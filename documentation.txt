@@ -7,3 +7,26 @@ Next.js app installation
 -type command: npx create-next-app@latest
 -type command: npm run dev
 -open route: http://localhost:3000
+
+
+Building Homepage
+
+-open link: https://tailwindcss.com
+-update globals.css file
+-update component layout.tsx
+-update object metadata
+-open route: http://localhost:3000
+-in folder app create folder (home)
+-in folder (home) move component page.tsx from folder app
+-type command: npm i react-icons
+-in folder (home) create folder components Header.tsx and Hero.tsx
+-in components Header.tsx and Hero.tsx create HTML elements with Tailwind CSS classes
+-in component (home)/page.tsx import components Header and Hero
+-in folder (home) create components HomeMenu.tsx abd MenuItem.tsx
+-in component HomeMenu.tsx abd MenuItem.tsx create HTML elements with Tailwind CSS classes
+-in component HomeMenu.tsx import component MenuItem
+-in component page.tsx import component HomeMenu
+-create components AboutUs.tsx, ContactUs.tsx and Footer.tsx
+-in components AboutUs.tsx, ContactUs.tsx and Footer.tsx create HTML elements with Tailwind CSS classes
+-in component page.tsx import components AboutUs and ContactUs
+-in component layout.tsx import component Footer
