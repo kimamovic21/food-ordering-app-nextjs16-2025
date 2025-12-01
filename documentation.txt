@@ -1,0 +1,9 @@
+Fullstack Food Ordering App with Next.js
+
+
+Next.js app installation
+
+-open link: https://nextjs.org
+-type command: npx create-next-app@latest
+-type command: npm run dev
+-open route: http://localhost:3000
