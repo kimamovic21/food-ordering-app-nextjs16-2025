@@ -4,7 +4,7 @@ import Pizza from '@/public/pizza.png';
 
 const Hero = () => {
   return (
-    <section className='block md:grid md:grid-cols-[0.4fr_0.6fr]'>
+    <section className='mt-4 block md:grid md:grid-cols-[0.4fr_0.6fr]'>
       <div className='py-12'>
         <h1 className='text-4xl font-bold leading-12'>
           <span>Everything</span>

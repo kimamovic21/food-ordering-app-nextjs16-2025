@@ -11,6 +11,7 @@ Next.js app installation
 
 Building Homepage
 
+-create documentation.txt file for project work description
 -open link: https://tailwindcss.com
 -update globals.css file
 -update component layout.tsx
@@ -30,3 +31,23 @@ Building Homepage
 -in components AboutUs.tsx, ContactUs.tsx and Footer.tsx create HTML elements with Tailwind CSS classes
 -in component page.tsx import components AboutUs and ContactUs
 -in component layout.tsx import component Footer
+
+
+Authentication - first part
+
+-in component Header.tsx, in tsx more Link components
+-in folder app create folder register and component page.tsx
+-in component register/page.tsx create HTML elements with Tailwind CSS classes
+-open link: http://localhost:3000/register
+-in globals.css file add Tailwind CSS classes
+-update component layout.tsx
+-open link: https://next-auth.js.org
+-type command: npm i next-auth
+-create folders api, auth and [...nextauth]
+-in folder [...nextauth] create route.ts file
+-in route.ts file add logic for auth from documentation
+-in component register/page.tsx import and invoke function useState()
+-in tsx add logic for submitting the form
+-in folder api create folder register and route.ts file
+-in route.ts file create and export function POST()
+-open route: http://localhost:3000/register and click button Register
