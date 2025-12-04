@@ -79,3 +79,21 @@ Authentication - second part
 -create folder libs and mongoConnect.ts file
 -in mongoConnect.ts file add code from documentation
 -in route.ts file update MongoDB adapter logic
+-open route: http://localhost:3000 to see user data after login
+
+
+Profile editing page - first part
+
+-update component Header.tsx to display logged in user name
+-create folder profile and component page.tsx
+-open route: http://localhost:3000/profile
+-update next.config.ts file
+-in component profile/page.tsx add logic for displaying user info
+-in folder api create folder profile and route.ts file
+-in route.ts file create and export async function PUT
+-in folder libs create authOptions.ts file
+-in authOptions.ts file export variable object const authOptions
+-in [...nextauth]/route.ts file import object authOptions
+-in profile/route.ts file import object authOptions
+-open route: http://localhost:3000/profile and update user name
+-open MongoDB to see updated user info
