@@ -35,11 +35,14 @@ export const authOptions = {
         await mongoose.connect(process.env.MONGODB_URL as string);
         const user = await User.findOne({ email });
 
-        const passwordOk = user && bcrypt.compareSync(password ?? '', user.password);
+        const passwordOk = user && bcrypt.compareSync(
+          password ?? '', user.password
+        );
 
         if (passwordOk) {
           return user;
-        }
+        };
+
         return null;
       },
     }),
@@ -59,6 +62,7 @@ export const authOptions = {
         session.user.postalCode = userInDb.postalCode || '';
         session.user.city = userInDb.city || '';
         session.user.country = userInDb.country || '';
+        session.user.admin = userInDb.admin || false;
       }
 
       return session;
@@ -72,7 +76,9 @@ export const authOptions = {
         token.postalCode = (user as any).postalCode || '';
         token.city = (user as any).city || '';
         token.country = (user as any).country || '';
-      }
+        token.admin = (user as any).admin || false;
+      };
+
       return token;
     },
   },
@@ -107,9 +113,11 @@ export const authOptions = {
           postalCode: '',
           city: '',
           country: '',
+          admin: false,
         });
-      }
-    }
+      };
+    };
+
     return true;
   },
 };

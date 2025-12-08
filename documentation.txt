@@ -130,3 +130,16 @@ Profile editing page - third part
 -update authOptions.ts file for new fields
 -open route: http://localhost:3000/profile and update user info
 -open MongoDB to see saved info
+
+
+Admin panel & categories - first part
+
+-in MongoDB create collection admins
+-update user model with admin property
+-update authOptions.ts file with admin property
+-update files register/route.ts and profile/route.ts
+-update component profile/page.tsx
+-open route: http://localhost:3000/profile
+-in folder shared create component UserTabs.tsx
+-in component profile/page.tsx import component UserTabs
+-in tsx add component UserTabs with prop isAdmin

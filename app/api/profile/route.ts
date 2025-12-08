@@ -10,13 +10,25 @@ export async function PUT(req: Request) {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
 
-  if (!email) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!email) return Response.json(
+    { error: 'Unauthorized' },
+    { status: 401 }
+  );
 
-  const allowedFields = ['name', 'phone', 'streetAddress', 'postalCode', 'city', 'country'];
+  const allowedFields = [
+    'name',
+    'phone',
+    'streetAddress',
+    'postalCode',
+    'city',
+    'country',
+  ];
+
   const updateData: any = {};
+
   for (const key of allowedFields) {
     if (key in data) updateData[key] = data[key];
-  }
+  };
 
   await User.updateOne({ email }, { $set: updateData });
 
@@ -31,8 +43,12 @@ export async function GET() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email;
 
-  if (!email) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!email) return Response.json(
+    { error: 'Unauthorized' },
+    { status: 401 }
+  );
 
   const user = await User.findOne({ email });
+
   return Response.json(user);
 };

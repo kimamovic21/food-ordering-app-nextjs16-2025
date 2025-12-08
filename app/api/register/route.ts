@@ -32,6 +32,7 @@ export async function POST(req: Request) {
     postalCode: '',
     city: '',
     country: '',
+    admin: false,
   });
 
   return Response.json(createdUser);

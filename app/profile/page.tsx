@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { redirect } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
+import UserTabs from '@/components/shared/UserTabs';
 
 interface ExtendedUser {
   name?: string | null;
@@ -15,7 +17,8 @@ interface ExtendedUser {
   postalCode?: string | null;
   city?: string | null;
   country?: string | null;
-}
+  admin?: boolean | null;
+};
 
 const ProfilePage = () => {
   const session = useSession();
@@ -28,6 +31,7 @@ const ProfilePage = () => {
   const [postalCode, setPostalCode] = useState('');
   const [city, setCity] = useState('');
   const [country, setCountry] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -40,6 +44,7 @@ const ProfilePage = () => {
       setPostalCode(user?.postalCode || '');
       setCity(user?.city || '');
       setCountry(user?.country || '');
+      setIsAdmin(user?.admin || false);
     }
   }, [status, session]);
 
@@ -62,6 +67,7 @@ const ProfilePage = () => {
         postalCode,
         city,
         country,
+        admin: isAdmin,
       }),
     });
 
@@ -107,7 +113,7 @@ const ProfilePage = () => {
             image: json.url,
           },
         });
-      }
+      };
 
       return json;
     });
@@ -121,11 +127,9 @@ const ProfilePage = () => {
 
   return (
     <section className='mt-8 w-lg'>
-      <h2 className='text-center text-primary text-4xl mb-4'>
-        Profile
-      </h2>
+      <UserTabs isAdmin={isAdmin} />
 
-      <div className='max-w-md mx-auto p-4'>
+      <div className='max-w-md mx-auto mt-8'>
         <div className='flex gap-4 items-start'>
           <div className='flex flex-col items-center'>
             <div className='relative w-28 h-28 md:w-32 md:h-32 rounded-lg overflow-hidden'>
