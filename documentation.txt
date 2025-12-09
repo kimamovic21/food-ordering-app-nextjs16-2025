@@ -175,3 +175,14 @@ Admin menu items - first part
 -in folder models create menuItems.ts file
 -in folder api create menu-items and route.ts file
 -open route: http://localhost:3000/menu-items
+
+
+Admin menu items - second part
+
+-in menu-items/route.ts file update function DELETE()
+-update component menu-items/page.tsx to handle image upload and menu items info
+-in folder upload create menu-items and route.ts file
+-create folder users and route.ts file
+-update register/route.ts file
+-update package.json file
+-type command: npm i mongodb@^6

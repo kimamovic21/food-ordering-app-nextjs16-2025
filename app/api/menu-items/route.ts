@@ -1,5 +1,6 @@
 import { MenuItem } from '@/models/menuItem';
 import { isAdmin } from '../auth/[...nextauth]/route';
+import cloudinary from '@/libs/cloudinary';
 import mongoose from 'mongoose';
 
 export async function POST(req: Request) {
@@ -46,6 +47,22 @@ export async function DELETE(req: Request) {
   const _id = searchParams.get('_id');
 
   if (_id) {
+    const menuItem = await MenuItem.findById(_id);
+
+    if (menuItem && menuItem.image) {
+      const matches = menuItem.image.match(/menu-items\/([^\.]+)/);
+      const publicId = matches ? `menu-items/${matches[1]}` : null;
+
+      if (publicId) {
+        try {
+          await cloudinary.uploader.destroy(publicId);
+          console.log('Image deleted from Cloudinary:', publicId);
+        } catch (error) {
+          console.error('Error deleting image from Cloudinary:', error);
+        }
+      }
+    }
+
     await MenuItem.deleteOne({ _id });
   }
 

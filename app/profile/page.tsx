@@ -103,7 +103,7 @@ const ProfilePage = () => {
     const data = new FormData();
     data.append('file', files[0]);
 
-    const uploadPromise = fetch('/api/upload', {
+    const uploadPromise = fetch('/api/upload/users', {
       method: 'POST',
       body: data,
     }).then(async (res) => {
