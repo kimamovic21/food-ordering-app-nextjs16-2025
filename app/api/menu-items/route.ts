@@ -4,16 +4,38 @@ import cloudinary from '@/libs/cloudinary';
 import mongoose from 'mongoose';
 
 export async function POST(req: Request) {
-  await mongoose.connect(process.env.MONGODB_URL as string);
+  try {
+    await mongoose.connect(process.env.MONGODB_URL as string);
 
-  if (!(await isAdmin())) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!(await isAdmin())) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const data = await req.json();
+
+    if (!data.priceSmall || !data.priceMedium || !data.priceLarge) {
+      console.error('Missing prices:', { priceSmall: data.priceSmall, priceMedium: data.priceMedium, priceLarge: data.priceLarge });
+      return Response.json({ error: 'All prices are required' }, { status: 400 });
+    }
+
+    const menuItemData = {
+      name: data.name,
+      description: data.description,
+      image: data.image || '',
+      priceSmall: Number(data.priceSmall),
+      priceMedium: Number(data.priceMedium),
+      priceLarge: Number(data.priceLarge),
+    };
+
+
+    const menuItemDoc = await MenuItem.create(menuItemData);
+
+
+    return Response.json(menuItemDoc);
+  } catch (error) {
+    console.error('Error creating menu item:', error);
+    return Response.json({ error: 'Failed to create menu item', details: error }, { status: 500 });
   }
-
-  const data = await req.json();
-  const menuItemDoc = await MenuItem.create(data);
-
-  return Response.json(menuItemDoc);
 }
 
 export async function GET() {
@@ -24,16 +46,39 @@ export async function GET() {
 }
 
 export async function PUT(req: Request) {
-  await mongoose.connect(process.env.MONGODB_URL as string);
+  try {
+    await mongoose.connect(process.env.MONGODB_URL as string);
 
-  if (!(await isAdmin())) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!(await isAdmin())) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { _id, ...data } = await req.json();
+
+
+    if (!data.priceSmall || !data.priceMedium || !data.priceLarge) {
+      console.error('Missing prices:', { priceSmall: data.priceSmall, priceMedium: data.priceMedium, priceLarge: data.priceLarge });
+      return Response.json({ error: 'All prices are required' }, { status: 400 });
+    }
+
+    const updateData = {
+      name: data.name,
+      description: data.description,
+      image: data.image || '',
+      priceSmall: Number(data.priceSmall),
+      priceMedium: Number(data.priceMedium),
+      priceLarge: Number(data.priceLarge),
+    };
+
+
+    const updated = await MenuItem.findByIdAndUpdate(_id, updateData, { new: true });
+
+
+    return Response.json(updated);
+  } catch (error) {
+    console.error('Error updating menu item:', error);
+    return Response.json({ error: 'Failed to update menu item', details: error }, { status: 500 });
   }
-
-  const { _id, ...rest } = await req.json();
-  await MenuItem.findByIdAndUpdate(_id, rest);
-
-  return Response.json(true);
 }
 
 export async function DELETE(req: Request) {
@@ -56,7 +101,6 @@ export async function DELETE(req: Request) {
       if (publicId) {
         try {
           await cloudinary.uploader.destroy(publicId);
-          console.log('Image deleted from Cloudinary:', publicId);
         } catch (error) {
           console.error('Error deleting image from Cloudinary:', error);
         }

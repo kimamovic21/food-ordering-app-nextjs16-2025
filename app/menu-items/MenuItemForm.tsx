@@ -1,24 +1,32 @@
 interface MenuItemFormProps {
   name: string;
   description: string;
-  basePrice: string;
+  priceSmall: string;
+  priceMedium: string;
+  priceLarge: string;
   editingItem: string | null;
   isSaving: boolean;
   onNameChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
-  onBasePriceChange: (value: string) => void;
+  onPriceSmallChange: (value: string) => void;
+  onPriceMediumChange: (value: string) => void;
+  onPriceLargeChange: (value: string) => void;
   onCancel: () => void;
 }
 
 const MenuItemForm = ({
   name,
   description,
-  basePrice,
+  priceSmall,
+  priceMedium,
+  priceLarge,
   editingItem,
   isSaving,
   onNameChange,
   onDescriptionChange,
-  onBasePriceChange,
+  onPriceSmallChange,
+  onPriceMediumChange,
+  onPriceLargeChange,
   onCancel,
 }: MenuItemFormProps) => {
   return (
@@ -52,23 +60,67 @@ const MenuItemForm = ({
       </div>
 
       <div>
-        <label className='block text-sm font-medium text-gray-700 mb-1'>
-          Base Price <span className='text-gray-400'>(USD)</span>
+        <label className='block text-sm font-medium text-gray-700 mb-2'>
+          Prices <span className='text-gray-400'>(USD)</span>
         </label>
-        <div className='relative'>
-          <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-            <span className='text-gray-500'>$</span>
+
+        <div className='grid grid-cols-3 gap-3'>
+          <div>
+            <label className='block text-xs text-gray-600 mb-1'>Small</label>
+            <div className='relative'>
+              <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+                <span className='text-gray-500'>$</span>
+              </div>
+              <input
+                type='number'
+                step='0.01'
+                min='0'
+                value={priceSmall}
+                onChange={(e) => onPriceSmallChange(e.target.value)}
+                placeholder='8.99'
+                disabled={isSaving}
+                className='pl-7 w-full rounded-lg border border-gray-300 bg-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition'
+              />
+            </div>
           </div>
-          <input
-            type='number'
-            step='0.01'
-            min='0'
-            value={basePrice}
-            onChange={(e) => onBasePriceChange(e.target.value)}
-            placeholder='9.99'
-            disabled={isSaving}
-            className='pl-7 w-full rounded-lg border border-gray-300 bg-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition'
-          />
+
+          <div>
+            <label className='block text-xs text-gray-600 mb-1'>Medium</label>
+            <div className='relative'>
+              <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+                <span className='text-gray-500'>$</span>
+              </div>
+              <input
+                type='number'
+                step='0.01'
+                min='0'
+                value={priceMedium}
+                onChange={(e) => onPriceMediumChange(e.target.value)}
+                placeholder='11.99'
+                disabled={isSaving}
+                className='pl-7 w-full rounded-lg border border-gray-300 bg-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition'
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className='block text-xs text-gray-600 mb-1'>Large</label>
+            <div className='relative'>
+              <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+                <span className='text-gray-500'>$</span>
+              </div>
+              <input
+                type='number'
+                step='0.01'
+                min='0'
+                value={priceLarge}
+                onChange={(e) => onPriceLargeChange(e.target.value)}
+                placeholder='14.99'
+                disabled={isSaving}
+                className='pl-7 w-full rounded-lg border border-gray-300 bg-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition'
+              />
+            </div>
+          </div>
         </div>
       </div>
 

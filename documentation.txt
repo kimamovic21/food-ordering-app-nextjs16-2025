@@ -193,3 +193,11 @@ Admin menu items - third part
 -in folder menu-items create components MenuItemForm.tsx, MenuItemImage.tsx and MenuItems.tsx
 -in component page.tsx import created components
 -in tsx add components with props
+
+
+Admin menu items - fourth part
+
+-update logic for small, medium and large menu item price
+-update menuItem.ts file and model MenuItem
+-update price info in route.ts file
+-in folder menu-items update tsx components 

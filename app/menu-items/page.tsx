@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import UserTabs from '@/components/shared/UserTabs';
 import useProfile from '@/contexts/UseProfile';
-import MenuItemForm from './MenuItemForm';
 import MenuItemImage from './MenuItemImage';
+import MenuItemForm from './MenuItemForm';
 import MenuItems from './MenuItems';
 
 interface MenuItem {
@@ -13,7 +13,9 @@ interface MenuItem {
   image?: string;
   name: string;
   description: string;
-  basePrice: number;
+  priceSmall: number;
+  priceMedium: number;
+  priceLarge: number;
 }
 
 const MenuItemsPage = () => {
@@ -21,7 +23,9 @@ const MenuItemsPage = () => {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [basePrice, setBasePrice] = useState('');
+  const [priceSmall, setPriceSmall] = useState('');
+  const [priceMedium, setPriceMedium] = useState('');
+  const [priceLarge, setPriceLarge] = useState('');
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -82,31 +86,44 @@ const MenuItemsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name || !basePrice) {
-      toast.error('Name and price are required');
+    if (
+      name.trim() === '' ||
+      priceSmall.trim() === '' ||
+      priceMedium.trim() === '' ||
+      priceLarge.trim() === ''
+    ) {
+      toast.error('Name and all prices are required');
       return;
     }
 
     setIsSaving(true);
 
     try {
-      let imageUrl = image;
+      const s = Number(priceSmall);
+      const m = Number(priceMedium);
+      const l = Number(priceLarge);
 
+      if (isNaN(s) || isNaN(m) || isNaN(l)) {
+        toast.error('All prices must be valid numbers');
+        setIsSaving(false);
+        return;
+      }
+
+      let imageUrl = image;
       if (imageFile) {
-        imageUrl = await toast.promise(
-          uploadImage(imageFile, editingItem || undefined),
-          {
-            loading: 'Uploading image...',
-            success: 'Image uploaded!',
-            error: 'Image upload failed.',
-          }
-        );
+        imageUrl = await toast.promise(uploadImage(imageFile, editingItem || undefined), {
+          loading: 'Uploading image...',
+          success: 'Image uploaded!',
+          error: 'Image upload failed',
+        });
       }
 
       const menuItemData = {
         name,
         description,
-        basePrice: parseFloat(basePrice),
+        priceSmall: s,
+        priceMedium: m,
+        priceLarge: l,
         image: imageUrl || '',
       };
 
@@ -117,35 +134,27 @@ const MenuItemsPage = () => {
           body: JSON.stringify({ _id: editingItem, ...menuItemData }),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to update');
-        }
+        if (!response.ok) throw new Error('Failed to update menu item');
 
         toast.success('Menu item updated!');
-      } else {
+      }
+
+      else {
         const response = await fetch('/api/menu-items', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(menuItemData),
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to create');
-        }
+        if (!response.ok) throw new Error('Failed to create menu item');
 
         toast.success('Menu item created!');
       }
 
-      setName('');
-      setDescription('');
-      setBasePrice('');
-      setImage('');
-      setImageFile(null);
-      setImagePreview('');
-      setEditingItem(null);
+      resetForm();
       fetchMenuItems();
-    } catch (error) {
-      console.error('Error saving menu item:', error);
+    } catch (err) {
+      console.error(err);
       toast.error(`Failed to ${editingItem ? 'update' : 'create'} menu item`);
     } finally {
       setIsSaving(false);
@@ -156,7 +165,9 @@ const MenuItemsPage = () => {
     setEditingItem(item._id);
     setName(item.name);
     setDescription(item.description);
-    setBasePrice(item.basePrice.toString());
+    setPriceSmall(item.priceSmall.toString());
+    setPriceMedium(item.priceMedium.toString());
+    setPriceLarge(item.priceLarge.toString());
     setImage(item.image || '');
     setImagePreview(item.image || '');
     setImageFile(null);
@@ -166,46 +177,41 @@ const MenuItemsPage = () => {
     if (!confirm('Are you sure you want to delete this menu item?')) return;
 
     try {
-      const response = await fetch(`/api/menu-items?_id=${id}`, {
+      const res = await fetch(`/api/menu-items?_id=${id}`, {
         method: 'DELETE',
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete');
-      }
+      if (!res.ok) throw new Error('Delete failed');
 
-      toast.success('Menu item deleted!');
+      toast.success('Menu item deleted');
       fetchMenuItems();
-    } catch (error) {
-      console.error('Error deleting menu item:', error);
-      toast.error('Failed to delete menu item.');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to delete menu item');
     }
   };
 
-  const handleCancel = () => {
+  const resetForm = () => {
     setEditingItem(null);
     setName('');
     setDescription('');
-    setBasePrice('');
+    setPriceSmall('');
+    setPriceMedium('');
+    setPriceLarge('');
     setImage('');
     setImageFile(null);
     setImagePreview('');
   };
 
-  if (loading) {
-    return 'Loading user info';
-  }
-
-  if (!data?.admin) {
-    return 'Not an admin.';
-  }
+  if (loading) return 'Loading user info...';
+  if (!data?.admin) return 'Not an admin.';
 
   return (
-    <section className='mt-8'>
+    <section className="mt-8">
       <UserTabs isAdmin={true} />
 
-      <form className='mt-8 max-w-md mx-auto' onSubmit={handleSubmit}>
-        <div className='flex items-start gap-6'>
+      <form className="mt-8 max-w-md mx-auto" onSubmit={handleSubmit}>
+        <div className="flex items-start gap-6">
           <MenuItemImage
             imagePreview={imagePreview}
             image={image}
@@ -216,13 +222,17 @@ const MenuItemsPage = () => {
           <MenuItemForm
             name={name}
             description={description}
-            basePrice={basePrice}
+            priceSmall={priceSmall}
+            priceMedium={priceMedium}
+            priceLarge={priceLarge}
             editingItem={editingItem}
             isSaving={isSaving}
             onNameChange={setName}
             onDescriptionChange={setDescription}
-            onBasePriceChange={setBasePrice}
-            onCancel={handleCancel}
+            onPriceSmallChange={setPriceSmall}
+            onPriceMediumChange={setPriceMedium}
+            onPriceLargeChange={setPriceLarge}
+            onCancel={resetForm}
           />
         </div>
       </form>

@@ -5,7 +5,9 @@ interface MenuItem {
   image?: string;
   name: string;
   description: string;
-  basePrice: number;
+  priceSmall: number;
+  priceMedium: number;
+  priceLarge: number;
 }
 
 interface MenuItemsProps {
@@ -50,9 +52,33 @@ const MenuItems = ({ menuItems, onEdit, onDelete }: MenuItemsProps) => {
                 {item.description && (
                   <p className='text-gray-600 text-sm'>{item.description}</p>
                 )}
-                <p className='text-primary font-semibold mt-1'>
-                  ${item.basePrice.toFixed(2)}
-                </p>
+
+                {item.priceSmall !== undefined && item.priceMedium !== undefined && item.priceLarge !== undefined ? (
+                  <div className='flex gap-3 mt-2'>
+                    <span className='text-sm'>
+                      <span className='text-gray-600'>S:</span>{' '}
+                      <span className='font-semibold text-primary'>
+                        ${item.priceSmall.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className='text-sm'>
+                      <span className='text-gray-600'>M:</span>{' '}
+                      <span className='font-semibold text-primary'>
+                        ${item.priceMedium.toFixed(2)}
+                      </span>
+                    </span>
+                    <span className='text-sm'>
+                      <span className='text-gray-600'>L:</span>{' '}
+                      <span className='font-semibold text-primary'>
+                        ${item.priceLarge.toFixed(2)}
+                      </span>
+                    </span>
+                  </div>
+                ) : (
+                  <p className='text-red-500 text-sm mt-1'>
+                    Prices missing - please edit this item
+                  </p>
+                )}
               </div>
 
               <div className='flex gap-2 shrink-0'>
