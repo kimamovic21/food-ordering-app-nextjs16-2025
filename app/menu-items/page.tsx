@@ -13,15 +13,22 @@ interface MenuItem {
   image?: string;
   name: string;
   description: string;
+  category?: { _id: string; name: string } | string;
   priceSmall: number;
   priceMedium: number;
   priceLarge: number;
+}
+
+interface Category {
+  _id: string;
+  name: string;
 }
 
 const MenuItemsPage = () => {
   const { data, loading } = useProfile();
 
   const [name, setName] = useState('');
+  const [categoryId, setCategoryId] = useState('');
   const [description, setDescription] = useState('');
   const [priceSmall, setPriceSmall] = useState('');
   const [priceMedium, setPriceMedium] = useState('');
@@ -30,11 +37,13 @@ const MenuItemsPage = () => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState('');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchMenuItems();
+    fetchCategories();
   }, []);
 
   const fetchMenuItems = async () => {
@@ -45,6 +54,17 @@ const MenuItemsPage = () => {
     } catch (error) {
       console.error('Error fetching menu items:', error);
       toast.error('Failed to load menu items');
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch('/api/categories');
+      const cats = await res.json();
+      setCategories(cats);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Failed to load categories');
     }
   };
 
@@ -88,11 +108,12 @@ const MenuItemsPage = () => {
 
     if (
       name.trim() === '' ||
+      categoryId.trim() === '' ||
       priceSmall.trim() === '' ||
       priceMedium.trim() === '' ||
       priceLarge.trim() === ''
     ) {
-      toast.error('Name and all prices are required');
+      toast.error('Name, category, and all prices are required');
       return;
     }
 
@@ -121,6 +142,7 @@ const MenuItemsPage = () => {
       const menuItemData = {
         name,
         description,
+        category: categoryId,
         priceSmall: s,
         priceMedium: m,
         priceLarge: l,
@@ -165,6 +187,11 @@ const MenuItemsPage = () => {
     setEditingItem(item._id);
     setName(item.name);
     setDescription(item.description);
+    setCategoryId(
+      typeof item.category === 'string'
+        ? item.category
+        : item.category?._id || ''
+    );
     setPriceSmall(item.priceSmall.toString());
     setPriceMedium(item.priceMedium.toString());
     setPriceLarge(item.priceLarge.toString());
@@ -195,6 +222,7 @@ const MenuItemsPage = () => {
     setEditingItem(null);
     setName('');
     setDescription('');
+    setCategoryId('');
     setPriceSmall('');
     setPriceMedium('');
     setPriceLarge('');
@@ -221,6 +249,8 @@ const MenuItemsPage = () => {
 
           <MenuItemForm
             name={name}
+            categoryId={categoryId}
+            categories={categories}
             description={description}
             priceSmall={priceSmall}
             priceMedium={priceMedium}
@@ -228,6 +258,7 @@ const MenuItemsPage = () => {
             editingItem={editingItem}
             isSaving={isSaving}
             onNameChange={setName}
+            onCategoryChange={setCategoryId}
             onDescriptionChange={setDescription}
             onPriceSmallChange={setPriceSmall}
             onPriceMediumChange={setPriceMedium}

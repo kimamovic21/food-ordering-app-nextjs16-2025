@@ -1,5 +1,7 @@
 interface MenuItemFormProps {
   name: string;
+  categoryId: string;
+  categories: Array<{ _id: string; name: string }>;
   description: string;
   priceSmall: string;
   priceMedium: string;
@@ -7,6 +9,7 @@ interface MenuItemFormProps {
   editingItem: string | null;
   isSaving: boolean;
   onNameChange: (value: string) => void;
+  onCategoryChange: (value: string) => void;
   onDescriptionChange: (value: string) => void;
   onPriceSmallChange: (value: string) => void;
   onPriceMediumChange: (value: string) => void;
@@ -16,6 +19,8 @@ interface MenuItemFormProps {
 
 const MenuItemForm = ({
   name,
+  categoryId,
+  categories,
   description,
   priceSmall,
   priceMedium,
@@ -23,6 +28,7 @@ const MenuItemForm = ({
   editingItem,
   isSaving,
   onNameChange,
+  onCategoryChange,
   onDescriptionChange,
   onPriceSmallChange,
   onPriceMediumChange,
@@ -43,6 +49,25 @@ const MenuItemForm = ({
           disabled={isSaving}
           className='w-full rounded-lg border border-gray-300 bg-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition'
         />
+      </div>
+
+      <div>
+        <label className='block text-sm font-medium text-gray-700 mb-1'>
+          Category
+        </label>
+        <select
+          value={categoryId}
+          onChange={(e) => onCategoryChange(e.target.value)}
+          disabled={isSaving}
+          className='w-full rounded-lg border border-gray-300 bg-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:bg-gray-100 disabled:cursor-not-allowed transition'
+        >
+          <option value=''>Select a category</option>
+          {categories.map((category) => (
+            <option key={category._id} value={category._id}>
+              {category.name}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div>

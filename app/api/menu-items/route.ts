@@ -22,14 +22,13 @@ export async function POST(req: Request) {
       name: data.name,
       description: data.description,
       image: data.image || '',
+      category: data.category,
       priceSmall: Number(data.priceSmall),
       priceMedium: Number(data.priceMedium),
       priceLarge: Number(data.priceLarge),
     };
 
-
     const menuItemDoc = await MenuItem.create(menuItemData);
-
 
     return Response.json(menuItemDoc);
   } catch (error) {
@@ -41,7 +40,9 @@ export async function POST(req: Request) {
 export async function GET() {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
-  const items = await MenuItem.find();
+  const items = await MenuItem
+    .find()
+    .populate('category');
   return Response.json(items);
 }
 
@@ -55,7 +56,6 @@ export async function PUT(req: Request) {
 
     const { _id, ...data } = await req.json();
 
-
     if (!data.priceSmall || !data.priceMedium || !data.priceLarge) {
       console.error('Missing prices:', { priceSmall: data.priceSmall, priceMedium: data.priceMedium, priceLarge: data.priceLarge });
       return Response.json({ error: 'All prices are required' }, { status: 400 });
@@ -65,14 +65,13 @@ export async function PUT(req: Request) {
       name: data.name,
       description: data.description,
       image: data.image || '',
+      category: data.category,
       priceSmall: Number(data.priceSmall),
       priceMedium: Number(data.priceMedium),
       priceLarge: Number(data.priceLarge),
     };
 
-
     const updated = await MenuItem.findByIdAndUpdate(_id, updateData, { new: true });
-
 
     return Response.json(updated);
   } catch (error) {

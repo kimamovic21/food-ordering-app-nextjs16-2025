@@ -5,6 +5,7 @@ interface MenuItem {
   image?: string;
   name: string;
   description: string;
+  category?: { _id: string; name: string } | string;
   priceSmall: number;
   priceMedium: number;
   priceLarge: number;
@@ -49,6 +50,14 @@ const MenuItems = ({ menuItems, onEdit, onDelete }: MenuItemsProps) => {
 
               <div className='grow'>
                 <h3 className='font-semibold text-lg'>{item.name}</h3>
+                {item.category && (
+                  <p className='text-xs text-gray-500'>
+                    Category:{' '}
+                    {typeof item.category === 'string'
+                      ? item.category
+                      : item.category?.name}
+                  </p>
+                )}
                 {item.description && (
                   <p className='text-gray-600 text-sm'>{item.description}</p>
                 )}

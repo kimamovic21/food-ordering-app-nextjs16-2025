@@ -201,3 +201,11 @@ Admin menu items - fourth part
 -update menuItem.ts file and model MenuItem
 -update price info in route.ts file
 -in folder menu-items update tsx components 
+
+
+Admin menu items - fifth part
+
+-update logic to connect menu item category with category model from database
+-in menuItem.ts file update model MenuItem
+-in folder menu-items update tsx components for displaying ui logic for categories
+-in menu-items/route.ts file update logic for categories
