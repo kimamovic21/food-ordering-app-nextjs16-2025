@@ -222,3 +222,8 @@ Admin menu users - first part
 -in folder api create folder users and route.ts file
 -add logic for displaying all users
 -open route: http://localhost:3000/users
+
+
+Auth with credentials fixed 
+
+-update authOptions.ts file

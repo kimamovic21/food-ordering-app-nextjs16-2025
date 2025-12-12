@@ -10,6 +10,7 @@ export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   adapter: MongoDBAdapter(client),
   allowDangerousEmailAccountLinking: true,
+  session: { strategy: 'jwt' },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -19,7 +20,7 @@ export const authOptions = {
       name: 'Credentials',
       id: 'credentials',
       credentials: {
-        username: {
+        email: {
           label: 'Email',
           type: 'email',
           placeholder: 'test@example.com',
@@ -30,21 +31,32 @@ export const authOptions = {
         },
       },
       async authorize(credentials) {
-        const email = credentials?.username;
+        const email = credentials?.email;
         const password = credentials?.password;
+
+        if (!email || !password) return null;
 
         await mongoose.connect(process.env.MONGODB_URL as string);
         const user = await User.findOne({ email });
 
-        const passwordOk = user && bcrypt.compareSync(
-          password ?? '', user.password
-        );
+        if (!user?.password) return null;
 
-        if (passwordOk) {
-          return user;
+        const passwordOk = bcrypt.compareSync(password, user.password);
+
+        if (!passwordOk) return null;
+
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+          image: user.image || '',
+          phone: user.phone || '',
+          streetAddress: user.streetAddress || '',
+          postalCode: user.postalCode || '',
+          city: user.city || '',
+          country: user.country || '',
+          admin: user.admin || false,
         };
-
-        return null;
       },
     }),
   ],
