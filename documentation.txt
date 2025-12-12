@@ -232,3 +232,8 @@ Auth with credentials fixed
 Admin menu users - second part
 
 -update ui for displaying users in component users/page.tsx 
+
+
+Admin menu users - third part
+
+-add pagination logic in component users/page.tsx and users/route.ts
