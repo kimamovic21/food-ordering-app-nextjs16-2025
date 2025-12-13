@@ -227,18 +227,30 @@ Admin menu users - first part
 Auth with credentials fixed 
 
 -update authOptions.ts file
+-open route: http://localhost:3000/register
+-open route: http://localhost:3000/login
 
 
 Admin menu users - second part
 
 -update ui for displaying users in component users/page.tsx 
+-open route: http://localhost:3000/users 
 
 
 Admin menu users - third part
 
--add pagination logic in component users/page.tsx and users/route.ts
+-add pagination logic in component users/page.tsx and users/route.t
+-open route: http://localhost:3000/users
 
 
 Rule for type any fix
 
 -update files eslint.config.mjs and authOptions.ts
+
+
+Deployment fix for users page
+
+-open link: https://react.dev/reference/react/Suspense
+-in component users/page.tsx import component Suspense
+-open route: http://localhost:3000/users
+-type command: npm run build

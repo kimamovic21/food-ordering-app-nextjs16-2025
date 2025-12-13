@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import UserTabs from '@/components/shared/UserTabs';
 import useProfile from '@/contexts/UseProfile';
@@ -155,4 +155,10 @@ const UsersPage = () => {
   );
 };
 
-export default UsersPage;
+const UsersPageWithSuspense = () => (
+  <Suspense fallback={<p className='mt-8'>Loading page...</p>}>
+    <UsersPage />
+  </Suspense>
+);
+
+export default UsersPageWithSuspense;
