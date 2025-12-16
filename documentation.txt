@@ -284,3 +284,8 @@ About and Contact components
 -open: https://sora.chatgpt.com to generate restaurant interior
 -open route: http://localhost:3000/about
 -open route: http://localhost:3000/contact
+
+
+Header component - Hamburger button 
+
+-in component Header.tsx add hamburger button logic
