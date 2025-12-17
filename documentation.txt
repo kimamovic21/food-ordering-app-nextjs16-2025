@@ -297,3 +297,11 @@ Cart global state - first part
 -create component cart and page.tsx
 -update component MenuItem.tsx to use cart context
 -update component Header.tsx to display total number of menu items in the cart
+
+
+Cart global state - second part
+
+-update component (home)/MenuItem.tsx to use global cart state
+-update UI in component cart/page.tsx
+-update UI for component Header.tsx
+-update component layout.tsx

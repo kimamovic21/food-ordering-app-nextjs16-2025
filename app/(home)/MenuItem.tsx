@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { useCart } from '@/contexts/CartContext';
+import toast from 'react-hot-toast';
 import Image from 'next/image'
 import Pizza from '@/public/pizza.png';
 
@@ -23,6 +25,7 @@ type PizzaSize = 'small' | 'medium' | 'large';
 
 const MenuItem = ({ item }: MenuItemProps) => {
   const [selectedSize, setSelectedSize] = useState<PizzaSize>('small');
+  const { addToCart } = useCart();
 
   const displayItem = item || {
     _id: 'default',
@@ -48,6 +51,18 @@ const MenuItem = ({ item }: MenuItemProps) => {
       default:
         return displayItem.priceSmall;
     }
+  };
+
+  const handleAddToCart = () => {
+    addToCart({
+      _id: displayItem._id,
+      name: displayItem.name,
+      description: displayItem.description,
+      image: displayItem.image,
+      size: selectedSize,
+      price: getPrice(),
+    });
+    toast.success(`${displayItem.name} (${selectedSize}) added to cart!`);
   };
 
   return (
@@ -108,7 +123,10 @@ const MenuItem = ({ item }: MenuItemProps) => {
         </button>
       </div>
 
-      <button className='mt-4 bg-primary text-white rounded-full px-8 py-2'>
+      <button
+        onClick={handleAddToCart}
+        className='mt-4 bg-primary text-white rounded-full px-8 py-2 hover:bg-orange-700 transition'
+      >
         Add to cart ${getPrice()?.toFixed(2) || '0.00'}
       </button>
     </div>

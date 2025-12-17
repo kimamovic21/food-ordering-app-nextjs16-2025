@@ -23,7 +23,8 @@ const Header = () => {
   const totalItems = getTotalItems();
 
   return (
-    <header className='flex items-center justify-between m-4 relative'>
+    <header className='fixed top-0 left-0 right-0 z-50 bg-white shadow-sm'>
+      <div className='flex items-center justify-between px-4 py-3 max-w-7xl mx-auto'>
       <nav className='flex items-center gap-8 text-gray-500 font-semibold'>
         <Link
           className='text-primary font-semibold text-2xl'
@@ -98,8 +99,10 @@ const Header = () => {
         </button>
       </div>
 
+      </div>
+
       {mobileOpen && (
-        <div className='md:hidden absolute left-0 right-0 top-full mt-2 mx-4 rounded-xl border border-gray-200 bg-white shadow-lg z-50'>
+        <div className='md:hidden absolute left-4 right-4 top-full mt-2 rounded-xl border border-gray-200 bg-white shadow-lg z-50'>
           <div className='flex flex-col p-4 text-gray-700 font-semibold gap-3'>
             <Link href='/cart' onClick={() => setMobileOpen(false)} className='hover:text-primary flex items-center gap-2'>
               <IoCartOutline size={24} />
