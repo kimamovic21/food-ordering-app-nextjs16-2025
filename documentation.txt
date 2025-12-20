@@ -341,3 +341,8 @@ Stripe payment - first part
 -open route: https://checkout.stripe.com/c/pay/[stripeId]
 -add your payment information and click button Pay
 -open MongoDB to see saved order with property paid: true
+
+
+Vercel deployment error - Checkout component
+
+-update component checkout/page.tsx

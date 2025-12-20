@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useCart } from '@/contexts/CartContext';
 import Link from 'next/link';
 
-const CheckoutPage = () => {
+const CheckoutContent = () => {
   const searchParams = useSearchParams();
   const status = searchParams.get('status');
   const { clearCart } = useCart();
@@ -48,6 +48,18 @@ const CheckoutPage = () => {
         </Link>
       </div>
     </div>
+  );
+};
+
+const CheckoutPage = () => {
+  return (
+    <Suspense fallback={
+      <div className='py-12 text-center text-gray-600'>
+        Loading checkout...
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   );
 };
 
