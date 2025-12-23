@@ -346,3 +346,16 @@ Stripe payment - first part
 Vercel deployment error - Checkout component
 
 -update component checkout/page.tsx
+
+
+Orders page - first part
+
+-in .env create variable NEXT_PUBLIC_APP_URL
+-in folder api create folder orders and route.ts file
+-in folder app create folder orders and component page.tsx to display all orders
+-update component UserTabs.tsx
+-in orders create folder [id] and component page.tsx to display detailed info about order
+-in folder orders create component OrdersTable.tsx
+-in component orders/page.tsx import component OrdersTable
+-open route: http://localhost:3000/orders
+-open route: http://localhost:3000/orders/[id]

@@ -235,11 +235,11 @@ const MenuItemsPage = () => {
   if (!data?.admin) return 'Not an admin.';
 
   return (
-    <section className="mt-8">
+    <section className='mt-8'>
       <UserTabs isAdmin={true} />
 
-      <form className="mt-8 max-w-md mx-auto" onSubmit={handleSubmit}>
-        <div className="flex items-start gap-6">
+      <form className='mt-8 max-w-md mx-auto' onSubmit={handleSubmit}>
+        <div className='flex items-start gap-6'>
           <MenuItemImage
             imagePreview={imagePreview}
             image={image}
