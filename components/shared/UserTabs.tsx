@@ -40,7 +40,7 @@ const UserTabs = ({ isAdmin = false }: UserTabsProps) => {
             Users
           </Link>
           <Link
-            className={path === '/orders' ? 'active' : ''}
+            className={path.startsWith('/orders') ? 'active' : ''}
             href={'/orders'}
           >
             Orders

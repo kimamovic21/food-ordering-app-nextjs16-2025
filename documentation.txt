@@ -359,3 +359,13 @@ Orders page - first part
 -in component orders/page.tsx import component OrdersTable
 -open route: http://localhost:3000/orders
 -open route: http://localhost:3000/orders/[id]
+
+
+
+Orders page - second part
+
+-update component UserTabs
+-in folder orders/[id] create three new components
+-import created components in order/[id]/page.tsx component
+-open route: http://localhost:3000/orders
+-open route: http://localhost:3000/orders/[id]
