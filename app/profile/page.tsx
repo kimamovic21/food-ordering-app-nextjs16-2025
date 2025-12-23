@@ -130,10 +130,10 @@ const ProfilePage = () => {
   };
 
   return (
-    <section className='mt-8 w-lg'>
+    <section className='mt-8 max-w-2xl mx-auto'>
       <UserTabs isAdmin={isAdmin} />
 
-      <div className='max-w-md mx-auto mt-8'>
+      <div className='max-w-2xl mx-auto mt-8'>
         <div className='flex gap-4 items-start'>
           <div className='flex flex-col items-center'>
             <div className='relative w-28 h-28 md:w-32 md:h-32 rounded-lg overflow-hidden'>

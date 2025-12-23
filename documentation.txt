@@ -361,7 +361,6 @@ Orders page - first part
 -open route: http://localhost:3000/orders/[id]
 
 
-
 Orders page - second part
 
 -update component UserTabs
@@ -369,3 +368,16 @@ Orders page - second part
 -import created components in order/[id]/page.tsx component
 -open route: http://localhost:3000/orders
 -open route: http://localhost:3000/orders/[id]
+
+
+My orders page - first part
+
+-update component UserTabs.tsx
+-in folder api create folder my-orders and route.ts file
+-in folder app create folder my-orders and component page.tsx for displaying signed in user orders
+-in folder my-orders create folder [id] and component page.tsx
+-in folder [id] create three components
+-in folder [id]/page.tsx import created components
+-update Tailwind CSS classes in existing components
+-open route: http://localhost:3000/my-orders
+-open route: http://localhost:3000/my-orders/[id]

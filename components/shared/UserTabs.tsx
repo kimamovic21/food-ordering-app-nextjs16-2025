@@ -18,6 +18,12 @@ const UserTabs = ({ isAdmin = false }: UserTabsProps) => {
       >
         Profile
       </Link>
+      <Link
+        className={path === '/my-orders' ? 'active' : ''}
+        href={'/my-orders'}
+      >
+        My Orders
+      </Link>
 
       {isAdmin && (
         <>
