@@ -381,3 +381,12 @@ My orders page - first part
 -update Tailwind CSS classes in existing components
 -open route: http://localhost:3000/my-orders
 -open route: http://localhost:3000/my-orders/[id]
+
+
+My orders page - second part
+
+-create folder payment-link and route.ts file
+-update component MyOrdersTable.tsx
+-open route: http://localhost:3000/my-orders and click Finish Payment button
+-open route: http://localhost:3000/my-orders/[id]
+-open Stripe dashboard to see payments

@@ -1,3 +1,6 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 
 type OrderType = {
@@ -14,6 +17,8 @@ type MyOrdersTableProps = {
 };
 
 const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -22,6 +27,30 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
       hour: '2-digit',
       minute: '2-digit',
     });
+  };
+
+  const handleFinishPayment = async (orderId: string) => {
+    try {
+      setProcessingPayment(orderId);
+      const res = await fetch(`/api/payment-link?orderId=${orderId}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || 'Failed to get payment link');
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Payment link not available');
+      }
+    } catch (error) {
+      console.error('Error fetching payment link:', error);
+      alert('Failed to get payment link');
+    } finally {
+      setProcessingPayment(null);
+    }
   };
 
   if (loading) {
@@ -70,12 +99,23 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                   </span>
                 </td>
                 <td className='p-3'>
-                  <Link
-                    href={`/my-orders/${order._id}`}
-                    className='px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition'
-                  >
-                    View
-                  </Link>
+                  <div className='flex gap-2'>
+                    <Link
+                      href={`/my-orders/${order._id}`}
+                      className='px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition'
+                    >
+                      View
+                    </Link>
+                    {!order.paid && (
+                      <button
+                        onClick={() => handleFinishPayment(order._id)}
+                        disabled={processingPayment === order._id}
+                        className='px-4 py-2 text-sm font-medium rounded-lg border-primary bg-primary text-white hover:bg-orange-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap'
+                      >
+                        {processingPayment === order._id ? 'Loading...' : 'Finish Payment'}
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
