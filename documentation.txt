@@ -463,3 +463,10 @@ Orders table - Shadcn components
 -in component OrdersTable.tsx import table components from component table.tsx
 -in component orders/page.tsx import pagination components form component pagination.tsx
 -open route: http://localhost:3000/orders
+
+
+My orders table - Shadcn components
+
+-in component MyOrdersTable.tsx import table components from component table.tsx
+-in component my-orders/page.tsx import pagination components form component pagination.tsx
+-open route: http://localhost:3000/my-orders
