@@ -2,6 +2,13 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from '@/components/ui/pagination';
 import Title from '@/components/shared/Title';
 import useProfile from '@/contexts/UseProfile';
 import OrdersTable from './OrdersTable';
@@ -50,42 +57,52 @@ const OrdersPage = () => {
   if (!data?.admin) return 'Not an admin';
 
   return (
-    <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)]'>
+    <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>
       <Title>Orders</Title>
 
       <div className='mt-8 flex-1 flex flex-col'>
         <div className='flex-1'>
-          <OrdersTable orders={orders} loading={loadingOrders} />
+          {loadingOrders && <p>Loading orders...</p>}
+
+          {!loadingOrders && orders.length === 0 && <p>No orders found.</p>}
+
+          {!loadingOrders && orders.length > 0 && <OrdersTable orders={orders} loading={loadingOrders} />}
         </div>
 
         <div className='mt-auto pt-4 pb-4'>
-          <div className='flex items-center justify-center gap-6 px-4 py-3 bg-white rounded-lg'>
-            <button
-              onClick={() => {
-                const prev = Math.max(1, page - 1);
-                router.push(`/orders?page=${prev}`);
-              }}
-              disabled={page <= 1}
-              className='px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition'
-            >
-              Previous
-            </button>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href={`/orders?page=${Math.max(1, page - 1)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const prev = Math.max(1, page - 1);
+                    router.push(`/orders?page=${prev}`);
+                  }}
+                  aria-disabled={page <= 1}
+                  className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
 
-            <div className='text-sm font-medium text-gray-700 whitespace-nowrap'>
-              Page {page} of {totalPages}
-            </div>
+              <div className='flex items-center justify-center px-4 text-sm font-medium text-gray-700'>
+                Page {page} of {totalPages}
+              </div>
 
-            <button
-              onClick={() => {
-                const next = Math.min(totalPages, page + 1);
-                router.push(`/orders?page=${next}`);
-              }}
-              disabled={page >= totalPages}
-              className='px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition'
-            >
-              Next
-            </button>
-          </div>
+              <PaginationItem>
+                <PaginationNext
+                  href={`/orders?page=${Math.min(totalPages, page + 1)}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const next = Math.min(totalPages, page + 1);
+                    router.push(`/orders?page=${next}`);
+                  }}
+                  aria-disabled={page >= totalPages}
+                  className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
         </div>
       </div>
     </section>

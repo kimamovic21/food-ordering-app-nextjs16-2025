@@ -455,3 +455,11 @@ Users table - Shadcn components
 -open link: https://ui.shadcn.com/docs/components/button
 -type command: npx shadcn@latest add button
 -in component users/page.tsx import pagination components from component pagination.tsx
+-open route: http://localhost:3000/users
+
+
+Orders table - Shadcn components
+
+-in component OrdersTable.tsx import table components from component table.tsx
+-in component orders/page.tsx import pagination components form component pagination.tsx
+-open route: http://localhost:3000/orders
