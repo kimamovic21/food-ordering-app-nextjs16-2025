@@ -40,7 +40,7 @@ const RootLayout = ({
         <AppContext>
           <CartProvider>
             <Header />
-            <main className='flex-1 max-w-4xl mx-auto p-4 mt-16'>
+            <main className='flex-1 max-w-5xl mx-auto p-4 mt-16'>
               <Toaster position='top-center' />
               {children}
             </main>

@@ -433,3 +433,25 @@ Users table update
 -in folder users create component UsersTable.tsx
 -in component page.tsx import component UsersTable.tsx
 -open route: http://localhost:3000/users
+
+
+Users table - Shadcn components
+
+-update component layout.tsx
+-open link: https://ui.shadcn.com/docs/components/table
+-type command: npx shadcn@latest add table
+-open folder ui and component table.tsx
+-in component UsersTable.tsx import table components from component table.tsx
+-open link: https://ui.shadcn.com/docs/components/badge
+-type command: npx shadcn@latest add badge
+-open folder ui and component badge.tsx
+-in component UsersTable.tsx import component Badge from component Badge.tsx
+-open link: https://ui.shadcn.com/docs/components/avatar
+-type command: npx shadcn@latest add avatar
+-in component UsersTable.tsx import avatar components from component avatar.tsx
+-open link: https://ui.shadcn.com/docs/components/pagination
+-type command: https://ui.shadcn.com/docs/components/pagination
+-type command: npx shadcn@latest add pagination
+-open link: https://ui.shadcn.com/docs/components/button
+-type command: npx shadcn@latest add button
+-in component users/page.tsx import pagination components from component pagination.tsx
