@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Roboto, Roboto_Mono } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { CartProvider } from '@/contexts/CartContext';
+import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import './globals.css';
 import Header from '../components/shared/Header';
 import Footer from '../components/shared/Footer';
@@ -31,22 +32,29 @@ const RootLayout = ({
   children: React.ReactNode;
 }>) => {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
       <body
         className={
           `${roboto.variable} ${robotoMono.variable} antialiased min-h-screen flex flex-col
         `}
       >
-        <AppContext>
-          <CartProvider>
-            <Header />
-            <main className='flex-1 max-w-5xl mx-auto p-4 mt-16'>
-              <Toaster position='top-center' />
-              {children}
-            </main>
-            <Footer />
-          </CartProvider>
-        </AppContext>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AppContext>
+            <CartProvider>
+              <Header />
+              <main className='flex-1 max-w-5xl mx-auto p-4 mt-16'>
+                <Toaster position='top-center' />
+                {children}
+              </main>
+              <Footer />
+            </CartProvider>
+          </AppContext>
+        </ThemeProvider>
       </body>
     </html>
   );

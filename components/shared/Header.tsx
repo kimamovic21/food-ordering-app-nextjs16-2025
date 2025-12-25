@@ -7,6 +7,7 @@ import { signOut } from 'next-auth/react';
 import { IoCartOutline } from 'react-icons/io5';
 import { useCart } from '@/contexts/CartContext';
 import Link from 'next/link';
+import ModeToggle from '../theme/ModeToggle';
 
 const Header = () => {
   const session = useSession();
@@ -26,9 +27,9 @@ const Header = () => {
   const isAdmin = Boolean((session?.data?.user as any)?.admin);
 
   return (
-    <header className='fixed top-0 left-0 right-0 z-50 bg-white shadow-sm'>
-      <div className='flex items-center justify-between px-4 py-3 max-w-7xl mx-auto'>
-        <nav className='flex items-center gap-8 text-gray-500 font-semibold'>
+    <header className='fixed top-0 left-0 right-0 z-50 bg-background/90 border-b border-border shadow-sm backdrop-blur transition-colors'>
+      <div className='flex items-center justify-between px-4 py-3 max-w-7xl mx-auto text-foreground'>
+        <nav className='flex items-center gap-8 text-muted-foreground font-semibold'>
           <Link
             className='text-primary font-semibold text-2xl'
             href='/'
@@ -101,9 +102,10 @@ const Header = () => {
           </div>
         </nav>
 
-        <nav className='hidden lg:flex items-center gap-2 text-gray-500 font-semibold'>
+        <nav className='hidden lg:flex items-center gap-2 text-muted-foreground font-semibold transition-colors'>
+          <ModeToggle />
           <Link href='/cart' className='relative mr-2'>
-            <IoCartOutline size={32} className='text-gray-700 hover:text-primary transition' />
+            <IoCartOutline size={32} className='text-foreground hover:text-primary transition' />
             {totalItems > 0 && (
               <span className='absolute -top-2 -right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold'>
                 {totalItems}
@@ -117,7 +119,7 @@ const Header = () => {
                 className='whitespace-nowrap'
                 href={'/profile'}
               >
-                Hello, {userName}
+                {userName}
               </Link>
               <button
                 onClick={() => signOut()}
@@ -149,7 +151,7 @@ const Header = () => {
         <div className='lg:hidden'>
           <button
             aria-label='Toggle menu'
-            className='inline-flex items-center justify-center p-1 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-100 h-8 w-8'
+            className='inline-flex items-center justify-center p-1 rounded-md border border-border text-foreground hover:bg-muted h-8 w-8 transition-colors'
             onClick={() => setMobileOpen((v) => !v)}
           >
             <span className='sr-only'>Open main menu</span>
@@ -163,15 +165,15 @@ const Header = () => {
       </div>
 
       {mobileOpen && (
-        <div className='lg:hidden absolute left-4 right-4 top-full mt-2 rounded-xl border border-gray-200 bg-white shadow-lg z-50'>
-          <div className='flex flex-col p-4 text-gray-700 font-semibold gap-3'>
+        <div className='lg:hidden absolute left-4 right-4 top-full mt-2 rounded-xl border border-border bg-background shadow-lg z-50 transition-colors'>
+          <div className='flex flex-col p-4 text-foreground font-semibold gap-3'>
             {status === 'authenticated' && (
               <Link
                 className='whitespace-nowrap hover:text-primary'
                 href={'/profile'}
                 onClick={() => setMobileOpen(false)}
               >
-                Hello, {userName}
+                {userName}
               </Link>
             )}
 

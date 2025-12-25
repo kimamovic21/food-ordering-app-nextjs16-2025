@@ -470,3 +470,18 @@ My orders table - Shadcn components
 -in component MyOrdersTable.tsx import table components from component table.tsx
 -in component my-orders/page.tsx import pagination components form component pagination.tsx
 -open route: http://localhost:3000/my-orders
+
+
+Dark mode - Shadcn components
+
+-open link: https://ui.shadcn.com/docs/dark-mode/next
+-open link: https://www.npmjs.com/package/next-themes
+-type command: npm i next-themes
+-open link: https://ui.shadcn.com/docs/components/dropdown-menu
+-type command: npx shadcn@latest add dropdown-menu
+-open folder ui and component dropdown-menu.tsx
+-in folder components create folder theme 
+-in folder theme create components ModeToggle.tsx and component ThemeProvider.tsx
+-in components ModeToggle.tsx and ThemeProvider.tsx add code from official documentation
+-in component layout.tsx import component ThemeProvider
+-in component Header.tsx import component ModeToggle
