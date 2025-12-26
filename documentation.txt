@@ -514,3 +514,10 @@ Menu items - Shadcn components update
 -update Tailwind CSS classes in tsx components in folder menu-items
 -update Tailwind CSS classes in globals.css file
 -in tsx components import shadcn components from folder ui
+
+
+Home menu items - Shadcn components
+
+-in folder (home) update tsx components with Shadcn components
+-update Tailwind CSS classes
+-update component layout.tsx and globals.css file

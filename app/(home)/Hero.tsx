@@ -1,4 +1,5 @@
 import { FaArrowCircleRight } from 'react-icons/fa';
+import { Button } from '@/components/ui/button';
 import Image from 'next/image';
 import Pizza from '@/public/pizza.png';
 
@@ -14,18 +15,18 @@ const Hero = () => {
           <span className='text-primary'>Pizza</span>
         </h1>
 
-        <p className='my-6 text-gray-500'>
+        <p className='my-6 text-gray-500 dark:text-gray-400'>
           Pizza is the missing piece that makes every day complete
         </p>
 
         <div className='flex gap-4'>
-          <button className='uppercase flex gap-2 items-center font-semibold bg-primary text-white px-4 py-2 rounded-full cursor-pointer hover:bg-orange-700'>
+          <Button className='uppercase rounded-full' size="lg">
             Order now <FaArrowCircleRight />
-          </button>
+          </Button>
 
-          <button className='flex gap-2 items-center px-4 py-2 text-gray-600 font-semibold bg-gray-100 rounded-full cursor-pointer hover:bg-gray-200'>
+          <Button variant="outline" className='rounded-full' size="lg">
             Learn more <FaArrowCircleRight />
-          </button>
+          </Button>
         </div>
       </div>
 

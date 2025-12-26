@@ -7,6 +7,18 @@
   --color-primary: #f13a01;
 }
 
+html {
+  scrollbar-gutter: stable;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
 select,
 input[type="email"]:not([data-slot="input"]),
 input[type="password"]:not([data-slot="input"]),

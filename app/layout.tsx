@@ -35,7 +35,7 @@ const RootLayout = ({
     <html lang='en' suppressHydrationWarning>
       <body
         className={
-          `${roboto.variable} ${robotoMono.variable} antialiased min-h-screen flex flex-col
+          `${roboto.variable} ${robotoMono.variable} antialiased min-h-screen flex flex-col w-full
         `}
       >
         <ThemeProvider
