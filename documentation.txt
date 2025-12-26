@@ -490,3 +490,27 @@ Dark mode - Shadcn components
 Tables dark mode fix
 
 -update Tailwind CSS classes in components UsersTable.tsx, OrdersTable.tsx and MyOrdersTable.tsx
+
+
+Menu items - Shadcn components update
+
+-open link: https://ui.shadcn.com/docs/components/breadcrumb
+-type command: npx shadcn@latest add breadcrumb
+-open link: https://ui.shadcn.com/docs/components/input
+-type command: npx shadcn@latest add input
+-open link: https://ui.shadcn.com/docs/components/label
+-type command: npx shadcn@latest add label
+-open link: https://ui.shadcn.com/docs/components/select
+-type command: npx shadcn@latest add select
+-open link: https://ui.shadcn.com/docs/components/textarea
+-type command: npx shadcn@latest add textarea
+-open link: https://ui.shadcn.com/docs/components/card
+-type command: npx shadcn@latest add card
+-open link: https://ui.shadcn.com/docs/components/form
+-type command: npx shadcn@latest add form
+-open link: https://ui.shadcn.com/docs/components/alert-dialog
+-type command: npx shadcn@latest add alert-dialog
+-open folder ui to see created components
+-update Tailwind CSS classes in tsx components in folder menu-items
+-update Tailwind CSS classes in globals.css file
+-in tsx components import shadcn components from folder ui

@@ -1,3 +1,5 @@
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import Image from 'next/image';
 
 interface MenuItemImageProps {
@@ -16,8 +18,8 @@ const MenuItemImage = ({
   const displayImage = imagePreview || image;
 
   return (
-    <div className='flex flex-col items-center'>
-      <div className='relative w-28 h-28 md:w-32 md:h-32 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center'>
+    <div className='flex flex-col items-center gap-3'>
+      <div className='relative w-28 h-28 md:w-36 md:h-36 lg:w-64 lg:h-64 rounded-lg overflow-hidden bg-muted flex items-center justify-center'>
         {displayImage ? (
           <Image
             src={displayImage}
@@ -26,20 +28,27 @@ const MenuItemImage = ({
             className='object-cover'
           />
         ) : (
-          <span className='text-gray-400 text-sm'>No image</span>
+          <span className='text-muted-foreground text-sm'>No image</span>
         )}
-
-        <label className='absolute bottom-2 left-1/2 -translate-x-1/2 bg-white bg-opacity-70 px-2 py-1 rounded-lg text-sm cursor-pointer hover:bg-opacity-90'>
-          <input
-            type='file'
-            className='hidden'
-            onChange={onImageSelect}
-            accept='image/*'
-            disabled={disabled}
-          />
-          {displayImage ? 'Edit' : 'Upload'}
-        </label>
       </div>
+
+      <input
+        id='menu-item-image'
+        type='file'
+        className='hidden'
+        onChange={onImageSelect}
+        accept='image/*'
+        disabled={disabled}
+      />
+      <Button
+        asChild
+        size='sm'
+        variant='outline'
+      >
+        <Label htmlFor='menu-item-image'>
+          {displayImage ? 'Edit' : 'Upload'}
+        </Label>
+      </Button>
     </div>
   );
 };

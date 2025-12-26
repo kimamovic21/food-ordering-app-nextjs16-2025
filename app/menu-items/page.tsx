@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { Form } from '@/components/ui/form';
 import toast from 'react-hot-toast';
 import Title from '@/components/shared/Title';
 import useProfile from '@/contexts/UseProfile';
@@ -25,6 +27,8 @@ interface Category {
 }
 
 const MenuItemsPage = () => {
+  const form = useForm();
+
   const { data, loading } = useProfile();
 
   const [name, setName] = useState('');
@@ -238,35 +242,37 @@ const MenuItemsPage = () => {
     <section className='mt-8'>
       <Title>Menu Items</Title>
 
-      <form className='mt-8 max-w-md mx-auto' onSubmit={handleSubmit}>
-        <div className='flex items-start gap-6'>
-          <MenuItemImage
-            imagePreview={imagePreview}
-            image={image}
-            onImageSelect={handleImageSelect}
-            disabled={isSaving}
-          />
+      <Form {...form}>
+        <form className='mt-8 max-w-2xl lg:max-w-3xl mx-auto' onSubmit={handleSubmit}>
+          <div className='flex items-start gap-6'>
+            <MenuItemImage
+              imagePreview={imagePreview}
+              image={image}
+              onImageSelect={handleImageSelect}
+              disabled={isSaving}
+            />
 
-          <MenuItemForm
-            name={name}
-            categoryId={categoryId}
-            categories={categories}
-            description={description}
-            priceSmall={priceSmall}
-            priceMedium={priceMedium}
-            priceLarge={priceLarge}
-            editingItem={editingItem}
-            isSaving={isSaving}
-            onNameChange={setName}
-            onCategoryChange={setCategoryId}
-            onDescriptionChange={setDescription}
-            onPriceSmallChange={setPriceSmall}
-            onPriceMediumChange={setPriceMedium}
-            onPriceLargeChange={setPriceLarge}
-            onCancel={resetForm}
-          />
-        </div>
-      </form>
+            <MenuItemForm
+              name={name}
+              categoryId={categoryId}
+              categories={categories}
+              description={description}
+              priceSmall={priceSmall}
+              priceMedium={priceMedium}
+              priceLarge={priceLarge}
+              editingItem={editingItem}
+              isSaving={isSaving}
+              onNameChange={setName}
+              onCategoryChange={setCategoryId}
+              onDescriptionChange={setDescription}
+              onPriceSmallChange={setPriceSmall}
+              onPriceMediumChange={setPriceMedium}
+              onPriceLargeChange={setPriceLarge}
+              onCancel={resetForm}
+            />
+          </div>
+        </form>
+      </Form>
 
       <MenuItems
         menuItems={menuItems}

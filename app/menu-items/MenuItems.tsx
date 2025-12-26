@@ -1,3 +1,18 @@
+'use client';
+
+import { useState } from 'react';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import Image from 'next/image';
 
 interface MenuItem {
@@ -35,55 +50,82 @@ const getCategoryName = (item: MenuItem) => {
   return item.category?.name?.toLowerCase() || '';
 };
 
-const AdminItemCard = ({ item, onEdit, onDelete }: { item: MenuItem; onEdit: (i: MenuItem) => void; onDelete: (id: string) => void }) => (
-  <div className='flex items-center gap-4 p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition'>
-    <div className='relative w-24 h-24 rounded-lg overflow-hidden bg-gray-200 shrink-0'>
-      {item.image ? (
-        <Image src={item.image} alt={item.name} fill className='object-cover' />
-      ) : (
-        <div className='w-full h-full flex items-center justify-center text-gray-400 text-xs'>No image</div>
-      )}
-    </div>
+const AdminItemCard = ({ item, onEdit, onDelete }: { item: MenuItem; onEdit: (i: MenuItem) => void; onDelete: (id: string) => void }) => {
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-    <div className='grow'>
-      <h3 className='font-semibold text-lg'>{item.name}</h3>
-      {item.category && (
-        <p className='text-xs text-gray-500'>
-          Category: {typeof item.category === 'string' ? item.category : item.category?.name}
-        </p>
-      )}
-      {item.description && <p className='text-gray-600 text-sm'>{item.description}</p>}
+  const handleDeleteClick = () => {
+    setIsDeleteDialogOpen(true);
+  };
 
-      {item.priceSmall !== undefined && item.priceMedium !== undefined && item.priceLarge !== undefined ? (
-        <div className='flex gap-3 mt-2'>
-          <span className='text-sm'>
-            <span className='text-gray-600'>S:</span>{' '}
-            <span className='font-semibold text-primary'>${item.priceSmall.toFixed(2)}</span>
-          </span>
-          <span className='text-sm'>
-            <span className='text-gray-600'>M:</span>{' '}
-            <span className='font-semibold text-primary'>${item.priceMedium.toFixed(2)}</span>
-          </span>
-          <span className='text-sm'>
-            <span className='text-gray-600'>L:</span>{' '}
-            <span className='font-semibold text-primary'>${item.priceLarge.toFixed(2)}</span>
-          </span>
-        </div>
-      ) : (
-        <p className='text-red-500 text-sm mt-1'>Prices missing - please edit this item</p>
-      )}
-    </div>
+  const handleConfirmDelete = () => {
+    onDelete(item._id);
+    setIsDeleteDialogOpen(false);
+  };
 
-    <div className='block md:flex gap-2 shrink-0'>
-      <button onClick={() => onEdit(item)} className='px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition'>
-        Edit
-      </button>
-      <button onClick={() => onDelete(item._id)} className='px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition'>
-        Delete
-      </button>
-    </div>
-  </div>
-);
+  return (
+    <>
+      <Card className='hover:bg-accent/20 transition'>
+        <CardContent className='flex items-center gap-4'>
+          <div className='relative w-24 h-24 rounded-lg overflow-hidden bg-muted shrink-0'>
+            {item.image ? (
+              <Image src={item.image} alt={item.name} fill className='object-cover' />
+            ) : (
+              <div className='w-full h-full flex items-center justify-center text-muted-foreground text-xs'>No image</div>
+            )}
+          </div>
+
+          <div className='grow'>
+            <h3 className='font-semibold text-lg'>{item.name}</h3>
+            {item.category && (
+              <p className='text-xs text-muted-foreground'>
+                Category: {typeof item.category === 'string' ? item.category : item.category?.name}
+              </p>
+            )}
+            {item.description && <p className='text-muted-foreground/80 text-sm'>{item.description}</p>}
+
+            {item.priceSmall !== undefined && item.priceMedium !== undefined && item.priceLarge !== undefined ? (
+              <div className='flex gap-3 mt-2'>
+                <span className='text-sm'>
+                  <span className='text-muted-foreground'>S:</span>{' '}
+                  <span className='font-semibold text-primary'>${item.priceSmall.toFixed(2)}</span>
+                </span>
+                <span className='text-sm'>
+                  <span className='text-muted-foreground'>M:</span>{' '}
+                  <span className='font-semibold text-primary'>${item.priceMedium.toFixed(2)}</span>
+                </span>
+                <span className='text-sm'>
+                  <span className='text-muted-foreground'>L:</span>{' '}
+                  <span className='font-semibold text-primary'>${item.priceLarge.toFixed(2)}</span>
+                </span>
+              </div>
+            ) : (
+              <p className='text-destructive text-sm mt-1'>Prices missing - please edit this item</p>
+            )}
+          </div>
+        </CardContent>
+        <CardFooter className='flex-col gap-2'>
+          <Button className='w-full' variant='outline' onClick={() => onEdit(item)}>Edit</Button>
+          <Button className='w-full' variant='destructive' onClick={handleDeleteClick}>Delete</Button>
+        </CardFooter>
+      </Card>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>Continue</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+};
 
 const MenuItems = ({ menuItems, onEdit, onDelete }: MenuItemsProps) => {
   if (menuItems.length === 0) {
@@ -112,7 +154,7 @@ const MenuItems = ({ menuItems, onEdit, onDelete }: MenuItemsProps) => {
                   ))}
                 </div>
               ) : (
-                <p className='text-gray-500'>No menu items found at the moment.</p>
+                <p className='text-muted-foreground'>No menu items found at the moment.</p>
               )}
             </section>
           );
