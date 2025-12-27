@@ -9,24 +9,14 @@ interface MenuItemImageProps {
   disabled?: boolean;
 }
 
-const MenuItemImage = ({
-  imagePreview,
-  image,
-  onImageSelect,
-  disabled
-}: MenuItemImageProps) => {
+const MenuItemImage = ({ imagePreview, image, onImageSelect, disabled }: MenuItemImageProps) => {
   const displayImage = imagePreview || image;
 
   return (
     <div className='flex flex-col items-center gap-3'>
       <div className='relative w-28 h-28 md:w-36 md:h-36 lg:w-64 lg:h-64 rounded-lg overflow-hidden bg-muted flex items-center justify-center'>
         {displayImage ? (
-          <Image
-            src={displayImage}
-            alt='Menu item'
-            fill
-            className='object-cover'
-          />
+          <Image src={displayImage} alt='Menu item' fill className='object-cover' />
         ) : (
           <span className='text-muted-foreground text-sm'>No image</span>
         )}
@@ -40,14 +30,8 @@ const MenuItemImage = ({
         accept='image/*'
         disabled={disabled}
       />
-      <Button
-        asChild
-        size='sm'
-        variant='outline'
-      >
-        <Label htmlFor='menu-item-image'>
-          {displayImage ? 'Edit' : 'Upload'}
-        </Label>
+      <Button asChild size='sm' variant='outline'>
+        <Label htmlFor='menu-item-image'>{displayImage ? 'Edit' : 'Upload'}</Label>
       </Button>
     </div>
   );

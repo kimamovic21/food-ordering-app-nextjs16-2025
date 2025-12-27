@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { Form } from '@/components/ui/form';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+} from '@/components/ui/breadcrumb';
 import toast from 'react-hot-toast';
-import Title from '@/components/shared/Title';
 import useProfile from '@/contexts/UseProfile';
-import MenuItemImage from './MenuItemImage';
-import MenuItemForm from './MenuItemForm';
+import Title from '@/components/shared/Title';
 import MenuItems from './MenuItems';
 
 interface MenuItem {
@@ -21,33 +25,15 @@ interface MenuItem {
   priceLarge: number;
 }
 
-interface Category {
-  _id: string;
-  name: string;
-}
-
-const MenuItemsPage = () => {
-  const form = useForm();
-
+const MenuItemsListPage = () => {
+  const router = useRouter();
   const { data, loading } = useProfile();
 
-  const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [description, setDescription] = useState('');
-  const [priceSmall, setPriceSmall] = useState('');
-  const [priceMedium, setPriceMedium] = useState('');
-  const [priceLarge, setPriceLarge] = useState('');
-  const [image, setImage] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState('');
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [editingItem, setEditingItem] = useState<string | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchMenuItems();
-    fetchCategories();
   }, []);
 
   const fetchMenuItems = async () => {
@@ -58,155 +44,16 @@ const MenuItemsPage = () => {
     } catch (error) {
       console.error('Error fetching menu items:', error);
       toast.error('Failed to load menu items');
-    }
-  };
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch('/api/categories');
-      const cats = await res.json();
-      setCategories(cats);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      toast.error('Failed to load categories');
-    }
-  };
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length !== 1) return;
-
-    const file = files[0];
-    setImageFile(file);
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const uploadImage = async (file: File, menuItemId?: string): Promise<string> => {
-    const data = new FormData();
-    data.append('file', file);
-
-    if (menuItemId) {
-      data.append('menuItemId', menuItemId);
-    }
-
-    const res = await fetch('/api/upload/menu-items', {
-      method: 'POST',
-      body: data,
-    });
-
-    if (!res.ok) {
-      throw new Error('Upload failed');
-    }
-
-    const json = await res.json();
-    return json.url;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (
-      name.trim() === '' ||
-      categoryId.trim() === '' ||
-      priceSmall.trim() === '' ||
-      priceMedium.trim() === '' ||
-      priceLarge.trim() === ''
-    ) {
-      toast.error('Name, category, and all prices are required');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      const s = Number(priceSmall);
-      const m = Number(priceMedium);
-      const l = Number(priceLarge);
-
-      if (isNaN(s) || isNaN(m) || isNaN(l)) {
-        toast.error('All prices must be valid numbers');
-        setIsSaving(false);
-        return;
-      }
-
-      let imageUrl = image;
-      if (imageFile) {
-        imageUrl = await toast.promise(uploadImage(imageFile, editingItem || undefined), {
-          loading: 'Uploading image...',
-          success: 'Image uploaded!',
-          error: 'Image upload failed',
-        });
-      }
-
-      const menuItemData = {
-        name,
-        description,
-        category: categoryId,
-        priceSmall: s,
-        priceMedium: m,
-        priceLarge: l,
-        image: imageUrl || '',
-      };
-
-      if (editingItem) {
-        const response = await fetch('/api/menu-items', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ _id: editingItem, ...menuItemData }),
-        });
-
-        if (!response.ok) throw new Error('Failed to update menu item');
-
-        toast.success('Menu item updated!');
-      }
-
-      else {
-        const response = await fetch('/api/menu-items', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(menuItemData),
-        });
-
-        if (!response.ok) throw new Error('Failed to create menu item');
-
-        toast.success('Menu item created!');
-      }
-
-      resetForm();
-      fetchMenuItems();
-    } catch (err) {
-      console.error(err);
-      toast.error(`Failed to ${editingItem ? 'update' : 'create'} menu item`);
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
-  const handleEdit = (item: MenuItem) => {
-    setEditingItem(item._id);
-    setName(item.name);
-    setDescription(item.description);
-    setCategoryId(
-      typeof item.category === 'string'
-        ? item.category
-        : item.category?._id || ''
-    );
-    setPriceSmall(item.priceSmall.toString());
-    setPriceMedium(item.priceMedium.toString());
-    setPriceLarge(item.priceLarge.toString());
-    setImage(item.image || '');
-    setImagePreview(item.image || '');
-    setImageFile(null);
+  const handleEdit = (id: string) => {
+    router.push(`/menu-items/edit/${id}`);
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this menu item?')) return;
-
     try {
       const res = await fetch(`/api/menu-items?_id=${id}`, {
         method: 'DELETE',
@@ -222,65 +69,75 @@ const MenuItemsPage = () => {
     }
   };
 
-  const resetForm = () => {
-    setEditingItem(null);
-    setName('');
-    setDescription('');
-    setCategoryId('');
-    setPriceSmall('');
-    setPriceMedium('');
-    setPriceLarge('');
-    setImage('');
-    setImageFile(null);
-    setImagePreview('');
-  };
+  const showSkeleton = loading || isLoading;
 
-  if (loading) return 'Loading user info...';
-  if (!data?.admin) return 'Not an admin.';
+  if (!loading && !data?.admin) return 'Not an admin.';
 
   return (
     <section className='mt-8'>
-      <Title>Menu Items</Title>
-
-      <Form {...form}>
-        <form className='mt-8 max-w-2xl lg:max-w-3xl mx-auto' onSubmit={handleSubmit}>
-          <div className='flex items-start gap-6'>
-            <MenuItemImage
-              imagePreview={imagePreview}
-              image={image}
-              onImageSelect={handleImageSelect}
-              disabled={isSaving}
-            />
-
-            <MenuItemForm
-              name={name}
-              categoryId={categoryId}
-              categories={categories}
-              description={description}
-              priceSmall={priceSmall}
-              priceMedium={priceMedium}
-              priceLarge={priceLarge}
-              editingItem={editingItem}
-              isSaving={isSaving}
-              onNameChange={setName}
-              onCategoryChange={setCategoryId}
-              onDescriptionChange={setDescription}
-              onPriceSmallChange={setPriceSmall}
-              onPriceMediumChange={setPriceMedium}
-              onPriceLargeChange={setPriceLarge}
-              onCancel={resetForm}
-            />
+      {showSkeleton ? (
+        <div className='space-y-10'>
+          <div className='space-y-3'>
+            <div className='h-4 w-40 md:w-48 bg-muted animate-pulse rounded-md' />
+            <div className='flex items-center justify-between'>
+              <div className='h-10 w-60 md:w-80 bg-muted animate-pulse rounded-md' />
+              <div className='h-10 w-40 md:w-48 bg-muted animate-pulse rounded-md' />
+            </div>
           </div>
-        </form>
-      </Form>
 
-      <MenuItems
-        menuItems={menuItems}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />
+          {[1, 2, 3].map((section) => (
+            <div key={section} className='space-y-5'>
+              <div className='h-7 w-64 md:w-80 bg-muted animate-pulse rounded-md' />
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                {[1, 2, 3].map((card) => (
+                  <div
+                    key={card}
+                    className='rounded-xl border border-border/50 bg-muted/30 overflow-hidden flex flex-col'
+                  >
+                    <div className='h-52 w-full bg-muted animate-pulse' />
+                    <div className='p-4 space-y-3'>
+                      <div className='h-5 w-4/5 bg-muted animate-pulse rounded-md' />
+                      <div className='h-3 w-2/5 bg-muted animate-pulse rounded-md' />
+                      <div className='space-y-2'>
+                        <div className='h-3 w-full bg-muted animate-pulse rounded-md' />
+                        <div className='h-3 w-11/12 bg-muted animate-pulse rounded-md' />
+                      </div>
+                      <div className='flex gap-2 text-xs'>
+                        <div className='h-3 w-16 bg-muted animate-pulse rounded-md' />
+                        <div className='h-3 w-16 bg-muted animate-pulse rounded-md' />
+                        <div className='h-3 w-16 bg-muted animate-pulse rounded-md' />
+                      </div>
+                      <div className='flex gap-2 pt-2'>
+                        <div className='h-9 w-full bg-muted animate-pulse rounded-md' />
+                        <div className='h-9 w-full bg-muted animate-pulse rounded-md' />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <>
+          <Breadcrumb className='mb-4'>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href='/menu-items'>Menu Items</BreadcrumbLink>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+
+          <div className='flex items-center justify-between mb-6'>
+            <Title>Menu Items</Title>
+            <Button onClick={() => router.push('/menu-items/new')}>Create New Item</Button>
+          </div>
+
+          <MenuItems menuItems={menuItems} onEdit={handleEdit} onDelete={handleDelete} />
+        </>
+      )}
     </section>
   );
 };
 
-export default MenuItemsPage;
+export default MenuItemsListPage;
