@@ -1,3 +1,5 @@
+import { Card } from '@/components/ui/card';
+
 type CustomerInfoCardProps = {
   email: string;
   phone: string;
@@ -16,35 +18,35 @@ const CustomerInfoCard = ({
   country,
 }: CustomerInfoCardProps) => {
   return (
-    <div className='bg-white rounded-xl border border-gray-200 shadow-sm p-6'>
+    <Card className='p-6 bg-card text-card-foreground border border-border shadow-sm'>
       <h2 className='text-lg font-semibold mb-4'>Delivery Information</h2>
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         <div>
-          <p className='text-sm text-gray-600'>Email</p>
-          <p className='font-semibold text-gray-900'>{email}</p>
+          <p className='text-sm text-muted-foreground'>Email</p>
+          <p className='font-semibold break-all'>{email}</p>
         </div>
         <div>
-          <p className='text-sm text-gray-600'>Phone</p>
-          <p className='font-semibold text-gray-900'>{phone}</p>
+          <p className='text-sm text-muted-foreground'>Phone</p>
+          <p className='font-semibold'>{phone}</p>
         </div>
         <div>
-          <p className='text-sm text-gray-600'>Street Address</p>
-          <p className='font-semibold text-gray-900'>{streetAddress}</p>
+          <p className='text-sm text-muted-foreground'>Street Address</p>
+          <p className='font-semibold'>{streetAddress}</p>
         </div>
         <div>
-          <p className='text-sm text-gray-600'>Postal Code</p>
-          <p className='font-semibold text-gray-900'>{postalCode}</p>
+          <p className='text-sm text-muted-foreground'>Postal Code</p>
+          <p className='font-semibold'>{postalCode}</p>
         </div>
         <div>
-          <p className='text-sm text-gray-600'>City</p>
-          <p className='font-semibold text-gray-900'>{city}</p>
+          <p className='text-sm text-muted-foreground'>City</p>
+          <p className='font-semibold'>{city}</p>
         </div>
         <div>
-          <p className='text-sm text-gray-600'>Country</p>
-          <p className='font-semibold text-gray-900'>{country}</p>
+          <p className='text-sm text-muted-foreground'>Country</p>
+          <p className='font-semibold'>{country}</p>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

@@ -538,3 +538,13 @@ Menu skeleton component
 -create component loading.tsx
 -update components page.tsx and MenuItem.tsx
 -open route: http://localhost:3000/menu
+
+
+My orders and order by id skeleton components
+
+-create folder .vscode and settings.json file
+-create .prettierrc file
+-in folders my-orders and [id] create components loading.tsx
+-in tsx components import shadcn components from folder ui
+-open route: http://localhost:3000/my-orders
+-open route: http://localhost:3000/my-orders/[id]

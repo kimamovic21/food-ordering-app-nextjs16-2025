@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import {
   Table,
   TableHeader,
@@ -12,6 +11,9 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 type OrderType = {
   _id: string;
@@ -64,18 +66,56 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
   };
 
   if (loading) {
-    return <p>Loading orders...</p>;
+    return (
+      <Card className='border border-border bg-card text-card-foreground shadow-sm'>
+        <div className='p-4'>
+          <Skeleton className='h-8 w-48 mb-4' />
+        </div>
+
+        <div className='overflow-x-auto'>
+          <Table className='w-full min-w-[900px] table-fixed'>
+            <TableHeader>
+              <TableRow>
+                {['w-32', 'w-52', 'w-64', 'w-32', 'w-32', 'w-40'].map((w, idx) => (
+                  <TableHead key={idx} className='p-3'>
+                    <Skeleton className={`h-4 ${w}`} />
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(4)].map((_, rowIdx) => (
+                <TableRow key={rowIdx}>
+                  {[
+                    'w-24', // id
+                    'w-40', // date
+                    'w-64', // email
+                    'w-24', // total
+                    'w-20', // status
+                    'w-32', // action
+                  ].map((w, cellIdx) => (
+                    <TableCell key={cellIdx} className='p-3'>
+                      <Skeleton className={`h-4 ${w}`} />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+    );
   }
 
   if (orders.length === 0) {
-    return <p>No orders found.</p>;
+    return <p className='text-muted-foreground'>No orders found.</p>;
   }
 
   return (
-    <div className='border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-950 shadow-sm'>
+    <Card className='border border-border bg-card text-card-foreground shadow-sm'>
       <div className='overflow-x-auto'>
         <Table className='w-full min-w-[900px] table-fixed'>
-          <TableHeader className='bg-gray-50 dark:bg-slate-900 text-left text-xs uppercase tracking-wide text-gray-600 dark:text-gray-300'>
+          <TableHeader className='bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground'>
             <TableRow>
               <TableHead className='p-3 w-32'>Order ID</TableHead>
               <TableHead className='p-3 w-52'>Date</TableHead>
@@ -85,23 +125,23 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
               <TableHead className='p-3 w-40'>Action</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody className='divide-y divide-gray-100 dark:divide-gray-700'>
+          <TableBody className='divide-y divide-border'>
             {orders.map((order) => (
-              <TableRow key={order._id} className='hover:bg-gray-50 dark:hover:bg-slate-900'>
-                <TableCell className='p-3 font-semibold text-gray-900 dark:text-gray-100 text-xs'>
+              <TableRow key={order._id} className='hover:bg-muted/50'>
+                <TableCell className='p-3 font-semibold text-xs'>
                   {order._id.substring(0, 8)}...
                 </TableCell>
-                <TableCell className='p-3 text-gray-700 dark:text-gray-300'>
+                <TableCell className='p-3 text-muted-foreground'>
                   {formatDate(order.createdAt)}
                 </TableCell>
-                <TableCell className='p-3 text-gray-700 dark:text-gray-300'>{order.email}</TableCell>
-                <TableCell className='p-3 font-semibold text-gray-900 dark:text-gray-100'>
-                  ${order.total.toFixed(2)}
-                </TableCell>
+                <TableCell className='p-3 text-muted-foreground'>{order.email}</TableCell>
+                <TableCell className='p-3 font-semibold'>${order.total.toFixed(2)}</TableCell>
                 <TableCell className='p-3'>
                   <Badge
-                    variant={order.paid ? 'default' : 'destructive'}
-                    className={order.paid ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
+                    variant={order.paid ? 'secondary' : 'destructive'}
+                    className={
+                      order.paid ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' : ''
+                    }
                   >
                     {order.paid ? 'Paid' : 'Unpaid'}
                   </Badge>
@@ -131,7 +171,7 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
           </TableBody>
         </Table>
       </div>
-    </div>
+    </Card>
   );
 };
 
