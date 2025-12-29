@@ -26,28 +26,21 @@ interface MenuItem {
   priceLarge: number;
 }
 
+interface Category {
+  _id: string;
+  name: string;
+}
+
 interface MenuItemsProps {
   menuItems: MenuItem[];
+  categories: Category[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
-type CategoryConfig = {
-  label: string;
-  matchers: string[];
-};
-
-const categories: CategoryConfig[] = [
-  { label: 'Pizza', matchers: ['pizza'] },
-  { label: 'Pasta', matchers: ['pasta'] },
-  { label: 'Desserts', matchers: ['desserts', 'deserts'] },
-  { label: 'Soup', matchers: ['soup', 'soups'] },
-  { label: 'Coffee', matchers: ['coffee', 'coffee'] },
-];
-
-const getCategoryName = (item: MenuItem) => {
-  if (typeof item.category === 'string') return item.category.toLowerCase();
-  return item.category?.name?.toLowerCase() || '';
+const getCategoryId = (item: MenuItem): string => {
+  if (typeof item.category === 'string') return item.category;
+  return item.category?._id || '';
 };
 
 const AdminItemCard = ({
@@ -154,7 +147,7 @@ const AdminItemCard = ({
   );
 };
 
-const MenuItems = ({ menuItems, onEdit, onDelete }: MenuItemsProps) => {
+const MenuItems = ({ menuItems, categories, onEdit, onDelete }: MenuItemsProps) => {
   if (menuItems.length === 0) {
     return (
       <div className='mt-12'>
@@ -166,22 +159,18 @@ const MenuItems = ({ menuItems, onEdit, onDelete }: MenuItemsProps) => {
   return (
     <div className='mt-12'>
       <div className='space-y-12'>
-        {categories.map((cat) => {
-          const items = menuItems.filter((mi) =>
-            cat.matchers.some((m) => getCategoryName(mi) === m)
-          );
+        {categories.map((category) => {
+          const items = menuItems.filter((mi) => getCategoryId(mi) === category._id);
+          if (items.length === 0) return null;
+
           return (
-            <section key={cat.label}>
-              <h3 className='text-2xl font-semibold mb-6'>{cat.label}</h3>
-              {items.length > 0 ? (
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                  {items.map((item) => (
-                    <AdminItemCard key={item._id} item={item} onEdit={onEdit} onDelete={onDelete} />
-                  ))}
-                </div>
-              ) : (
-                <p className='text-muted-foreground'>No menu items found at the moment.</p>
-              )}
+            <section key={category._id}>
+              <h3 className='text-2xl font-semibold mb-6 capitalize'>{category.name}</h3>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                {items.map((item) => (
+                  <AdminItemCard key={item._id} item={item} onEdit={onEdit} onDelete={onDelete} />
+                ))}
+              </div>
             </section>
           );
         })}

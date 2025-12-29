@@ -25,25 +25,36 @@ interface MenuItem {
   priceLarge: number;
 }
 
+interface Category {
+  _id: string;
+  name: string;
+}
+
 const MenuItemsListPage = () => {
   const router = useRouter();
   const { data, loading } = useProfile();
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchMenuItems();
+    fetchData();
   }, []);
 
-  const fetchMenuItems = async () => {
+  const fetchData = async () => {
     try {
-      const res = await fetch('/api/menu-items');
-      const items = await res.json();
+      const [itemsRes, catsRes] = await Promise.all([
+        fetch('/api/menu-items'),
+        fetch('/api/categories'),
+      ]);
+      const items = await itemsRes.json();
+      const cats = await catsRes.json();
       setMenuItems(items);
+      setCategories(cats);
     } catch (error) {
-      console.error('Error fetching menu items:', error);
-      toast.error('Failed to load menu items');
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load data');
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +73,7 @@ const MenuItemsListPage = () => {
       if (!res.ok) throw new Error('Delete failed');
 
       toast.success('Menu item deleted');
-      fetchMenuItems();
+      fetchData();
     } catch (err) {
       console.error(err);
       toast.error('Failed to delete menu item');
@@ -133,7 +144,12 @@ const MenuItemsListPage = () => {
             <Button onClick={() => router.push('/menu-items/new')}>Create New Item</Button>
           </div>
 
-          <MenuItems menuItems={menuItems} onEdit={handleEdit} onDelete={handleDelete} />
+          <MenuItems
+            menuItems={menuItems}
+            categories={categories}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
         </>
       )}
     </section>

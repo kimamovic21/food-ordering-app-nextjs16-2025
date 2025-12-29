@@ -15,7 +15,11 @@ export async function POST(req: Request) {
     const data = await req.json();
 
     if (!data.priceSmall || !data.priceMedium || !data.priceLarge) {
-      console.error('Missing prices:', { priceSmall: data.priceSmall, priceMedium: data.priceMedium, priceLarge: data.priceLarge });
+      console.error('Missing prices:', {
+        priceSmall: data.priceSmall,
+        priceMedium: data.priceMedium,
+        priceLarge: data.priceLarge,
+      });
       return Response.json({ error: 'All prices are required' }, { status: 400 });
     }
 
@@ -38,12 +42,18 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
-  const items = await MenuItem
-    .find()
-    .populate('category');
+  const { searchParams } = new URL(req.url);
+  const _id = searchParams.get('_id');
+
+  if (_id) {
+    const item = await MenuItem.findById(_id).populate('category');
+    return Response.json(item ? [item] : []);
+  }
+
+  const items = await MenuItem.find().populate('category');
   return Response.json(items);
 }
 
@@ -58,7 +68,11 @@ export async function PUT(req: Request) {
     const { _id, ...data } = await req.json();
 
     if (!data.priceSmall || !data.priceMedium || !data.priceLarge) {
-      console.error('Missing prices:', { priceSmall: data.priceSmall, priceMedium: data.priceMedium, priceLarge: data.priceLarge });
+      console.error('Missing prices:', {
+        priceSmall: data.priceSmall,
+        priceMedium: data.priceMedium,
+        priceLarge: data.priceLarge,
+      });
       return Response.json({ error: 'All prices are required' }, { status: 400 });
     }
 

@@ -581,3 +581,10 @@ Categories - delete category & shadcn components
 -open route: http://localhost:3000/categories to see all categories
 -delete category test
 -open Cloudinary service to see if menu item image is deleted
+
+
+Menu & Menu items - displaying all categories from db
+
+-update menu-items/route.ts file
+-update components menu-items/page.tsx and MenuItems.tsx
+-update components menu/page.tsx and MenuItem.tsx
