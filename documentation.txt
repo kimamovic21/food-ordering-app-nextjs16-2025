@@ -599,3 +599,9 @@ Categories - delete image from Cloudinary & skeleton components
 
 -in api/categories/route.ts file update function DELETE()
 -update ui in component categories/page.tsx 
+
+
+Header component skeleton components
+
+-in folder shared create component HeaderSkeletons.tsx
+-in component Header.tsx import component HeaderSkeletons.tsx
