@@ -15,6 +15,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Skeleton } from '@/components/ui/skeleton';
 import toast from 'react-hot-toast';
 import useProfile from '@/contexts/UseProfile';
 import Title from '@/components/shared/Title';
@@ -29,15 +30,22 @@ const CategoriesPage = () => {
   const [categories, setCategories] = useState<Array<CategoryType>>([]);
   const [editingCategory, setEditingCategory] = useState<CategoryType | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
 
   const { data: profileData, loading: profileLoading } = useProfile();
 
-  const fetchCategories = () => {
-    fetch('/api/categories')
-      .then((res) => res.json())
-      .then((categories) => {
-        setCategories(categories);
-      });
+  const fetchCategories = async () => {
+    try {
+      setIsLoadingCategories(true);
+      const res = await fetch('/api/categories');
+      const categories = await res.json();
+      setCategories(categories);
+    } catch (error) {
+      console.error('Error fetching categories', error);
+      toast.error('Failed to load categories');
+    } finally {
+      setIsLoadingCategories(false);
+    }
   };
 
   useEffect(() => {
@@ -101,8 +109,41 @@ const CategoriesPage = () => {
     });
   };
 
-  if (profileLoading) {
-    return 'Loading...';
+  const renderSkeleton = () => (
+    <section className='mt-8 w-full px-4 max-w-4xl mx-auto space-y-8'>
+      <div className='space-y-3'>
+        <Skeleton className='h-8 w-40' />
+        <div className='bg-card border border-border rounded-lg p-6 space-y-4'>
+          <div className='space-y-2'>
+            <Skeleton className='h-4 w-36' />
+            <Skeleton className='h-10 w-full' />
+          </div>
+          <Skeleton className='h-10 w-28' />
+        </div>
+      </div>
+
+      <div className='space-y-4'>
+        <Skeleton className='h-8 w-48' />
+        <Skeleton className='h-4 w-80' />
+        <div className='space-y-3'>
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className='bg-card border border-border rounded-lg p-4'>
+              <div className='flex items-center justify-between gap-3'>
+                <Skeleton className='h-4 w-32' />
+                <div className='flex items-center gap-2'>
+                  <Skeleton className='h-9 w-9 rounded-md' />
+                  <Skeleton className='h-9 w-12 rounded-full' />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+
+  if (profileLoading || isLoadingCategories) {
+    return renderSkeleton();
   }
 
   if (!profileData || !profileData.admin) {

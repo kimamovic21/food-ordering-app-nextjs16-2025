@@ -593,3 +593,9 @@ Menu & Menu items - displaying all categories from db
 Shadcn and (home) components update
 
 -in folders ui and (home) refactor existing code
+
+
+Categories - delete image from Cloudinary & skeleton components
+
+-in api/categories/route.ts file update function DELETE()
+-update ui in component categories/page.tsx 

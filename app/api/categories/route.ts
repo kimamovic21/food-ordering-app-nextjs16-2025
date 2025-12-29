@@ -30,10 +30,20 @@ export async function DELETE(request: Request) {
 
   const menuItems = await MenuItem.find({ category: _id });
 
+  const extractPublicId = (imageUrl: string): string | null => {
+    const uploadSegment = imageUrl.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z0-9]+)?$/);
+    if (uploadSegment?.[1]) return uploadSegment[1];
+
+    const menuMatch = imageUrl.match(/menu-items\/([^\.]+)/);
+    if (menuMatch?.[1]) return `menu-items/${menuMatch[1]}`;
+
+    return null;
+  };
+
   for (const menuItem of menuItems) {
     if (menuItem.image) {
       try {
-        const publicId = menuItem.image.split('/').pop()?.split('.')[0];
+        const publicId = extractPublicId(menuItem.image);
         if (publicId) {
           await cloudinary.uploader.destroy(publicId);
         }
