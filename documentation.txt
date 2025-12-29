@@ -588,6 +588,8 @@ Menu & Menu items - displaying all categories from db
 -update menu-items/route.ts file
 -update components menu-items/page.tsx and MenuItems.tsx
 -update components menu/page.tsx and MenuItem.tsx
+-open route: http://localhost:3000/menu
+-open route: http://localhost:3000/menu-items
 
 
 Shadcn and (home) components update
@@ -599,9 +601,19 @@ Categories - delete image from Cloudinary & skeleton components
 
 -in api/categories/route.ts file update function DELETE()
 -update ui in component categories/page.tsx 
+-open route: http://localhost:3000/categories
 
 
 Header component skeleton components
 
 -in folder shared create component HeaderSkeletons.tsx
 -in component Header.tsx import component HeaderSkeletons.tsx
+-open route: http://localhost:3000
+
+
+Cart skeleton components
+
+-in folder cart create component loading.tsx
+-in component cart/page.tsx import shadcn components
+-update component Header.tsx
+-open route: http://localhost:3000/cart

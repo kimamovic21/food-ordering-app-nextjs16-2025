@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
@@ -21,6 +21,7 @@ import {
   UserNameSkeleton,
   LogoutButtonSkeleton,
 } from './HeaderSkeletons';
+import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import ModeToggle from '../theme/ModeToggle';
 
@@ -39,6 +40,17 @@ const Header = () => {
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const totalItems = getTotalItems();
+  const [bounce, setBounce] = useState(false);
+  const prevCountRef = useRef(totalItems);
+
+  useEffect(() => {
+    if (totalItems !== prevCountRef.current) {
+      setBounce(true);
+      const t = setTimeout(() => setBounce(false), 600);
+      prevCountRef.current = totalItems;
+      return () => clearTimeout(t);
+    }
+  }, [totalItems]);
   const isAdmin = Boolean((session?.data?.user as any)?.admin);
 
   return (
@@ -155,7 +167,12 @@ const Header = () => {
                   className='text-foreground hover:text-primary transition'
                 />
                 {totalItems > 0 && (
-                  <span className='absolute -top-2 -right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold'>
+                  <span
+                    aria-live='polite'
+                    className={`absolute -top-2 -right-2 bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold will-change-transform ${
+                      bounce ? 'animate-bounce' : ''
+                    }`}
+                  >
                     {totalItems}
                   </span>
                 )}
@@ -166,28 +183,28 @@ const Header = () => {
                   <Link className='whitespace-nowrap' href={'/profile'}>
                     {userName}
                   </Link>
-                  <button
+                  <Button
                     onClick={() => signOut()}
-                    className='bg-white border-2 border-primary text-primary px-4 py-2 rounded-full hover:bg-gray-100'
+                    variant='outline'
+                    size='default'
+                    className='rounded-full'
                   >
                     Logout
-                  </button>
+                  </Button>
                 </>
               )}
 
               {status === 'unauthenticated' && (
                 <>
-                  <Link
-                    href='/login'
-                    className='bg-primary text-white px-4 py-2 rounded-full hover:bg-orange-700'
-                  >
-                    Login
+                  <Link href='/login'>
+                    <Button size='default' className='rounded-full'>
+                      Login
+                    </Button>
                   </Link>
-                  <Link
-                    href='/register'
-                    className='bg-white border-2 border-primary text-primary px-4 py-2 rounded-full hover:bg-gray-100'
-                  >
-                    Register
+                  <Link href='/register'>
+                    <Button variant='outline' size='default' className='rounded-full'>
+                      Register
+                    </Button>
                   </Link>
                 </>
               )}
@@ -306,33 +323,31 @@ const Header = () => {
                     </Link>
                   </>
                 )}
-                <button
+                <Button
                   onClick={() => {
                     setMobileOpen(false);
                     signOut();
                   }}
-                  className='bg-white border-2 border-primary text-primary px-4 py-2 rounded-full hover:bg-gray-100'
+                  variant='outline'
+                  size='default'
+                  className='w-full rounded-full'
                 >
                   Logout
-                </button>
+                </Button>
               </>
             )}
 
             {status === 'unauthenticated' && (
               <>
-                <Link
-                  href='/login'
-                  onClick={() => setMobileOpen(false)}
-                  className='bg-primary text-white px-4 py-2 rounded-full hover:bg-orange-700 text-center'
-                >
-                  Login
+                <Link href='/login' onClick={() => setMobileOpen(false)} className='w-full'>
+                  <Button size='default' className='w-full rounded-full'>
+                    Login
+                  </Button>
                 </Link>
-                <Link
-                  href='/register'
-                  onClick={() => setMobileOpen(false)}
-                  className='bg-white border-2 border-primary text-primary px-4 py-2 rounded-full hover:bg-gray-100 text-center'
-                >
-                  Register
+                <Link href='/register' onClick={() => setMobileOpen(false)} className='w-full'>
+                  <Button variant='outline' size='default' className='w-full rounded-full'>
+                    Register
+                  </Button>
                 </Link>
               </>
             )}
