@@ -7,73 +7,54 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 
 const UsersLoading = () => {
   return (
     <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>
-      <Skeleton className='h-10 w-32 mb-8' />
+      <Skeleton className='h-9 w-32' />
 
-      <div className='mt-8 flex-1 flex flex-col'>
-        <div className='flex-1'>
-          <div className='border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-950 shadow-sm'>
-            <Table className='w-full min-w-[1100px] table-fixed'>
-              <TableHeader className='bg-gray-50 dark:bg-slate-900 text-left text-xs uppercase tracking-wide text-gray-600 dark:text-gray-300'>
+      <div className='mt-8 flex-1 w-full'>
+        <Card className='border border-border bg-card text-card-foreground shadow-sm'>
+          <div className='overflow-x-auto'>
+            <Table className='w-full table-fixed'>
+              <TableHeader>
                 <TableRow>
-                  <TableHead className='p-3 w-28'>Photo</TableHead>
-                  <TableHead className='p-3 w-40'>Name</TableHead>
-                  <TableHead className='p-3 w-56'>Email</TableHead>
-                  <TableHead className='p-3 w-36'>Phone</TableHead>
-                  <TableHead className='p-3 w-52'>Street address</TableHead>
-                  <TableHead className='p-3 w-44'>City / Postal</TableHead>
-                  <TableHead className='p-3 w-36'>Country</TableHead>
-                  <TableHead className='p-3 w-24'>Role</TableHead>
-                  <TableHead className='p-3 w-24'>Actions</TableHead>
+                  {[...Array(10)].map((_, idx) => (
+                    <TableHead key={idx} className='p-3'>
+                      <Skeleton className='h-4 w-16' />
+                    </TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
-              <TableBody className='divide-y divide-gray-100 dark:divide-gray-700'>
-                {[...Array(5)].map((_, index) => (
-                  <TableRow key={index}>
-                    <TableCell className='p-3'>
-                      <Skeleton className='size-12 rounded-full' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-4 w-32' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-4 w-48' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-4 w-28' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-4 w-40' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-4 w-32' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-4 w-28' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-6 w-16' />
-                    </TableCell>
-                    <TableCell className='p-3'>
-                      <Skeleton className='h-8 w-16' />
-                    </TableCell>
+              <TableBody>
+                {[...Array(5)].map((_, rowIdx) => (
+                  <TableRow key={rowIdx}>
+                    {[...Array(10)].map((_, cellIdx) => (
+                      <TableCell key={cellIdx} className='p-3'>
+                        {cellIdx === 1 ? (
+                          <Skeleton className='size-10 rounded-full' />
+                        ) : cellIdx === 8 ? (
+                          <Skeleton className='h-5 w-12' />
+                        ) : cellIdx === 9 ? (
+                          <Skeleton className='h-7 w-14' />
+                        ) : (
+                          <Skeleton className='h-3 w-20' />
+                        )}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </div>
-        </div>
+        </Card>
+      </div>
 
-        <div className='mt-auto pt-4 pb-4'>
-          <div className='flex items-center justify-center gap-4'>
-            <Skeleton className='h-10 w-24' />
-            <Skeleton className='h-5 w-24' />
-            <Skeleton className='h-10 w-20' />
-          </div>
-        </div>
+      <div className='mt-6 flex items-center justify-center gap-4 pb-4'>
+        <Skeleton className='h-9 w-24' />
+        <Skeleton className='h-5 w-28' />
+        <Skeleton className='h-9 w-24' />
       </div>
     </section>
   );

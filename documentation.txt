@@ -632,3 +632,10 @@ Order by id - shadcn components
 -in folder order/[id] create component loading.tsx
 -update tsx components with shadcn components
 -open route: http://localhost:3000/orders/[id]
+
+
+Users and orders tables UI update
+
+-in folders users and orders update tsx components
+-open route: http://localhost:3000/users
+-open route: http://localhost:3000/orders

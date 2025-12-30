@@ -9,6 +9,7 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from '@/components/ui/pagination';
+import { Card } from '@/components/ui/card';
 import Title from '@/components/shared/Title';
 import useProfile from '@/contexts/UseProfile';
 import UsersTable from './UsersTable';
@@ -79,14 +80,18 @@ const UsersPage = () => {
     <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>
       <Title>Users</Title>
 
-      <div className='mt-8 flex-1 flex flex-col'>
+      <div className='mt-8 flex-1 w-full flex flex-col'>
         <div className='flex-1'>
           {users.length === 0 && <p>No users found.</p>}
 
-          {users.length > 0 && <UsersTable users={users} />}
+          {users.length > 0 && (
+            <Card className='border border-border bg-card text-card-foreground shadow-sm'>
+              <UsersTable users={users} />
+            </Card>
+          )}
         </div>
 
-        <div className='mt-auto pt-4 pb-4'>
+        <div className='mt-6 flex items-center justify-center gap-4 pb-4'>
           <Pagination>
             <PaginationContent>
               <PaginationItem>

@@ -30,10 +30,11 @@ type UsersTableProps = {
 
 const UsersTable = ({ users }: UsersTableProps) => {
   return (
-    <div className='border border-gray-200 dark:border-gray-700 bg-white dark:bg-slate-950 shadow-sm'>
-      <Table className='w-full min-w-[1100px] table-fixed'>
-        <TableHeader className='bg-gray-50 dark:bg-slate-900 text-left text-xs uppercase tracking-wide text-gray-600 dark:text-gray-300'>
+    <div className='overflow-x-auto'>
+      <Table className='w-full min-w-[1200px] table-fixed'>
+        <TableHeader className='bg-muted text-left text-xs uppercase tracking-wide text-muted-foreground'>
           <TableRow>
+            <TableHead className='p-3 w-32'>ID</TableHead>
             <TableHead className='p-3 w-28'>Photo</TableHead>
             <TableHead className='p-3 w-40'>Name</TableHead>
             <TableHead className='p-3 w-56'>Email</TableHead>
@@ -48,6 +49,9 @@ const UsersTable = ({ users }: UsersTableProps) => {
         <TableBody className='divide-y divide-gray-100 dark:divide-gray-700'>
           {users.map((user) => (
             <TableRow key={user._id} className='hover:bg-gray-50 dark:hover:bg-slate-900'>
+              <TableCell className='p-3 text-gray-600 dark:text-gray-400 text-sm font-mono'>
+                {user._id.slice(-8)}
+              </TableCell>
               <TableCell className='p-3'>
                 <Avatar className='size-12'>
                   <AvatarImage
