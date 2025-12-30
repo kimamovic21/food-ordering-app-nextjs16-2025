@@ -65,7 +65,9 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
                 <TableCell className='p-3 text-gray-700 dark:text-gray-300'>
                   {formatDate(order.createdAt)}
                 </TableCell>
-                <TableCell className='p-3 text-gray-700 dark:text-gray-300'>{order.email}</TableCell>
+                <TableCell className='p-3 text-gray-700 dark:text-gray-300'>
+                  {order.email}
+                </TableCell>
                 <TableCell className='p-3 font-semibold text-gray-900 dark:text-gray-100'>
                   ${order.total.toFixed(2)}
                 </TableCell>

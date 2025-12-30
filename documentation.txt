@@ -617,3 +617,11 @@ Cart skeleton components
 -in component cart/page.tsx import shadcn components
 -update component Header.tsx
 -open route: http://localhost:3000/cart
+
+
+Orders - skeleton component
+
+-create component loading.tsx
+-in component orders/page.tsx import skeleton component
+-update component OrdersTable.tsx
+-open route: http://localhost:3000/orders
