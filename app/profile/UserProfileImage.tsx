@@ -12,7 +12,14 @@ type UserProfileImageProps = {
   isSaving?: boolean;
 };
 
-const UserProfileImage = ({ imageUrl, previewUrl, isRemovingImage, onSelectImage, onRemoveImage, isSaving }: UserProfileImageProps) => {
+const UserProfileImage = ({
+  imageUrl,
+  previewUrl,
+  isRemovingImage,
+  onSelectImage,
+  onRemoveImage,
+  isSaving,
+}: UserProfileImageProps) => {
   const displaySrc = previewUrl || imageUrl || '/user-default-image.webp';
   const hasRealImage = imageUrl && imageUrl !== '/user-default-image.webp';
 
@@ -25,15 +32,10 @@ const UserProfileImage = ({ imageUrl, previewUrl, isRemovingImage, onSelectImage
 
   return (
     <div className='flex flex-col items-center'>
-      <div className='relative w-28 h-28 md:w-32 md:h-32 rounded-md overflow-hidden'>
-        <Image
-          src={displaySrc}
-          alt='User image'
-          fill
-          className='object-cover'
-        />
+      <div className='relative w-32 h-32 md:w-36 md:h-36 rounded-md overflow-hidden bg-muted/30 border border-border shadow-sm'>
+        <Image src={displaySrc} alt='User image' fill className='object-cover' />
 
-        <label className='absolute bottom-2 left-1/2 -translate-x-1/2 bg-white bg-opacity-70 px-2 py-1 rounded-lg text-sm cursor-pointer hover:bg-opacity-90'>
+        <label className='absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/90 px-2 py-1 rounded-lg text-sm cursor-pointer hover:bg-background'>
           <input
             id='imageFile'
             type='file'

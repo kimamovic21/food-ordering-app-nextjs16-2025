@@ -639,3 +639,10 @@ Users and orders tables UI update
 -in folders users and orders update tsx components
 -open route: http://localhost:3000/users
 -open route: http://localhost:3000/orders
+
+
+Profile page shadcn components
+
+-in folder page, update tsx components with shadcn components
+-add skeleton components
+-open route: http://localhost:3000/profile

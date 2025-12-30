@@ -18,7 +18,7 @@ interface ExtendedUser {
   city?: string | null;
   country?: string | null;
   admin?: boolean | null;
-};
+}
 
 const FALLBACK_IMAGE = '/user-default-image.webp';
 
@@ -56,9 +56,12 @@ const ProfilePage = () => {
     }
   }, [status, session.data?.user]);
 
-  useEffect(() => () => {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-  }, [previewUrl]);
+  useEffect(
+    () => () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    },
+    [previewUrl]
+  );
 
   if (status === 'loading') return 'Loading...';
   if (status === 'unauthenticated') return redirect('/login');
@@ -75,9 +78,7 @@ const ProfilePage = () => {
     setPreviewUrl(null);
   };
 
-  const handleProfileSave = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleProfileSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
 
@@ -163,8 +164,7 @@ const ProfilePage = () => {
     toast.promise(savePromise, {
       loading: 'Saving profile...',
       success: 'Profile updated!',
-      error: (err) =>
-        err instanceof Error ? err.message : 'Failed to update profile.',
+      error: (err) => (err instanceof Error ? err.message : 'Failed to update profile.'),
     });
 
     try {
@@ -175,10 +175,10 @@ const ProfilePage = () => {
   };
 
   return (
-    <section className='mt-8 max-w-3xl mx-auto'>
+    <section className='mt-8 max-w-5xl mx-auto'>
       <Title>Profile</Title>
 
-      <div className='max-w-2xl mx-auto mt-8'>
+      <div className='max-w-4xl mx-auto mt-8'>
         <div className='flex flex-col md:flex-row gap-4 md:items-start'>
           <UserProfileImage
             imageUrl={imageUrl}
