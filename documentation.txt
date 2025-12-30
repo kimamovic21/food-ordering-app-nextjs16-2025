@@ -643,6 +643,12 @@ Users and orders tables UI update
 
 Profile page shadcn components
 
--in folder page, update tsx components with shadcn components
+-in folder profile, update tsx components with shadcn components
 -add skeleton components
+-open route: http://localhost:3000/profile
+
+
+Profile page - skeleton components
+
+-in folder profile update tsx components with skeleton components
 -open route: http://localhost:3000/profile

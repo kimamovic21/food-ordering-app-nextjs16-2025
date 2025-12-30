@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { ChangeEvent } from 'react';
+import { Button } from '@/components/ui/button';
 
 type UserProfileImageProps = {
   imageUrl?: string | null;
@@ -32,7 +33,7 @@ const UserProfileImage = ({
 
   return (
     <div className='flex flex-col items-center'>
-      <div className='relative w-32 h-32 md:w-36 md:h-36 rounded-md overflow-hidden bg-muted/30 border border-border shadow-sm'>
+      <div className='relative w-32 h-32 md:w-36 md:h-36 rounded-md overflow-hidden bg-muted/30 shadow-sm'>
         <Image src={displaySrc} alt='User image' fill className='object-cover' />
 
         <label className='absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/90 px-2 py-1 rounded-lg text-sm cursor-pointer hover:bg-background'>
@@ -49,14 +50,16 @@ const UserProfileImage = ({
       </div>
 
       {hasRealImage && (
-        <button
+        <Button
           type='button'
           onClick={onRemoveImage}
           disabled={isSaving || isRemovingImage}
-          className='mt-2 text-sm text-red-500 hover:text-red-700 disabled:text-gray-400'
+          variant='destructive'
+          size='sm'
+          className='mt-2 bg-red-500! hover:bg-red-600! dark:bg-red-500! dark:hover:bg-red-600!'
         >
           Remove Image
-        </button>
+        </Button>
       )}
 
       {(previewUrl || isRemovingImage) && (

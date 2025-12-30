@@ -63,7 +63,56 @@ const ProfilePage = () => {
     [previewUrl]
   );
 
-  if (status === 'loading') return 'Loading...';
+  if (status === 'loading') {
+    return (
+      <section className='mt-8 w-full px-6 max-w-full'>
+        <div className='h-8 w-36 bg-accent animate-pulse rounded-md' />
+
+        <div className='w-full mt-8'>
+          <div className='flex flex-col md:flex-row gap-10 md:items-start max-w-full'>
+            <div className='flex flex-col items-center md:min-w-40'>
+              <div className='w-32 h-32 md:w-36 md:h-36 rounded-md bg-muted/30 border border-border shadow-sm animate-pulse' />
+              <div className='h-8 w-28 mt-2 bg-accent animate-pulse rounded-md' />
+            </div>
+
+            <div className='flex-1 w-full max-w-full space-y-6'>
+              <div className='space-y-2.5'>
+                <div className='h-5 w-28 bg-accent animate-pulse rounded-md' />
+                <div className='h-11 w-full max-w-full bg-accent animate-pulse rounded-md' />
+              </div>
+              <div className='space-y-2.5'>
+                <div className='h-5 w-24 bg-accent animate-pulse rounded-md' />
+                <div className='h-11 w-full max-w-full bg-accent animate-pulse rounded-md' />
+              </div>
+              <div className='space-y-2.5'>
+                <div className='h-5 w-32 bg-accent animate-pulse rounded-md' />
+                <div className='h-11 w-full max-w-full bg-accent animate-pulse rounded-md' />
+              </div>
+              <div className='space-y-2.5'>
+                <div className='h-5 w-36 bg-accent animate-pulse rounded-md' />
+                <div className='h-11 w-full max-w-full bg-accent animate-pulse rounded-md' />
+              </div>
+              <div className='grid gap-6 sm:grid-cols-2 w-full max-w-full'>
+                <div className='space-y-2.5'>
+                  <div className='h-5 w-20 bg-accent animate-pulse rounded-md' />
+                  <div className='h-11 w-full bg-accent animate-pulse rounded-md' />
+                </div>
+                <div className='space-y-2.5'>
+                  <div className='h-5 w-28 bg-accent animate-pulse rounded-md' />
+                  <div className='h-11 w-full bg-accent animate-pulse rounded-md' />
+                </div>
+              </div>
+              <div className='space-y-2.5'>
+                <div className='h-5 w-24 bg-accent animate-pulse rounded-md' />
+                <div className='h-11 w-full max-w-full bg-accent animate-pulse rounded-md' />
+              </div>
+              <div className='h-11 w-full max-w-full bg-accent animate-pulse rounded-md mt-6' />
+            </div>
+          </div>
+        </div>
+      </section>
+    );
+  }
   if (status === 'unauthenticated') return redirect('/login');
 
   const handleImageSelect = (file: File) => {
