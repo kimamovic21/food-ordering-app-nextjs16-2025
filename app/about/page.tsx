@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import Image from 'next/image';
 
 const AboutPage = () => {
   return (
@@ -17,32 +17,31 @@ const AboutPage = () => {
           </div>
         </div>
 
-        {/* Info second on small/medium; left side on large */}
         <div className='order-2 lg:order-1 space-y-6'>
           <header className='space-y-3'>
-            <h1 className='text-4xl font-bold tracking-tight'>About Pizza Hub</h1>
-            <p className='text-gray-600'>
+            <h1 className='text-4xl font-bold tracking-tight text-foreground'>About Pizza Hub</h1>
+            <p className='text-muted-foreground'>
               We're a neighborhood-first pizzeria crafting classic favorites and seasonal specials
               with honest ingredients, slow-fermented dough, and a whole lot of care.
             </p>
           </header>
 
           <section className='space-y-3'>
-            <h2 className='text-2xl font-semibold'>Our Story</h2>
-            <p>
+            <h2 className='text-2xl font-semibold text-foreground'>Our Story</h2>
+            <p className='text-foreground'>
               Pizza Hub started with a simple idea: great pizza brings people together. From our
               first bake to our busiest weekends, we've focused on doing the simple things well—
               thoughtfully sourced ingredients, time-tested methods, and warm hospitality.
             </p>
-            <p>
-              Our dough rests for at least 48 hours, developing flavor and texture naturally.
-              Sauces are prepared in small batches, and toppings are prepped fresh every morning.
+            <p className='text-foreground'>
+              Our dough rests for at least 48 hours, developing flavor and texture naturally. Sauces
+              are prepared in small batches, and toppings are prepped fresh every morning.
             </p>
           </section>
 
           <section className='space-y-3'>
-            <h2 className='text-2xl font-semibold'>What We Serve</h2>
-            <ul className='list-disc pl-5 space-y-2'>
+            <h2 className='text-2xl font-semibold text-foreground'>What We Serve</h2>
+            <ul className='list-disc pl-5 space-y-2 text-foreground'>
               <li>Signature pies like Margherita, Pepperoni, and Truffle Mushroom</li>
               <li>Rotating seasonal specials featuring local produce</li>
               <li>Fresh salads, house-made dips, and shareable sides</li>
@@ -53,23 +52,21 @@ const AboutPage = () => {
       </div>
 
       <section className='space-y-3'>
-        <h2 className='text-2xl font-semibold'>Values That Guide Us</h2>
-        <ul className='list-disc pl-5 space-y-2'>
+        <h2 className='text-2xl font-semibold text-foreground'>Values That Guide Us</h2>
+        <ul className='list-disc pl-5 space-y-2 text-foreground'>
           <li>
             Quality first: we prioritize ingredients, technique, and consistency over shortcuts.
           </li>
-          <li>
-            Community matters: we're proud to support local producers and events.
-          </li>
+          <li>Community matters: we're proud to support local producers and events.</li>
           <li>
             Sustainability: we reduce waste and choose responsible packaging wherever possible.
           </li>
         </ul>
       </section>
 
-      <section className='rounded-lg border p-6 bg-white'>
-        <h3 className='text-xl font-semibold mb-2'>Come By, Say Hi</h3>
-        <p className='text-gray-600'>
+      <section className='rounded-lg border border-border p-6 bg-card'>
+        <h3 className='text-xl font-semibold mb-2 text-foreground'>Come By, Say Hi</h3>
+        <p className='text-muted-foreground'>
           Whether it's a weeknight slice or a weekend feast, we'd love to serve you.
         </p>
       </section>

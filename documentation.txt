@@ -652,3 +652,10 @@ Profile page - skeleton components
 
 -in folder profile update tsx components with skeleton components
 -open route: http://localhost:3000/profile
+
+
+About and contact pages UI update
+
+-update ui in components about/page.tsx and contact/page.tsx
+-open route: http://localhost:3000/about
+-open route: http://localhost:3000/contact
