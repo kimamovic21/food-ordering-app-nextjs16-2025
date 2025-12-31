@@ -1,19 +1,14 @@
 import { Skeleton } from '@/components/ui/skeleton';
 
-const RegisterLoading = () => {
+const LoginLoading = () => {
   return (
     <section className='mt-8 w-full sm:w-xl md:w-2xl lg:w-3xl max-w-3xl mx-auto px-4'>
       <div className='text-center mb-8'>
-        <Skeleton className='h-10 w-48 mx-auto' />
+        <Skeleton className='h-10 w-40 mx-auto' />
       </div>
 
       <div className='w-full max-w-3xl mx-auto space-y-6'>
         <div className='space-y-4'>
-          <div className='space-y-2'>
-            <Skeleton className='h-4 w-12' />
-            <Skeleton className='h-9 w-full' />
-          </div>
-
           <div className='space-y-2'>
             <Skeleton className='h-4 w-12' />
             <Skeleton className='h-9 w-full' />
@@ -48,4 +43,4 @@ const RegisterLoading = () => {
   );
 };
 
-export default RegisterLoading;
+export default LoginLoading;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 import { IoCartOutline } from 'react-icons/io5';
@@ -24,11 +24,13 @@ import {
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import ModeToggle from '../theme/ModeToggle';
+import toast from 'react-hot-toast';
 
 const Header = () => {
   const session = useSession();
   const { getTotalItems } = useCart();
   const pathname = usePathname();
+  const router = useRouter();
 
   const status = session.status;
   const userData = session?.data?.user;
@@ -52,6 +54,12 @@ const Header = () => {
     }
   }, [totalItems]);
   const isAdmin = Boolean((session?.data?.user as any)?.admin);
+
+  const handleLogout = async () => {
+    toast.success('Successfully logged out');
+    await signOut({ redirect: false });
+    router.push('/');
+  };
 
   return (
     <header className='fixed top-0 left-0 right-0 z-50 bg-background/90 border-b border-border shadow-sm backdrop-blur transition-colors'>
@@ -184,7 +192,7 @@ const Header = () => {
                     {userName}
                   </Link>
                   <Button
-                    onClick={() => signOut()}
+                    onClick={handleLogout}
                     variant='outline'
                     size='default'
                     className='rounded-full'
@@ -324,9 +332,9 @@ const Header = () => {
                   </>
                 )}
                 <Button
-                  onClick={() => {
+                  onClick={async () => {
                     setMobileOpen(false);
-                    signOut();
+                    await handleLogout();
                   }}
                   variant='outline'
                   size='default'

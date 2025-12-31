@@ -1,89 +1,36 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn } from 'next-auth/react';
-import Image from 'next/image';
-import Link from 'next/link';
-import GoogleIcon from '@/public/google.png';
+import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Title from '@/components/shared/Title';
+import LoginUserForm from './LoginUserForm';
+import LoginLoading from './loading';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
-  const [loginInProgress, setLoginInProgress] = useState(false);
+  const { data: session, status } = useSession();
+  const router = useRouter();
 
-  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-
-    try {
-      setLoginInProgress(true);
-
-      await signIn('credentials', {
-        email,
-        password,
-        callbackUrl: '/',
-      });
-
-      setLoginInProgress(false);
-    } catch (err) {
-      console.error(err);
-      setError(true);
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.push('/');
     }
-  };
+  }, [status, router]);
+
+  if (status === 'loading') {
+    return <LoginLoading />;
+  }
+
+  if (status === 'authenticated') {
+    return null;
+  }
 
   return (
-    <section className='mt-8 w-lg'>
-      <h2 className='text-center text-primary text-4xl mb-4'>Login</h2>
-
-      {error && (
-        <div className='my-4 text-center text-red-700'>There was an error. Please try again.</div>
-      )}
-
-      <form className='w-full' onSubmit={handleFormSubmit}>
-        <input
-          name='email'
-          type='text'
-          placeholder='email'
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={loginInProgress}
-          required
-        />
-
-        <input
-          name='password'
-          type='password'
-          placeholder='password'
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          disabled={loginInProgress}
-          required
-        />
-
-        <button type='submit' disabled={loginInProgress}>
-          Login
-        </button>
-        <p className='my-4 text-center text-gray-500'>or login with provider</p>
-        <button
-          type='button'
-          className='flex items-center gap-4'
-          onClick={() =>
-            signIn('google', {
-              callbackUrl: '/',
-            })
-          }
-        >
-          <Image src={GoogleIcon} alt='Google Icon' width={24} height={24} />
-          Login with Google
-        </button>
-
-        <div className='text-center my-4 border-t border-gray-500 pt-4'>
-          <span className='mr-1 text-gray-500'>Don&apos;t have an account?</span>
-          <Link href={'/register'} className='underline text-blue-600'>
-            Register here
-          </Link>
-        </div>
-      </form>
+    <section className='mt-8 w-full sm:w-xl md:w-2xl lg:w-3xl max-w-3xl mx-auto px-4'>
+      <div className='text-center mb-8'>
+        <Title className='text-4xl'>Login</Title>
+      </div>
+      <LoginUserForm />
     </section>
   );
 };

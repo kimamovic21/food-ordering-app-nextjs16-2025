@@ -671,8 +671,18 @@ Register shadcn components
 
 -open link: https://www.npmjs.com/package/react-google-button
 -type command: npm i react-google-button
--in folder register RegisterUserForm.tsx 
+-in folder register create component RegisterUserForm.tsx 
+-create loading.tsx component
 -in component RegisterUserForm.tsx import shadcn components
 -add zod validation
 -in component register/page.tsx import component RegisterUserForm
 -open route: http://localhost:3000/register
+-open MongoDB to see saved user
+
+
+Login shadcn components
+
+-in folder login create component LoginUserForm.tsx
+-create component loading.tsx
+-in component login/page.tsx import component LoginUserForm
+-open route: http://localhost:3000/login
