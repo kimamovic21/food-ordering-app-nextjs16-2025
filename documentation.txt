@@ -719,3 +719,9 @@ Mongo DB Atlas setup
 -update variable MONGODB_URL
 -update settings Network access to be from everywhere
 -update folder name in upload/menu-items.ts file
+
+
+Favicon update 
+
+-create folder favicon with images and site.webmanifest file
+-update favicon.ico image
