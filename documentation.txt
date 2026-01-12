@@ -708,3 +708,14 @@ Statistics skeleton components
 -open route: http://localhost:3000/statistics
 -open route: http://localhost:3000/statistics/orders
 -open route: http://localhost:3000/statistics/users
+
+
+Mongo DB Atlas setup
+
+-create new project and database
+-open link: https://www.npmjs.com/package/mongodb
+-type command: npm i mongodb
+-open environment variables settings in your deployed project
+-update variable MONGODB_URL
+-update settings Network access to be from everywhere
+-update folder name in upload/menu-items.ts file

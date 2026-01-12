@@ -24,13 +24,11 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
 
     const uploadedImage: UploadApiResponse = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'menu-items' },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result as UploadApiResponse);
-        }
-      );
+      const folder = process.env.NODE_ENV === 'production' ? 'menu-items-production' : 'menu-items';
+      const uploadStream = cloudinary.uploader.upload_stream({ folder }, (error, result) => {
+        if (error) return reject(error);
+        resolve(result as UploadApiResponse);
+      });
       uploadStream.end(buffer);
     });
 
@@ -70,7 +68,6 @@ export async function POST(req: Request) {
       success: true,
       url: uploadedImage.secure_url,
     });
-
   } catch (err) {
     console.error('UPLOAD ERROR:', err);
     return new Response('Upload error', { status: 500 });
