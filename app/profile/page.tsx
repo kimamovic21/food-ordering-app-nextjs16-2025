@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
-import { redirect } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Title from '@/components/shared/Title';
 import UserProfileForm from './UserProfileForm';
@@ -25,6 +25,7 @@ const FALLBACK_IMAGE = '/user-default-image.webp';
 const ProfilePage = () => {
   const session = useSession();
   const { status } = session;
+  const router = useRouter();
 
   const [userName, setUserName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -38,6 +39,12 @@ const ProfilePage = () => {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/login');
+    }
+  }, [status, router]);
 
   useEffect(() => {
     if (status === 'authenticated' && session.data?.user) {
@@ -113,7 +120,7 @@ const ProfilePage = () => {
       </section>
     );
   }
-  if (status === 'unauthenticated') return redirect('/login');
+  if (status === 'unauthenticated') return null;
 
   const handleImageSelect = (file: File) => {
     setSelectedImageFile(file);

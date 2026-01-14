@@ -53,6 +53,22 @@ const Header = () => {
       return () => clearTimeout(t);
     }
   }, [totalItems]);
+
+  useEffect(() => {
+    // Check if we just completed a login (Google OAuth or credentials)
+    // This flag is set by next-auth after successful signin
+    if (status === 'authenticated') {
+      const hasShownToast = sessionStorage.getItem('loginToastShown');
+      if (!hasShownToast) {
+        toast.success('Successfully logged in');
+        sessionStorage.setItem('loginToastShown', 'true');
+      }
+    } else if (status === 'unauthenticated') {
+      // Clear the flag on logout so next login shows toast
+      sessionStorage.removeItem('loginToastShown');
+    }
+  }, [status]);
+
   const isAdmin = Boolean((session?.data?.user as any)?.admin);
 
   const handleLogout = async () => {

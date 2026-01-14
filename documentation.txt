@@ -732,3 +732,9 @@ Orders logic update
 -in order.ts file update fields orderPaid
 -add new field orderStatus
 -update route.ts files tsx components to match changes made in model.ts file
+
+
+Login with Google and logout logic update
+
+-update component profile/page.tsx to display toast message message after logging in
+-update component Header.tsx to redirect to home page after logging out
