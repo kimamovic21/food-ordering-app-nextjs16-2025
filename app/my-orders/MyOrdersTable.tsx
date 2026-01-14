@@ -19,7 +19,8 @@ type OrderType = {
   _id: string;
   email: string;
   total: number;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
 };
 
@@ -76,7 +77,7 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
           <Table className='w-full min-w-[900px] table-fixed'>
             <TableHeader>
               <TableRow>
-                {['w-32', 'w-52', 'w-64', 'w-32', 'w-32', 'w-40'].map((w, idx) => (
+                {['w-32', 'w-52', 'w-64', 'w-32', 'w-28', 'w-36', 'w-40'].map((w, idx) => (
                   <TableHead key={idx} className='p-3'>
                     <Skeleton className={`h-4 ${w}`} />
                   </TableHead>
@@ -91,7 +92,8 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                     'w-40', // date
                     'w-64', // email
                     'w-24', // total
-                    'w-20', // status
+                    'w-20', // payment status
+                    'w-28', // order status
                     'w-32', // action
                   ].map((w, cellIdx) => (
                     <TableCell key={cellIdx} className='p-3'>
@@ -121,7 +123,8 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
               <TableHead className='p-3 w-52'>Date</TableHead>
               <TableHead className='p-3 w-64'>Email</TableHead>
               <TableHead className='p-3 w-32'>Total</TableHead>
-              <TableHead className='p-3 w-32'>Status</TableHead>
+              <TableHead className='p-3 w-32'>Payment</TableHead>
+              <TableHead className='p-3 w-36'>Order Status</TableHead>
               <TableHead className='p-3 w-40'>Action</TableHead>
             </TableRow>
           </TableHeader>
@@ -138,12 +141,28 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                 <TableCell className='p-3 font-semibold'>${order.total.toFixed(2)}</TableCell>
                 <TableCell className='p-3'>
                   <Badge
-                    variant={order.paid ? 'secondary' : 'destructive'}
+                    variant={order.paymentStatus ? 'secondary' : 'destructive'}
                     className={
-                      order.paid ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' : ''
+                      order.paymentStatus
+                        ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100'
+                        : ''
                     }
                   >
-                    {order.paid ? 'Paid' : 'Unpaid'}
+                    {order.paymentStatus ? 'Paid' : 'Unpaid'}
+                  </Badge>
+                </TableCell>
+                <TableCell className='p-3'>
+                  <Badge
+                    variant='secondary'
+                    className={
+                      order.orderStatus === 'completed'
+                        ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
+                        : order.orderStatus === 'processing'
+                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                        : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                    }
+                  >
+                    {order.orderStatus}
                   </Badge>
                 </TableCell>
                 <TableCell className='p-3'>
@@ -153,7 +172,7 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                         View
                       </Button>
                     </Link>
-                    {!order.paid && (
+                    {!order.paymentStatus && (
                       <Button
                         size='sm'
                         variant='default'

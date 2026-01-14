@@ -37,7 +37,8 @@ type OrderDetailsType = {
   country: string;
   cartProducts: CartProduct[];
   total: number;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
 };
 
@@ -178,7 +179,12 @@ const MyOrderDetailPage = () => {
         <h1 className='text-3xl font-bold mb-6'>Order Details</h1>
 
         <div className='space-y-6'>
-          <OrderInfoCard orderId={order._id} paid={order.paid} createdAt={order.createdAt} />
+          <OrderInfoCard
+            orderId={order._id}
+            paymentStatus={order.paymentStatus}
+            orderStatus={order.orderStatus}
+            createdAt={order.createdAt}
+          />
 
           <CustomerInfoCard
             email={order.email}

@@ -22,29 +22,16 @@ export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
   if (!stripe) {
-    return Response.json(
-      { error: 'Stripe is not configured' },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Stripe is not configured' }, { status: 500 });
   }
 
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
-    return Response.json(
-      { error: 'Unauthorized' },
-      { status: 401 }
-    );
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const body = await req.json();
-  const {
-    phone,
-    streetAddress,
-    postalCode,
-    city,
-    country,
-    cartItems,
-  } = body as {
+  const { phone, streetAddress, postalCode, city, country, cartItems } = body as {
     phone?: string;
     streetAddress?: string;
     postalCode?: string;
@@ -54,17 +41,11 @@ export async function POST(req: Request) {
   };
 
   if (!phone || !streetAddress || !postalCode || !city || !country) {
-    return Response.json(
-      { error: 'Missing delivery information' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Missing delivery information' }, { status: 400 });
   }
 
   if (!Array.isArray(cartItems) || cartItems.length === 0) {
-    return Response.json(
-      { error: 'Cart is empty' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Cart is empty' }, { status: 400 });
   }
 
   const sanitizedItems = cartItems
@@ -76,30 +57,18 @@ export async function POST(req: Request) {
       quantity: Number(item.quantity),
     }))
     .filter((item) =>
-      Boolean(
-        item._id &&
-        item.name &&
-        item.size &&
-        item.quantity > 0 &&
-        item.price > 0
-      )
+      Boolean(item._id && item.name && item.size && item.quantity > 0 && item.price > 0)
     );
 
   if (sanitizedItems.length === 0) {
-    return Response.json(
-      { error: 'Invalid cart data' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Invalid cart data' }, { status: 400 });
   }
 
   await mongoose.connect(process.env.MONGODB_URL as string);
 
   const user = await User.findOne({ email: session.user.email });
   if (!user) {
-    return Response.json(
-      { error: 'User not found' },
-      { status: 404 }
-    );
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   const subtotal = sanitizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -123,12 +92,13 @@ export async function POST(req: Request) {
       price: item.price,
     })),
     total,
+    orderPaid: false,
     paid: false,
+    orderStatus: 'pending',
   });
 
-  const origin = req.headers.get('origin')
-    || process.env.NEXT_PUBLIC_APP_URL
-    || 'http://localhost:3000';
+  const origin =
+    req.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
     ...sanitizedItems.map((item) => ({

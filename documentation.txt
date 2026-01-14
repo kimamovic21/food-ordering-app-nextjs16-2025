@@ -725,3 +725,10 @@ Favicon update
 
 -create folder favicon with images and site.webmanifest file
 -update favicon.ico image
+
+
+Orders logic update
+
+-in order.ts file update fields orderPaid
+-add new field orderStatus
+-update route.ts files tsx components to match changes made in model.ts file

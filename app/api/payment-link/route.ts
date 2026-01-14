@@ -10,12 +10,11 @@ const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, { apiVersion: '2025-12-15.clover' })
   : null;
 
+const isPaid = (order: any) => Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid);
+
 export async function GET(request: Request) {
   if (!stripe) {
-    return Response.json(
-      { error: 'Stripe is not configured' },
-      { status: 500 }
-    );
+    return Response.json({ error: 'Stripe is not configured' }, { status: 500 });
   }
 
   await mongoose.connect(process.env.MONGODB_URL as string);
@@ -49,7 +48,7 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized - Order does not belong to you' }, { status: 403 });
   }
 
-  if (order.paid) {
+  if (isPaid(order)) {
     return Response.json({ error: 'Order is already paid' }, { status: 400 });
   }
 

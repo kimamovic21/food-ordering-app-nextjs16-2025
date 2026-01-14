@@ -14,7 +14,8 @@ type OrderType = {
   _id: string;
   email: string;
   total: number;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
 };
 
@@ -51,8 +52,9 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
             <TableHead className='p-3 w-52'>Date</TableHead>
             <TableHead className='p-3 w-64'>Email</TableHead>
             <TableHead className='p-3 w-32'>Total</TableHead>
-            <TableHead className='p-3 w-32'>Status</TableHead>
-            <TableHead className='p-3 w-32'>Action</TableHead>
+            <TableHead className='p-3 w-28'>Payment</TableHead>
+            <TableHead className='p-3 w-36'>Order Status</TableHead>
+            <TableHead className='p-3 w-28'>Action</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className='divide-y divide-gray-100 dark:divide-gray-700'>
@@ -73,14 +75,28 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
               </TableCell>
               <TableCell className='p-3'>
                 <Badge
-                  variant={order.paid ? 'default' : 'destructive'}
+                  variant={order.paymentStatus ? 'default' : 'destructive'}
                   className={
-                    order.paid
+                    order.paymentStatus
                       ? 'bg-emerald-600 text-white hover:bg-emerald-600 dark:bg-emerald-500 dark:text-gray-950 dark:hover:bg-emerald-500'
                       : 'bg-red-600 text-white hover:bg-red-600 dark:bg-red-500 dark:text-gray-950 dark:hover:bg-red-500'
                   }
                 >
-                  {order.paid ? 'Paid' : 'Unpaid'}
+                  {order.paymentStatus ? 'Paid' : 'Unpaid'}
+                </Badge>
+              </TableCell>
+              <TableCell className='p-3'>
+                <Badge
+                  variant='secondary'
+                  className={
+                    order.orderStatus === 'completed'
+                      ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
+                      : order.orderStatus === 'processing'
+                      ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                      : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                  }
+                >
+                  {order.orderStatus}
                 </Badge>
               </TableCell>
               <TableCell className='p-3'>

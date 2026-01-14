@@ -4,11 +4,17 @@ import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 
+const normalizeOrder = (order: any) => ({
+  ...order,
+  paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
+  orderStatus: order.orderStatus || 'pending',
+});
+
 export async function GET(request: Request) {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
   const session = await getServerSession(authOptions);
-  
+
   if (!session || !session.user?.email) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -18,7 +24,7 @@ export async function GET(request: Request) {
 
   // Find the current user
   const user = await User.findOne({ email: session.user.email });
-  
+
   if (!user) {
     return Response.json({ error: 'User not found' }, { status: 404 });
   }
@@ -37,10 +43,13 @@ export async function GET(request: Request) {
 
     // Check if order belongs to current user
     if (order.userId?.toString() !== user._id.toString()) {
-      return Response.json({ error: 'Unauthorized - Order does not belong to you' }, { status: 403 });
+      return Response.json(
+        { error: 'Unauthorized - Order does not belong to you' },
+        { status: 403 }
+      );
     }
 
-    return Response.json({ order });
+    return Response.json({ order: normalizeOrder(order) });
   }
 
   // Fetch all orders for the current user
@@ -55,7 +64,9 @@ export async function GET(request: Request) {
     .limit(limit)
     .lean();
 
+  const normalizedOrders = orders.map(normalizeOrder);
+
   const totalPages = Math.ceil(totalOrders / limit) || 1;
 
-  return Response.json({ orders, page, totalPages, totalOrders });
+  return Response.json({ orders: normalizedOrders, page, totalPages, totalOrders });
 }

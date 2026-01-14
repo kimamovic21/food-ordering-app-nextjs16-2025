@@ -5,6 +5,9 @@ import { authOptions } from '@/libs/authOptions';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 
+const getPaymentStatus = (order: any) =>
+  Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid);
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -24,10 +27,10 @@ export async function GET() {
     const now = new Date();
 
     const totalOrders = orders.length;
-    const paidOrders = orders.filter((order) => order.paid).length;
-    const unpaidOrders = orders.filter((order) => !order.paid).length;
+    const paidOrders = orders.filter((order) => getPaymentStatus(order)).length;
+    const unpaidOrders = orders.filter((order) => !getPaymentStatus(order)).length;
     const totalIncome = orders
-      .filter((order) => order.paid)
+      .filter((order) => getPaymentStatus(order))
       .reduce((sum, order) => sum + order.total, 0);
 
     const ordersLast12Months = orders.filter((order) => {

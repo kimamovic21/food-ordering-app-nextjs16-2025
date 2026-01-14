@@ -3,11 +3,12 @@ import { Badge } from '@/components/ui/badge';
 
 type OrderInfoCardProps = {
   orderId: string;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
 };
 
-const OrderInfoCard = ({ orderId, paid, createdAt }: OrderInfoCardProps) => {
+const OrderInfoCard = ({ orderId, paymentStatus, orderStatus, createdAt }: OrderInfoCardProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -28,12 +29,27 @@ const OrderInfoCard = ({ orderId, paid, createdAt }: OrderInfoCardProps) => {
           <p className='font-semibold break-all'>{orderId}</p>
         </div>
         <div>
-          <p className='text-sm text-muted-foreground'>Status</p>
+          <p className='text-sm text-muted-foreground'>Payment Status</p>
           <Badge
-            variant={paid ? 'secondary' : 'destructive'}
-            className={paid ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' : ''}
+            variant={paymentStatus ? 'secondary' : 'destructive'}
+            className={paymentStatus ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' : ''}
           >
-            {paid ? 'Paid' : 'Unpaid'}
+            {paymentStatus ? 'Paid' : 'Unpaid'}
+          </Badge>
+        </div>
+        <div>
+          <p className='text-sm text-muted-foreground'>Order Status</p>
+          <Badge
+            variant='secondary'
+            className={
+              orderStatus === 'completed'
+                ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
+                : orderStatus === 'processing'
+                ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+            }
+          >
+            {orderStatus}
           </Badge>
         </div>
         <div>
