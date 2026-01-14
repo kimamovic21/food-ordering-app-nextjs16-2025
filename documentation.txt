@@ -738,3 +738,9 @@ Login with Google and logout logic update
 
 -update component profile/page.tsx to display toast message message after logging in
 -update component Header.tsx to redirect to home page after logging out
+
+
+Folder update for cn function
+
+-move utils.ts file from folder lib to folder libs
+-in folder ui update imports for function cn()
