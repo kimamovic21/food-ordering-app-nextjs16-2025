@@ -3,7 +3,8 @@ import { Badge } from '@/components/ui/badge';
 
 type OrderInfoCardProps = {
   orderId: string;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
   updatedAt: string;
   stripeSessionId?: string;
@@ -11,7 +12,8 @@ type OrderInfoCardProps = {
 
 const OrderInfoCard = ({
   orderId,
-  paid,
+  paymentStatus,
+  orderStatus,
   createdAt,
   updatedAt,
   stripeSessionId,
@@ -39,12 +41,27 @@ const OrderInfoCard = ({
             <p className='font-semibold text-foreground'>{orderId}</p>
           </div>
           <div>
-            <p className='text-sm text-muted-foreground'>Status</p>
+            <p className='text-sm text-muted-foreground'>Payment Status</p>
             <Badge
-              variant={paid ? 'default' : 'destructive'}
-              className={paid ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
+              variant={paymentStatus ? 'default' : 'destructive'}
+              className={paymentStatus ? 'bg-green-100 text-green-800 hover:bg-green-100' : ''}
             >
-              {paid ? 'Paid' : 'Unpaid'}
+              {paymentStatus ? 'Paid' : 'Unpaid'}
+            </Badge>
+          </div>
+          <div>
+            <p className='text-sm text-muted-foreground'>Order Status</p>
+            <Badge
+              variant='secondary'
+              className={
+                orderStatus === 'completed'
+                  ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
+                  : orderStatus === 'processing'
+                  ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                  : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+              }
+            >
+              {orderStatus}
             </Badge>
           </div>
           <div>

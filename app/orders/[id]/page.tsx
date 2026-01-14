@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Breadcrumb,
   BreadcrumbList,
@@ -17,6 +17,14 @@ import Link from 'next/link';
 import OrderInfoCard from './OrderInfoCard';
 import CustomerInfoCard from './CustomerInfoCard';
 import OrderItemsCard from './OrderItemsCard';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
 type CartProduct = {
   productId: string;
@@ -37,7 +45,8 @@ type OrderDetailsType = {
   country: string;
   cartProducts: CartProduct[];
   total: number;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
   updatedAt: string;
   stripeSessionId?: string;
@@ -47,6 +56,11 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState<OrderDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState<'pending' | 'processing' | 'completed'>(
+    'pending'
+  );
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusError, setStatusError] = useState('');
   const { data: profileData, loading: profileLoading } = useProfile();
   const params = useParams();
   const orderId = params?.id as string;
@@ -63,6 +77,8 @@ const OrderDetailPage = () => {
         }
         const json = await res.json();
         setOrder(json.order);
+        setSelectedStatus(json.order.orderStatus || 'pending');
+        setStatusError('');
       } catch (err) {
         console.error('Failed to load order', err);
         setError('Failed to load order details');
@@ -75,6 +91,40 @@ const OrderDetailPage = () => {
       fetchOrder();
     }
   }, [orderId, profileData?.admin, profileLoading]);
+
+  const handleStatusUpdate = async () => {
+    if (!order) return;
+
+    if (!order.paymentStatus) {
+      setStatusError('Payment must be completed before updating order status.');
+      return;
+    }
+
+    setStatusUpdating(true);
+    setStatusError('');
+
+    try {
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: order._id, orderStatus: selectedStatus }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setStatusError(data.error || 'Failed to update order status');
+        return;
+      }
+
+      setOrder(data.order);
+      setSelectedStatus(data.order.orderStatus);
+    } catch (err) {
+      setStatusError('Failed to update order status');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   if (profileLoading || (loading && !order)) {
     return (
@@ -178,11 +228,51 @@ const OrderDetailPage = () => {
       <div className='space-y-6'>
         <OrderInfoCard
           orderId={order._id}
-          paid={order.paid}
+          paymentStatus={order.paymentStatus}
+          orderStatus={order.orderStatus}
           createdAt={order.createdAt}
           updatedAt={order.updatedAt}
           stripeSessionId={order.stripeSessionId}
         />
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Update Order Status</CardTitle>
+            <CardDescription>
+              You can only move the order forward after payment is completed.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+            <div className='flex-1 space-y-2'>
+              <p className='text-sm text-muted-foreground'>Order Status</p>
+              <Select
+                value={selectedStatus}
+                onValueChange={(value) => setSelectedStatus(value as typeof selectedStatus)}
+                disabled={!order.paymentStatus || statusUpdating}
+              >
+                <SelectTrigger className='w-full sm:w-60'>
+                  <SelectValue placeholder='Select status' />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value='pending'>pending</SelectItem>
+                  <SelectItem value='processing'>processing</SelectItem>
+                  <SelectItem value='completed'>completed</SelectItem>
+                </SelectContent>
+              </Select>
+              {!order.paymentStatus && (
+                <p className='text-xs text-amber-600'>Payment required before changing status.</p>
+              )}
+              {statusError && <p className='text-sm text-red-600'>{statusError}</p>}
+            </div>
+            <Button
+              onClick={handleStatusUpdate}
+              disabled={statusUpdating || !order.paymentStatus}
+              className='self-start'
+            >
+              {statusUpdating ? 'Updating...' : 'Save status'}
+            </Button>
+          </CardContent>
+        </Card>
 
         <CustomerInfoCard
           email={order.email}

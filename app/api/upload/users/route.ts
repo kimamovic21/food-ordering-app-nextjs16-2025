@@ -14,26 +14,24 @@ export async function POST(req: Request) {
 
     if (!email) {
       return new Response('Unauthorized', { status: 401 });
-    };
+    }
 
     const form = await req.formData();
     const file = form.get('file') as File | null;
 
     if (!file) {
       return new Response('No file provided', { status: 400 });
-    };
+    }
 
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
     const uploadedImage: UploadApiResponse = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'users' },
-        (error, result) => {
-          if (error) return reject(error);
-          resolve(result as UploadApiResponse);
-        }
-      );
+      const folder = process.env.NODE_ENV === 'production' ? 'users-production' : 'users';
+      const uploadStream = cloudinary.uploader.upload_stream({ folder }, (error, result) => {
+        if (error) return reject(error);
+        resolve(result as UploadApiResponse);
+      });
       uploadStream.end(buffer);
     });
 
@@ -41,16 +39,17 @@ export async function POST(req: Request) {
 
     if (!user) {
       return new Response('User not found', { status: 404 });
-    };
+    }
 
     if (user.image) {
-      const matches = user.image.match(/users\/([^\.]+)/);
-      const oldPublicId = matches ? `users/${matches[1]}` : null;
+      const matches = user.image.match(/users(?:-production)?\/([^\.]+)/);
+      const folder = process.env.NODE_ENV === 'production' ? 'users-production' : 'users';
+      const oldPublicId = matches ? `${folder}/${matches[1]}` : null;
 
       if (oldPublicId) {
         await cloudinary.uploader.destroy(oldPublicId);
-      };
-    };
+      }
+    }
 
     const updatedUser = await User.findOneAndUpdate(
       { email },
@@ -63,11 +62,10 @@ export async function POST(req: Request) {
       url: uploadedImage.secure_url,
       user: updatedUser,
     });
-
   } catch (err) {
     console.error('UPLOAD ERROR:', err);
     return new Response('Upload error', { status: 500 });
-  };
+  }
 }
 
 export async function DELETE(req: Request) {
@@ -79,46 +77,42 @@ export async function DELETE(req: Request) {
 
     if (!email) {
       return new Response('Unauthorized', { status: 401 });
-    };
+    }
 
     const { imageUrl } = await req.json();
 
     if (!imageUrl) {
       return new Response('No image URL provided', { status: 400 });
-    };
+    }
 
     const user = await User.findOne({ email });
 
     if (!user) {
       return new Response('User not found', { status: 404 });
-    };
+    }
 
     if (imageUrl && imageUrl !== '/user-default-image.webp') {
-      const matches = imageUrl.match(/users\/([^\.]+)/);
-      const publicId = matches ? `users/${matches[1]}` : null;
+      const matches = imageUrl.match(/users(?:-production)?\/([^\.]+)/);
+      const folder = process.env.NODE_ENV === 'production' ? 'users-production' : 'users';
+      const publicId = matches ? `${folder}/${matches[1]}` : null;
 
       if (publicId) {
         try {
           await cloudinary.uploader.destroy(publicId);
         } catch (cloudinaryErr) {
           console.error('Cloudinary delete error:', cloudinaryErr);
-        };
-      };
-    };
+        }
+      }
+    }
 
-    const updatedUser = await User.findOneAndUpdate(
-      { email },
-      { image: '' },
-      { new: true }
-    );
+    const updatedUser = await User.findOneAndUpdate({ email }, { image: '' }, { new: true });
 
     return Response.json({
       success: true,
       user: updatedUser,
     });
-
   } catch (err) {
     console.error('DELETE ERROR:', err);
     return new Response('Delete error', { status: 500 });
-  };
-};
+  }
+}

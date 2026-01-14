@@ -27,7 +27,8 @@ type OrderType = {
   _id: string;
   email: string;
   total: number;
-  paid: boolean;
+  paymentStatus: boolean;
+  orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
 };
 
@@ -75,7 +76,7 @@ const OrdersPage = () => {
               <Table className='w-full min-w-[900px] table-fixed'>
                 <TableHeader>
                   <TableRow>
-                    {[...Array(6)].map((_, idx) => (
+                    {[...Array(7)].map((_, idx) => (
                       <TableHead key={idx} className='p-3'>
                         <Skeleton className='h-4 w-24' />
                       </TableHead>
@@ -121,7 +122,7 @@ const OrdersPage = () => {
                 <Table className='w-full min-w-[900px] table-fixed'>
                   <TableHeader>
                     <TableRow>
-                      {[...Array(6)].map((_, idx) => (
+                      {[...Array(7)].map((_, idx) => (
                         <TableHead key={idx} className='p-3'>
                           <Skeleton className='h-4 w-24' />
                         </TableHead>

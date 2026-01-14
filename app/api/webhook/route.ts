@@ -41,10 +41,16 @@ export async function POST(req: Request) {
 
     if (orderId) {
       await mongoose.connect(process.env.MONGODB_URL as string);
-      await Order.findByIdAndUpdate(orderId, {
-        paid: true,
-        stripeSessionId: session.id,
-      });
+      const order = await Order.findById(orderId);
+      if (order) {
+        (order as any).orderPaid = true;
+        (order as any).paid = true; // keep legacy flag in sync
+        if (!(order as any).orderStatus) {
+          (order as any).orderStatus = 'pending';
+        }
+        order.stripeSessionId = session.id;
+        await order.save();
+      }
     }
   }
 

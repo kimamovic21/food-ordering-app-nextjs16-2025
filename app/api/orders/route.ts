@@ -2,6 +2,12 @@ import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
 import { Order } from '@/models/order';
 import mongoose from 'mongoose';
 
+const normalizeOrder = (order: any) => ({
+  ...order,
+  paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
+  orderStatus: order.orderStatus || 'pending',
+});
+
 export async function GET(request: Request) {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
@@ -23,7 +29,7 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    return Response.json({ order });
+    return Response.json({ order: normalizeOrder(order) });
   }
 
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1', 10));
@@ -31,13 +37,52 @@ export async function GET(request: Request) {
   const skip = (page - 1) * limit;
 
   const totalOrders = await Order.countDocuments({});
-  const orders = await Order.find({})
-    .sort({ _id: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean();
+  const orders = await Order.find({}).sort({ _id: -1 }).skip(skip).limit(limit).lean();
+  const normalizedOrders = orders.map(normalizeOrder);
 
   const totalPages = Math.ceil(totalOrders / limit) || 1;
 
-  return Response.json({ orders, page, totalPages, totalOrders });
+  return Response.json({ orders: normalizedOrders, page, totalPages, totalOrders });
+}
+
+export async function PATCH(request: Request) {
+  await mongoose.connect(process.env.MONGODB_URL as string);
+
+  if (!(await isAdmin())) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const { id, orderStatus } = await request.json();
+
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    return Response.json({ error: 'Invalid order ID' }, { status: 400 });
+  }
+
+  const allowedStatuses = ['pending', 'processing', 'completed'];
+  if (!allowedStatuses.includes(orderStatus)) {
+    return Response.json({ error: 'Invalid order status' }, { status: 400 });
+  }
+
+  const order = await Order.findById(id);
+
+  if (!order) {
+    return Response.json({ error: 'Order not found' }, { status: 404 });
+  }
+
+  const hasPaid = Boolean(
+    (order as any).orderPaid ?? (order as any).paymentStatus ?? (order as any).paid
+  );
+
+  if (!hasPaid) {
+    return Response.json(
+      { error: 'Cannot update status before payment is completed' },
+      { status: 400 }
+    );
+  }
+
+  (order as any).orderPaid = hasPaid;
+  order.orderStatus = orderStatus;
+  const savedOrder = await order.save();
+
+  return Response.json({ order: normalizeOrder(savedOrder.toObject()) });
 }
