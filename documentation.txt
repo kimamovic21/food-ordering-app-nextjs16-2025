@@ -744,3 +744,8 @@ Folder update for cn function
 
 -move utils.ts file from folder lib to folder libs
 -in folder ui update imports for function cn()
+
+
+Register with Google account update
+
+-update authOptions.ts file

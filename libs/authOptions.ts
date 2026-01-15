@@ -6,9 +6,36 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import client from '@/libs/mongoConnect';
 
+const mongoAdapter = MongoDBAdapter(client);
+
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: MongoDBAdapter(client),
+  adapter: {
+    ...mongoAdapter,
+    createUser: async (user: any) => {
+      const createdUser = await mongoAdapter.createUser(user);
+
+      // Ensure all schema fields are present with defaults for new users
+      if (createdUser) {
+        const updatedUser = await User.findByIdAndUpdate(
+          createdUser.id,
+          {
+            phone: user.phone || '',
+            streetAddress: user.streetAddress || '',
+            postalCode: user.postalCode || '',
+            city: user.city || '',
+            country: user.country || '',
+            admin: user.admin ?? false,
+            provider: user.provider || 'oauth',
+          },
+          { new: true }
+        );
+        return updatedUser || createdUser;
+      }
+
+      return createdUser;
+    },
+  },
   allowDangerousEmailAccountLinking: true,
   session: { strategy: 'jwt' as const },
   providers: [
@@ -90,7 +117,7 @@ export const authOptions = {
         token.city = (user as any).city || '';
         token.country = (user as any).country || '';
         token.admin = (user as any).admin || false;
-      };
+      }
 
       return token;
     },
@@ -101,35 +128,27 @@ export const authOptions = {
     account,
   }: {
     user: {
-      name?: string | null
-      email?: string | null
-      image?: string | null
-      [key: string]: any
-    }
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      [key: string]: any;
+    };
     account?: {
-      provider?: string
-      [key: string]: any
-    }
+      provider?: string;
+      [key: string]: any;
+    };
   }) {
     if (account?.provider === 'google') {
       await mongoose.connect(process.env.MONGODB_URL as string);
-      let existingUser = await User.findOne({ email: user.email });
+      const existingUser = await User.findOne({ email: user.email });
 
-      if (!existingUser) {
-        existingUser = await User.create({
-          name: user.name,
-          email: user.email,
-          image: user.image || '',
-          provider: 'google',
-          phone: '',
-          streetAddress: '',
-          postalCode: '',
-          city: '',
-          country: '',
-          admin: false,
-        });
-      };
-    };
+      if (existingUser) {
+        // Update provider if not already set
+        if (!existingUser.provider || existingUser.provider !== 'google') {
+          await User.findByIdAndUpdate(existingUser._id, { provider: 'google' });
+        }
+      }
+    }
 
     return true;
   },
