@@ -13,7 +13,7 @@ export const authOptions = {
   adapter: {
     ...mongoAdapter,
     createUser: async (user: any) => {
-      const createdUser = await mongoAdapter.createUser(user);
+      const createdUser = await mongoAdapter?.createUser?.(user);
 
       // Ensure all schema fields are present with defaults for new users
       if (createdUser) {

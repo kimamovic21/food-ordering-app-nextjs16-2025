@@ -756,3 +756,19 @@ Refactor user admin to role-based access control
 -in models/user.ts file add field role instead of admin
 -create folder types and .ts files
 -update existing route.ts files and tsx components to match role field from user.ts
+
+
+Add user location map with Leaflet to user details
+
+-open link: https://leafletjs.com
+-open link: https://www.npmjs.com/package/leaflet
+-type command: npm i leaflet
+-open link: https://react-leaflet.js.org/
+-open link: https://www.npmjs.com/package/react-leaflet
+-type command: npm i react-leaflet
+-open link: https://www.npmjs.com/package/@types/leaflet
+-type command: npm i @types/leaflet 
+-open link: https://www.npmjs.com/package/leaflet-defaulticon-compatibility
+-type command: npm i leaflet-defaulticon-compatibility
+-in folder users create component UserLocationMap.tsx
+-in component users/map.tsx import component UserLocationMap.tsx
