@@ -41,7 +41,7 @@ const OrdersStatisticsPage = () => {
   const { loading: profileLoading, data: profileData } = useProfile();
 
   useEffect(() => {
-    if (!profileLoading && !profileData?.admin) {
+    if (!profileLoading && profileData?.role !== 'admin') {
       redirect('/');
     }
   }, [profileLoading, profileData]);
@@ -61,7 +61,7 @@ const OrdersStatisticsPage = () => {
       }
     };
 
-    if (profileData?.admin) {
+    if (profileData?.role === 'admin') {
       fetchStatistics();
     }
   }, [profileData]);

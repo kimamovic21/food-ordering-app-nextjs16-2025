@@ -7,18 +7,7 @@ import toast from 'react-hot-toast';
 import Title from '@/components/shared/Title';
 import UserProfileForm from './UserProfileForm';
 import UserProfileImage from './UserProfileImage';
-
-interface ExtendedUser {
-  name?: string | null;
-  email?: string | null;
-  image?: string | null;
-  phone?: string | null;
-  streetAddress?: string | null;
-  postalCode?: string | null;
-  city?: string | null;
-  country?: string | null;
-  admin?: boolean | null;
-}
+import type { ExtendedUser } from '@/types/user';
 
 const FALLBACK_IMAGE = '/user-default-image.webp';
 
@@ -57,7 +46,7 @@ const ProfilePage = () => {
         setPostalCode(user.postalCode || '');
         setCity(user.city || '');
         setCountry(user.country || '');
-        setIsAdmin(user.admin || false);
+        setIsAdmin(user.role === 'admin');
         setImageUrl(user.image || FALLBACK_IMAGE);
       });
     }

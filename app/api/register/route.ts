@@ -8,26 +8,20 @@ export async function POST(req: Request) {
 
     if (!process.env.MONGODB_URL) {
       throw new Error('MONGODB_URL is not defined in environment variables!');
-    };
+    }
 
     await mongoose.connect(process.env.MONGODB_URL as string);
 
     const pass = body.password;
 
     if (!pass || pass.length < 5) {
-      return Response.json(
-        { error: 'Password must be at least 5 characters!' },
-        { status: 400 }
-      );
-    };
+      return Response.json({ error: 'Password must be at least 5 characters!' }, { status: 400 });
+    }
 
     const existingUser = await User.findOne({ email: body.email });
     if (existingUser) {
-      return Response.json(
-        { error: 'Email already exists' },
-        { status: 400 }
-      );
-    };
+      return Response.json({ error: 'Email already exists' }, { status: 400 });
+    }
 
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(pass, salt);
@@ -42,17 +36,13 @@ export async function POST(req: Request) {
       postalCode: '',
       city: '',
       country: '',
-      admin: false,
+      role: 'user',
     });
 
     return Response.json(createdUser, { status: 201 });
-
   } catch (error) {
     console.error('REGISTER ERROR:', error);
 
-    return Response.json(
-      { error: 'Internal Server Error' },
-      { status: 500 }
-    );
-  };
-};
+    return Response.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}

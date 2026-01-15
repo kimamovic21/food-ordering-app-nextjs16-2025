@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 
 interface ProfileData {
-  admin: boolean;
+  role?: string;
   name?: string;
   email?: string;
   image?: string;
@@ -10,7 +10,7 @@ interface ProfileData {
   postalCode?: string;
   city?: string;
   country?: string;
-};
+}
 
 const useProfile = () => {
   const [data, setData] = useState<ProfileData | null>(null);
@@ -18,8 +18,8 @@ const useProfile = () => {
 
   useEffect(() => {
     fetch('/api/profile')
-      .then(res => res.json())
-      .then(json => {
+      .then((res) => res.json())
+      .then((json) => {
         setData(json);
         setLoading(false);
       })

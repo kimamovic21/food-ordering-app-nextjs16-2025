@@ -1,6 +1,7 @@
 import NextAuth, { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 import { User } from '@/models/user';
+import mongoose from 'mongoose';
 
 export const isAdmin = async () => {
   const session = await getServerSession(authOptions);
@@ -8,20 +9,18 @@ export const isAdmin = async () => {
 
   if (!userEmail) {
     return false;
-  };
+  }
 
+  await mongoose.connect(process.env.MONGODB_URL as string);
   const user = await User.findOne({ email: userEmail });
 
   if (!user) {
     return false;
-  };
+  }
 
-  return user.admin;
+  return user.role === 'admin';
 };
 
 const handler = NextAuth(authOptions);
 
-export {
-  handler as GET,
-  handler as POST,
-};
+export { handler as GET, handler as POST };

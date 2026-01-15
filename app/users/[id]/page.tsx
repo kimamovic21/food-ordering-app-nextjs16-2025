@@ -114,8 +114,8 @@ const UserDetailsPage = () => {
             </Avatar>
             <div>
               <h2 className='text-2xl font-bold'>{user.name}</h2>
-              <Badge variant={user.admin ? 'default' : 'secondary'} className='mt-1'>
-                {user.admin ? 'Admin' : 'User'}
+              <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className='mt-1'>
+                {user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
               </Badge>
             </div>
           </div>

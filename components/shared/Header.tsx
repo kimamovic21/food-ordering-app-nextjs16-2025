@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 import { IoCartOutline } from 'react-icons/io5';
 import { useCart } from '@/contexts/CartContext';
+import useProfile from '@/contexts/UseProfile';
 import {
   MenuLinkSkeleton,
   AboutLinkSkeleton,
@@ -29,6 +30,7 @@ import toast from 'react-hot-toast';
 const Header = () => {
   const session = useSession();
   const { getTotalItems } = useCart();
+  const { data: profileData } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
 
@@ -69,7 +71,8 @@ const Header = () => {
     }
   }, [status]);
 
-  const isAdmin = Boolean((session?.data?.user as any)?.admin);
+  // Check admin status from both session and profile data for reliability
+  const isAdmin = (session?.data?.user as any)?.role === 'admin' || profileData?.role === 'admin';
 
   const handleLogout = async () => {
     toast.success('Successfully logged out');

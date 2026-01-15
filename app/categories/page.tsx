@@ -146,7 +146,7 @@ const CategoriesPage = () => {
     return renderSkeleton();
   }
 
-  if (!profileData || !profileData.admin) {
+  if (!profileData || profileData?.role !== 'admin') {
     return 'Not an admin';
   }
 

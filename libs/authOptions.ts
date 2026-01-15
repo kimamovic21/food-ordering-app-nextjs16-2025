@@ -25,7 +25,7 @@ export const authOptions = {
             postalCode: user.postalCode || '',
             city: user.city || '',
             country: user.country || '',
-            admin: user.admin ?? false,
+            role: user.role || 'user',
             provider: user.provider || 'oauth',
           },
           { new: true }
@@ -82,27 +82,37 @@ export const authOptions = {
           postalCode: user.postalCode || '',
           city: user.city || '',
           country: user.country || '',
-          admin: user.admin || false,
+          role: user.role || 'user',
         };
       },
     }),
   ],
   callbacks: {
-    async session({ session }: { session: any }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (!session?.user?.email) return session;
 
-      await mongoose.connect(process.env.MONGODB_URL as string);
-      const userInDb = await User.findOne({ email: session.user.email });
+      // First, copy role from token if available
+      if (token?.role) {
+        session.user.role = token.role;
+      }
 
-      if (userInDb) {
-        session.user.name = userInDb.name;
-        session.user.image = userInDb.image;
-        session.user.phone = userInDb.phone || '';
-        session.user.streetAddress = userInDb.streetAddress || '';
-        session.user.postalCode = userInDb.postalCode || '';
-        session.user.city = userInDb.city || '';
-        session.user.country = userInDb.country || '';
-        session.user.admin = userInDb.admin || false;
+      // Then fetch fresh data from database
+      try {
+        await mongoose.connect(process.env.MONGODB_URL as string);
+        const userInDb = await User.findOne({ email: session.user.email });
+
+        if (userInDb) {
+          session.user.name = userInDb.name;
+          session.user.image = userInDb.image;
+          session.user.phone = userInDb.phone || '';
+          session.user.streetAddress = userInDb.streetAddress || '';
+          session.user.postalCode = userInDb.postalCode || '';
+          session.user.city = userInDb.city || '';
+          session.user.country = userInDb.country || '';
+          session.user.role = userInDb.role || 'user';
+        }
+      } catch (error) {
+        console.error('Error in session callback:', error);
       }
 
       return session;
@@ -111,12 +121,29 @@ export const authOptions = {
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
         token.id = (user as any)._id;
+        token.email = (user as any).email;
         token.phone = (user as any).phone || '';
         token.streetAddress = (user as any).streetAddress || '';
         token.postalCode = (user as any).postalCode || '';
         token.city = (user as any).city || '';
         token.country = (user as any).country || '';
-        token.admin = (user as any).admin || false;
+        token.role = (user as any).role || 'user';
+      } else if (token.email) {
+        // Refresh user data from database on each JWT callback
+        try {
+          await mongoose.connect(process.env.MONGODB_URL as string);
+          const userInDb = await User.findOne({ email: token.email });
+          if (userInDb) {
+            token.role = userInDb.role || 'user';
+            token.phone = userInDb.phone || '';
+            token.streetAddress = userInDb.streetAddress || '';
+            token.postalCode = userInDb.postalCode || '';
+            token.city = userInDb.city || '';
+            token.country = userInDb.country || '';
+          }
+        } catch (error) {
+          console.error('Error fetching user data in JWT callback:', error);
+        }
       }
 
       return token;

@@ -21,7 +21,7 @@ type UserRow = {
   phone?: string;
   postalCode?: string;
   streetAddress?: string;
-  admin?: boolean;
+  role?: string;
 };
 
 type UsersTableProps = {
@@ -81,8 +81,8 @@ const UsersTable = ({ users }: UsersTableProps) => {
                 {user.country || '—'}
               </TableCell>
               <TableCell className='p-3'>
-                <Badge variant={user.admin ? 'default' : 'secondary'}>
-                  {user.admin ? 'Admin' : 'User'}
+                <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                  {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
                 </Badge>
               </TableCell>
               <TableCell className='p-3'>

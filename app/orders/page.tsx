@@ -42,7 +42,14 @@ const OrdersPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading || !data?.admin) return;
+    if (loading) return;
+
+    if (data?.role !== 'admin') {
+      console.warn('User is not admin:', { role: data?.role, data });
+      return;
+    }
+
+    console.log('User is admin, fetching orders:', { role: data?.role });
 
     const currentPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
     setPage(currentPage);
@@ -51,7 +58,16 @@ const OrdersPage = () => {
       try {
         setLoadingOrders(true);
         const res = await fetch(`/api/orders?page=${currentPage}`);
+
+        if (!res.ok) {
+          console.error('API error:', res.status, res.statusText);
+          const errorData = await res.json();
+          console.error('Error details:', errorData);
+          return;
+        }
+
         const json = await res.json();
+        console.log('Orders response:', json);
         setOrders(json.orders || []);
         setTotalPages(json.totalPages || 1);
       } catch (error) {
@@ -63,7 +79,7 @@ const OrdersPage = () => {
     };
 
     fetchOrders();
-  }, [loading, data?.admin, searchParams]);
+  }, [loading, data?.role, searchParams]);
 
   if (loading) {
     return (
@@ -108,7 +124,7 @@ const OrdersPage = () => {
     );
   }
 
-  if (!data?.admin) return 'Not an admin';
+  if (!data?.role || data.role !== 'admin') return 'Not an admin';
 
   return (
     <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>

@@ -38,7 +38,9 @@ const UsersPage = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (loading || !data?.admin) return;
+    if (loading) return;
+
+    if (data?.role !== 'admin') return;
 
     const currentPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
     setPage(currentPage);
@@ -62,13 +64,13 @@ const UsersPage = () => {
     };
 
     fetchUsers();
-  }, [loading, data?.admin, searchParams]);
+  }, [loading, data?.role, searchParams]);
 
   if (loading || loadingUsers) {
     return <UsersLoading />;
   }
 
-  if (!data?.admin) {
+  if (data?.role !== 'admin') {
     return (
       <div className='min-h-[calc(100vh-8rem)] flex items-center justify-center'>
         <p className='text-lg'>Not an admin</p>

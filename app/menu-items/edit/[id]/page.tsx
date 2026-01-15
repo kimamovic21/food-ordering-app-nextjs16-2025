@@ -174,7 +174,7 @@ const EditMenuItemPage = () => {
 
   const showSkeleton = loading || isDataLoading;
 
-  if (!loading && !data?.admin) return 'Not an admin.';
+  if (!loading && data?.role !== 'admin') return 'Not an admin.';
 
   return (
     <section className='mt-8 pb-10'>

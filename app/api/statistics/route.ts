@@ -21,7 +21,7 @@ export async function GET() {
 
     // Get user to check admin status
     const user = await User.findOne({ email: session.user.email });
-    if (!user || !user.admin) {
+    if (!user || user.role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

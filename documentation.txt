@@ -749,3 +749,10 @@ Folder update for cn function
 Register with Google account update
 
 -update authOptions.ts file
+
+
+Refactor user admin to role-based access control
+
+-in models/user.ts file add field role instead of admin
+-create folder types and .ts files
+-update existing route.ts files and tsx components to match role field from user.ts
