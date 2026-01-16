@@ -30,10 +30,11 @@ const OrderSchema = new Schema(
     orderPaid: { type: Boolean, default: false },
     orderStatus: {
       type: String,
-      enum: ['pending', 'processing', 'completed'],
+      enum: ['pending', 'processing', 'transportation', 'completed'],
       default: 'pending',
       required: true,
     },
+    courierId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     stripeSessionId: { type: String },
   },
   { timestamps: true }

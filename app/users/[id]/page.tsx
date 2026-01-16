@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -13,8 +14,20 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import Link from 'next/link';
 import UserLoading from './loading';
+import toast from 'react-hot-toast';
+import useProfile from '@/contexts/UseProfile';
 
 type UserType = {
   _id: string;
@@ -44,6 +57,8 @@ const UserDetailsPage = () => {
   const [user, setUser] = useState<UserType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [makingCourier, setMakingCourier] = useState(false);
+  const { data: profileData, loading: profileLoading } = useProfile();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -68,7 +83,63 @@ const UserDetailsPage = () => {
     }
   }, [params.id]);
 
-  if (loading) {
+  const handleMakeCourier = async () => {
+    if (!user) return;
+
+    try {
+      setMakingCourier(true);
+      const res = await fetch('/api/users/make-courier', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to make courier');
+        return;
+      }
+
+      setUser({ ...user, role: 'courier' });
+      toast.success('User has been promoted to courier');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to make courier');
+    } finally {
+      setMakingCourier(false);
+    }
+  };
+
+  const handleRemoveCourier = async () => {
+    if (!user) return;
+
+    try {
+      setMakingCourier(true);
+      const res = await fetch('/api/users/remove-courier', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to remove courier');
+        return;
+      }
+
+      setUser({ ...user, role: 'user' });
+      toast.success('User courier role has been removed');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to remove courier');
+    } finally {
+      setMakingCourier(false);
+    }
+  };
+
+  if (loading || profileLoading) {
     return <UserLoading />;
   }
 
@@ -161,13 +232,6 @@ const UserDetailsPage = () => {
 
                 <div>
                   <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    Postal Code:
-                  </span>
-                  <p className='text-base mt-1'>{user.postalCode || '-'}</p>
-                </div>
-
-                <div>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
                     Country:
                   </span>
                   <p className='text-base mt-1'>{user.country || '-'}</p>
@@ -198,6 +262,71 @@ const UserDetailsPage = () => {
                   </div>
                 )}
               </div>
+
+              {profileData?.role === 'admin' && user.role !== 'courier' && (
+                <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        disabled={makingCourier}
+                        className='w-full bg-primary hover:bg-primary/90'
+                      >
+                        {makingCourier ? 'Making Courier...' : 'Make Courier'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Make Courier</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to make {user.name} a courier?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className='flex gap-3 justify-end'>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleMakeCourier}
+                          className='bg-primary hover:bg-primary/90'
+                        >
+                          Confirm
+                        </AlertDialogAction>
+                      </div>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
+
+              {profileData?.role === 'admin' && user.role === 'courier' && (
+                <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        disabled={makingCourier}
+                        variant='destructive'
+                        className='w-full'
+                      >
+                        {makingCourier ? 'Removing Courier...' : 'Remove Courier'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Courier</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove {user.name} from courier role?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className='flex gap-3 justify-end'>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleRemoveCourier}
+                          className='bg-red-600 hover:bg-red-700'
+                        >
+                          Confirm
+                        </AlertDialogAction>
+                      </div>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

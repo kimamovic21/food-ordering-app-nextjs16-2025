@@ -10,6 +10,7 @@ interface ProfileData {
   postalCode?: string;
   city?: string;
   country?: string;
+  availability?: boolean;
 }
 
 const useProfile = () => {

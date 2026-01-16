@@ -15,6 +15,8 @@ import {
   CategoriesLinkSkeleton,
   MenuItemsLinkSkeleton,
   UsersLinkSkeleton,
+  CouriersLinkSkeleton,
+  CourierLinkSkeleton,
   OrdersLinkSkeleton,
   StatisticsLinkSkeleton,
   ModeToggleSkeleton,
@@ -71,7 +73,7 @@ const Header = () => {
     }
   }, [status]);
 
-  // Check admin status from both session and profile data for reliability
+  const isCourier = (session?.data?.user as any)?.role === 'courier' || profileData?.role === 'courier';
   const isAdmin = (session?.data?.user as any)?.role === 'admin' || profileData?.role === 'admin';
 
   const handleLogout = async () => {
@@ -83,20 +85,22 @@ const Header = () => {
   return (
     <header className='fixed top-0 left-0 right-0 z-50 bg-background/90 border-b border-border shadow-sm backdrop-blur transition-colors'>
       <div className='flex items-center justify-between px-4 py-3 max-w-7xl mx-auto text-foreground'>
-        <nav className='flex items-center gap-8 text-muted-foreground font-semibold'>
+        <nav className='flex items-center gap-4 text-muted-foreground font-semibold'>
           <Link className='text-primary font-semibold text-2xl' href='/'>
             Pizza Hub
           </Link>
-          <div className='hidden lg:flex items-center gap-8'>
+          <div className='hidden lg:flex items-center gap-3'>
             {status === 'loading' ? (
               <>
                 <MenuLinkSkeleton />
                 <AboutLinkSkeleton />
                 <ContactLinkSkeleton />
                 <MyOrdersLinkSkeleton />
+                <CourierLinkSkeleton />
                 <CategoriesLinkSkeleton />
                 <MenuItemsLinkSkeleton />
                 <UsersLinkSkeleton />
+                <CouriersLinkSkeleton />
                 <OrdersLinkSkeleton />
                 <StatisticsLinkSkeleton />
               </>
@@ -128,6 +132,14 @@ const Header = () => {
                     >
                       My Orders
                     </Link>
+                    {isCourier && (
+                      <Link
+                        className={`${pathname === '/courier' ? 'text-primary font-semibold' : ''}`}
+                        href={'/courier'}
+                      >
+                        Courier
+                      </Link>
+                    )}
                     {isAdmin && (
                       <>
                         <Link
@@ -151,6 +163,14 @@ const Header = () => {
                           href={'/users'}
                         >
                           Users
+                        </Link>
+                        <Link
+                          className={`${
+                            pathname === '/couriers' ? 'text-primary font-semibold' : ''
+                          }`}
+                          href={'/couriers'}
+                        >
+                          Couriers
                         </Link>
                         <Link
                           className={`${
@@ -311,6 +331,15 @@ const Header = () => {
                 >
                   My Orders
                 </Link>
+                {isCourier && (
+                  <Link
+                    href='/courier'
+                    onClick={() => setMobileOpen(false)}
+                    className='hover:text-primary'
+                  >
+                    Courier
+                  </Link>
+                )}
                 {isAdmin && (
                   <>
                     <Link
@@ -333,6 +362,13 @@ const Header = () => {
                       className='hover:text-primary'
                     >
                       Users
+                    </Link>
+                    <Link
+                      href='/couriers'
+                      onClick={() => setMobileOpen(false)}
+                      className='hover:text-primary'
+                    >
+                      Couriers
                     </Link>
                     <Link
                       href='/orders'

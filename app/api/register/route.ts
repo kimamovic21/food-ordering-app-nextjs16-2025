@@ -37,6 +37,8 @@ export async function POST(req: Request) {
       city: '',
       country: '',
       role: 'user',
+      availability: false,
+      takenOrder: null,
     });
 
     return Response.json(createdUser, { status: 201 });

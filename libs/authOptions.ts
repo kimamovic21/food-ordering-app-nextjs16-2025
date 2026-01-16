@@ -6,36 +6,13 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import client from '@/libs/mongoConnect';
 
-const mongoAdapter = MongoDBAdapter(client);
+// Use a dedicated database for NextAuth to avoid collection conflicts
+const mongoAdapter = MongoDBAdapter(client, { databaseName: 'next-auth' });
+
 
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: {
-    ...mongoAdapter,
-    createUser: async (user: any) => {
-      const createdUser = await mongoAdapter?.createUser?.(user);
-
-      // Ensure all schema fields are present with defaults for new users
-      if (createdUser) {
-        const updatedUser = await User.findByIdAndUpdate(
-          createdUser.id,
-          {
-            phone: user.phone || '',
-            streetAddress: user.streetAddress || '',
-            postalCode: user.postalCode || '',
-            city: user.city || '',
-            country: user.country || '',
-            role: user.role || 'user',
-            provider: user.provider || 'oauth',
-          },
-          { new: true }
-        );
-        return updatedUser || createdUser;
-      }
-
-      return createdUser;
-    },
-  },
+  adapter: mongoAdapter,
   allowDangerousEmailAccountLinking: true,
   session: { strategy: 'jwt' as const },
   providers: [
@@ -88,6 +65,11 @@ export const authOptions = {
     }),
   ],
   callbacks: {
+    async signIn() {
+      // Allow all sign-ins; adapter handles account linking
+      return true;
+    },
+
     async session({ session, token }: { session: any; token: any }) {
       if (!session?.user?.email) return session;
 
@@ -96,10 +78,10 @@ export const authOptions = {
         session.user.role = token.role;
       }
 
-      // Then fetch fresh data from database
+      // Then fetch fresh data from database; create user if missing
       try {
         await mongoose.connect(process.env.MONGODB_URL as string);
-        const userInDb = await User.findOne({ email: session.user.email });
+        let userInDb = await User.findOne({ email: session.user.email });
 
         if (userInDb) {
           session.user.name = userInDb.name;
@@ -110,6 +92,31 @@ export const authOptions = {
           session.user.city = userInDb.city || '';
           session.user.country = userInDb.country || '';
           session.user.role = userInDb.role || 'user';
+        } else {
+          // Create the user in our app DB on first OAuth session
+          try {
+            userInDb = await User.create({
+              name: session.user.name || 'User',
+              email: session.user.email,
+              image: session.user.image || '',
+              provider: 'oauth',
+              phone: '',
+              streetAddress: '',
+              postalCode: '',
+              city: '',
+              country: '',
+              role: token?.role || 'user',
+              availability: false,
+              takenOrder: null,
+            });
+
+            // Mirror data back into session
+            session.user.name = userInDb.name;
+            session.user.image = userInDb.image;
+            session.user.role = userInDb.role || 'user';
+          } catch (createErr) {
+            console.error('Error creating user on session:', createErr);
+          }
         }
       } catch (error) {
         console.error('Error in session callback:', error);
@@ -150,33 +157,49 @@ export const authOptions = {
     },
   },
 
-  async signIn({
-    user,
-    account,
-  }: {
-    user: {
-      name?: string | null;
-      email?: string | null;
-      image?: string | null;
-      [key: string]: any;
-    };
-    account?: {
-      provider?: string;
-      [key: string]: any;
-    };
-  }) {
-    if (account?.provider === 'google') {
-      await mongoose.connect(process.env.MONGODB_URL as string);
-      const existingUser = await User.findOne({ email: user.email });
-
-      if (existingUser) {
-        // Update provider if not already set
-        if (!existingUser.provider || existingUser.provider !== 'google') {
-          await User.findByIdAndUpdate(existingUser._id, { provider: 'google' });
+  // Use events to synchronize NextAuth users with our Mongoose User model
+  events: {
+    async createUser({ user }: any) {
+      try {
+        await mongoose.connect(process.env.MONGODB_URL as string);
+        const existing = await User.findOne({ email: user?.email });
+        if (!existing && user?.email) {
+          await User.create({
+            name: user?.name || '',
+            email: user.email,
+            image: user?.image || '',
+            provider: 'oauth',
+            phone: '',
+            streetAddress: '',
+            postalCode: '',
+            city: '',
+            country: '',
+            role: 'user',
+            availability: false,
+            takenOrder: null,
+          });
         }
+      } catch (err) {
+        console.error('Error in events.createUser:', err);
       }
-    }
+    },
 
-    return true;
+    async linkAccount({ user, account }: any) {
+      try {
+        if (account?.provider === 'google' && user?.email) {
+          await mongoose.connect(process.env.MONGODB_URL as string);
+          await User.findOneAndUpdate(
+            { email: user.email },
+            {
+              name: user.name,
+              image: user.image,
+              provider: 'oauth',
+            }
+          );
+        }
+      } catch (err) {
+        console.error('Error in events.linkAccount:', err);
+      }
+    },
   },
 };

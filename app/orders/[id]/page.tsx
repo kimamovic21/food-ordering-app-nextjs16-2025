@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import toast from 'react-hot-toast';
 
 type CartProduct = {
   productId: string;
@@ -46,21 +47,36 @@ type OrderDetailsType = {
   cartProducts: CartProduct[];
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'completed';
+  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
+  courierId?: { _id: string; name: string; email: string; image?: string };
   createdAt: string;
   updatedAt: string;
   stripeSessionId?: string;
+};
+
+type CourierType = {
+  _id: string;
+  name: string;
+  email: string;
+  image?: string;
+  availability: boolean;
+  takenOrder?: string;
+  role: string;
 };
 
 const OrderDetailPage = () => {
   const [order, setOrder] = useState<OrderDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<'pending' | 'processing' | 'completed'>(
+  const [selectedStatus, setSelectedStatus] = useState<'pending' | 'processing' | 'transportation'>(
     'pending'
   );
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusError, setStatusError] = useState('');
+  const [couriers, setCouriers] = useState<CourierType[]>([]);
+  const [selectedCourier, setSelectedCourier] = useState<string>('');
+  const [assigningCourier, setAssigningCourier] = useState(false);
+  const [showCourierSelect, setShowCourierSelect] = useState(false);
   const { data: profileData, loading: profileLoading } = useProfile();
   const params = useParams();
   const orderId = params?.id as string;
@@ -77,7 +93,7 @@ const OrderDetailPage = () => {
         }
         const json = await res.json();
         setOrder(json.order);
-        setSelectedStatus(json.order.orderStatus || 'pending');
+        setSelectedStatus((json.order.orderStatus === 'completed' ? 'transportation' : json.order.orderStatus) || 'pending');
         setStatusError('');
       } catch (err) {
         console.error('Failed to load order', err);
@@ -91,6 +107,23 @@ const OrderDetailPage = () => {
       fetchOrder();
     }
   }, [orderId, profileData?.role, profileLoading]);
+
+  // Fetch available couriers when order status is transportation
+  useEffect(() => {
+    if (order?.orderStatus === 'transportation') {
+      const fetchCouriers = async () => {
+        try {
+          const res = await fetch('/api/couriers?availableOnly=true');
+          if (!res.ok) throw new Error('Failed to fetch couriers');
+          const data = await res.json();
+          setCouriers(data.couriers);
+        } catch (err) {
+          console.error('Failed to fetch couriers', err);
+        }
+      };
+      fetchCouriers();
+    }
+  }, [order?.orderStatus]);
 
   const handleStatusUpdate = async () => {
     if (!order) return;
@@ -119,10 +152,45 @@ const OrderDetailPage = () => {
 
       setOrder(data.order);
       setSelectedStatus(data.order.orderStatus);
+      toast.success('Order status updated successfully');
     } catch (err) {
       setStatusError('Failed to update order status');
     } finally {
       setStatusUpdating(false);
+    }
+  };
+
+  const handleAssignCourier = async () => {
+    if (!order || !selectedCourier) return;
+
+    try {
+      setAssigningCourier(true);
+      const res = await fetch('/api/couriers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courierId: selectedCourier, orderId: order._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to assign courier');
+        return;
+      }
+
+      // Update order with courier info
+      const updatedOrder = {
+        ...order,
+        courierId: data.courier,
+      };
+      setOrder(updatedOrder);
+      setShowCourierSelect(false);
+      setSelectedCourier('');
+      toast.success('Courier assigned successfully');
+    } catch (err) {
+      toast.error('Failed to assign courier');
+    } finally {
+      setAssigningCourier(false);
     }
   };
 
@@ -239,7 +307,11 @@ const OrderDetailPage = () => {
           <CardHeader>
             <CardTitle>Update Order Status</CardTitle>
             <CardDescription>
-              You can only move the order forward after payment is completed.
+              {order.orderStatus === 'completed' 
+                ? 'Order delivered successfully. You are not able to update order delivery status.'
+                : order.orderStatus === 'transportation'
+                ? 'Order is being delivered. Status cannot be changed.'
+                : 'You can only move the order forward after payment is completed.'}
             </CardDescription>
           </CardHeader>
           <CardContent className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
@@ -248,7 +320,7 @@ const OrderDetailPage = () => {
               <Select
                 value={selectedStatus}
                 onValueChange={(value) => setSelectedStatus(value as typeof selectedStatus)}
-                disabled={!order.paymentStatus || statusUpdating}
+                disabled={!order.paymentStatus || statusUpdating || order.orderStatus === 'transportation' || order.orderStatus === 'completed'}
               >
                 <SelectTrigger className='w-full sm:w-60'>
                   <SelectValue placeholder='Select status' />
@@ -256,7 +328,7 @@ const OrderDetailPage = () => {
                 <SelectContent>
                   <SelectItem value='pending'>pending</SelectItem>
                   <SelectItem value='processing'>processing</SelectItem>
-                  <SelectItem value='completed'>completed</SelectItem>
+                  <SelectItem value='transportation'>transportation</SelectItem>
                 </SelectContent>
               </Select>
               {!order.paymentStatus && (
@@ -266,13 +338,138 @@ const OrderDetailPage = () => {
             </div>
             <Button
               onClick={handleStatusUpdate}
-              disabled={statusUpdating || !order.paymentStatus}
+              disabled={statusUpdating || !order.paymentStatus || order.orderStatus === 'transportation' || order.orderStatus === 'completed'}
               className='self-start'
             >
               {statusUpdating ? 'Updating...' : 'Save status'}
             </Button>
           </CardContent>
         </Card>
+
+        {order.orderStatus === 'completed' && order.courierId && (
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                ✅ Order Completed
+              </CardTitle>
+              <CardDescription>
+                This order has been successfully delivered.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='border rounded-lg p-4 bg-green-50 dark:bg-green-950'>
+                <p className='font-semibold text-green-900 dark:text-green-100 mb-2'>
+                  Delivered By
+                </p>
+                <div className='flex items-center gap-3'>
+                  {order.courierId.image && (
+                    <img
+                      src={order.courierId.image}
+                      alt={order.courierId.name}
+                      className='w-10 h-10 rounded-full'
+                    />
+                  )}
+                  <div>
+                    <p className='font-medium'>{order.courierId.name}</p>
+                    <p className='text-sm text-gray-600 dark:text-gray-300'>
+                      {order.courierId.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {order.orderStatus === 'transportation' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                📍 Order Being Transported
+              </CardTitle>
+              <CardDescription>
+                This order is currently being transported to the customer.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {order.courierId ? (
+                <div className='space-y-3'>
+                  <div className='border rounded-lg p-4 bg-green-50 dark:bg-green-950'>
+                    <p className='font-semibold text-green-900 dark:text-green-100 mb-2'>
+                      Courier Assigned
+                    </p>
+                    <div className='flex items-center gap-3'>
+                      {order.courierId.image && (
+                        <img
+                          src={order.courierId.image}
+                          alt={order.courierId.name}
+                          className='w-10 h-10 rounded-full'
+                        />
+                      )}
+                      <div>
+                        <p className='font-medium'>{order.courierId.name}</p>
+                        <p className='text-sm text-gray-600 dark:text-gray-300'>
+                          {order.courierId.email}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className='space-y-4'>
+                  {!showCourierSelect ? (
+                    <Button onClick={() => setShowCourierSelect(true)} className='w-full'>
+                      Assign Courier
+                    </Button>
+                  ) : (
+                    <div className='space-y-3'>
+                      <div className='space-y-2'>
+                        <label className='text-sm font-medium'>Select Available Courier</label>
+                        {couriers.length === 0 ? (
+                          <p className='text-sm text-amber-600'>No available couriers at the moment.</p>
+                        ) : (
+                          <select
+                            value={selectedCourier}
+                            onChange={(e) => setSelectedCourier(e.target.value)}
+                            className='w-full px-3 py-2 border border-input rounded-md bg-background'
+                          >
+                            <option value=''>Choose a courier...</option>
+                            {couriers.map((courier) => (
+                              <option key={courier._id} value={courier._id}>
+                                {courier.name} - {courier.email}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                      {selectedCourier && (
+                        <div className='flex gap-2'>
+                          <Button
+                            onClick={handleAssignCourier}
+                            disabled={assigningCourier || !selectedCourier}
+                            className='flex-1'
+                          >
+                            {assigningCourier ? 'Assigning...' : 'Confirm Assignment'}
+                          </Button>
+                          <Button
+                            variant='outline'
+                            onClick={() => {
+                              setShowCourierSelect(false);
+                              setSelectedCourier('');
+                            }}
+                            className='flex-1'
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <CustomerInfoCard
           email={order.email}

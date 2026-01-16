@@ -28,6 +28,14 @@ export function UsersLinkSkeleton() {
   return <Skeleton className='h-4 w-14' />;
 }
 
+export function CouriersLinkSkeleton() {
+  return <Skeleton className='h-4 w-18' />;
+}
+
+export function CourierLinkSkeleton() {
+  return <Skeleton className='h-4 w-16' />;
+}
+
 export function OrdersLinkSkeleton() {
   return <Skeleton className='h-4 w-16' />;
 }

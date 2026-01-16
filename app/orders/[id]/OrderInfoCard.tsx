@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 type OrderInfoCardProps = {
   orderId: string;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'completed';
+  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
   createdAt: string;
   updatedAt: string;
   stripeSessionId?: string;

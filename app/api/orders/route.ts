@@ -23,7 +23,7 @@ export async function GET(request: Request) {
       return Response.json({ error: 'Invalid order ID' }, { status: 400 });
     }
 
-    const order = await Order.findById(id).lean();
+    const order = await Order.findById(id).populate('courierId', 'name email image').lean();
 
     if (!order) {
       return Response.json({ error: 'Order not found' }, { status: 404 });
@@ -37,7 +37,12 @@ export async function GET(request: Request) {
   const skip = (page - 1) * limit;
 
   const totalOrders = await Order.countDocuments({});
-  const orders = await Order.find({}).sort({ _id: -1 }).skip(skip).limit(limit).lean();
+  const orders = await Order.find({})
+    .populate('courierId', 'name email image')
+    .sort({ _id: -1 })
+    .skip(skip)
+    .limit(limit)
+    .lean();
   const normalizedOrders = orders.map(normalizeOrder);
 
   const totalPages = Math.ceil(totalOrders / limit) || 1;
@@ -58,9 +63,17 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'Invalid order ID' }, { status: 400 });
   }
 
-  const allowedStatuses = ['pending', 'processing', 'completed'];
+  const allowedStatuses = ['pending', 'processing', 'transportation', 'completed'];
   if (!allowedStatuses.includes(orderStatus)) {
     return Response.json({ error: 'Invalid order status' }, { status: 400 });
+  }
+
+  // Admin cannot mark order as completed
+  if (orderStatus === 'completed') {
+    return Response.json(
+      { error: 'Only courier can mark order as completed' },
+      { status: 400 }
+    );
   }
 
   const order = await Order.findById(id);

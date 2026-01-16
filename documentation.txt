@@ -772,3 +772,10 @@ Add user location map with Leaflet to user details
 -type command: npm i leaflet-defaulticon-compatibility
 -in folder users create component UserLocationMap.tsx
 -in component users/map.tsx import component UserLocationMap.tsx
+
+
+Add courier management and delivery assignment features
+
+-in folder api create new folders and route.ts file ho handle logic for courier
+-create folders courier, couriers and tsx components to display ui for courier logic
+-update register with Google logic in authOptions.ts file
