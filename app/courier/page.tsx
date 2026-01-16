@@ -1,17 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import useProfile from '@/contexts/UseProfile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,8 +15,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import Link from 'next/link';
 import toast from 'react-hot-toast';
+import dynamic from 'next/dynamic';
+import useProfile from '@/contexts/UseProfile';
+
+// Dynamic import to prevent SSR issues with Leaflet
+const OrderMap = dynamic(() => import('./OrderMap'), {
+  ssr: false,
+  loading: () => (
+    <div className='border rounded-lg p-4 h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
+      <p className='text-muted-foreground'>Loading map...</p>
+    </div>
+  ),
+});
 
 type CartProduct = {
   productId: string;
@@ -200,7 +202,9 @@ const CourierPage = () => {
       <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-6 gap-8 min-w-[600px]'>
         <div className='flex items-center gap-4 flex-1'>
           <div
-            className={`w-3 h-3 rounded-full shrink-0 ${availability ? 'bg-green-500' : 'bg-red-500'}`}
+            className={`w-3 h-3 rounded-full shrink-0 ${
+              availability ? 'bg-green-500' : 'bg-red-500'
+            }`}
           ></div>
           <div>
             <p className='font-semibold text-foreground'>
@@ -216,9 +220,7 @@ const CourierPage = () => {
           disabled={togglingAvailability}
           variant={availability ? 'destructive' : 'default'}
           className={`whitespace-nowrap w-[130px] shrink-0 ${
-            availability 
-              ? 'bg-red-600 hover:bg-red-700' 
-              : 'bg-green-600 hover:bg-green-700'
+            availability ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
           }`}
         >
           {togglingAvailability ? 'Updating...' : availability ? 'Go Offline' : 'Go Online'}
@@ -300,6 +302,18 @@ const CourierPage = () => {
                     </div>
                   </div>
 
+                  {/* Map */}
+                  <div>
+                    <h3 className='font-semibold text-foreground mb-3'>Delivery Location</h3>
+                    <OrderMap
+                      address={order.streetAddress}
+                      city={order.city}
+                      postalCode={order.postalCode}
+                      country={order.country}
+                      customerEmail={order.email}
+                    />
+                  </div>
+
                   {/* Delivery Status */}
                   <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm'>
                     <p className='text-blue-900 font-semibold'>
@@ -324,7 +338,8 @@ const CourierPage = () => {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Complete Delivery</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to complete your delivery for order #{order._id.slice(-8).toUpperCase()}?
+                          Are you sure you want to complete your delivery for order #
+                          {order._id.slice(-8).toUpperCase()}?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <div className='flex gap-3 justify-end'>

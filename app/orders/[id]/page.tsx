@@ -26,6 +26,17 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import toast from 'react-hot-toast';
+import Image from 'next/image';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 type CartProduct = {
   productId: string;
@@ -77,6 +88,7 @@ const OrderDetailPage = () => {
   const [selectedCourier, setSelectedCourier] = useState<string>('');
   const [assigningCourier, setAssigningCourier] = useState(false);
   const [showCourierSelect, setShowCourierSelect] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const { data: profileData, loading: profileLoading } = useProfile();
   const params = useParams();
   const orderId = params?.id as string;
@@ -93,7 +105,10 @@ const OrderDetailPage = () => {
         }
         const json = await res.json();
         setOrder(json.order);
-        setSelectedStatus((json.order.orderStatus === 'completed' ? 'transportation' : json.order.orderStatus) || 'pending');
+        setSelectedStatus(
+          (json.order.orderStatus === 'completed' ? 'transportation' : json.order.orderStatus) ||
+            'pending'
+        );
         setStatusError('');
       } catch (err) {
         console.error('Failed to load order', err);
@@ -154,6 +169,7 @@ const OrderDetailPage = () => {
       setSelectedStatus(data.order.orderStatus);
       toast.success('Order status updated successfully');
     } catch (err) {
+      console.error(err);
       setStatusError('Failed to update order status');
     } finally {
       setStatusUpdating(false);
@@ -186,12 +202,18 @@ const OrderDetailPage = () => {
       setOrder(updatedOrder);
       setShowCourierSelect(false);
       setSelectedCourier('');
+      setShowConfirmModal(false);
       toast.success('Courier assigned successfully');
     } catch (err) {
+      console.error(err);
       toast.error('Failed to assign courier');
     } finally {
       setAssigningCourier(false);
     }
+  };
+
+  const handleConfirmAssignment = () => {
+    setShowConfirmModal(true);
   };
 
   if (profileLoading || (loading && !order)) {
@@ -307,7 +329,7 @@ const OrderDetailPage = () => {
           <CardHeader>
             <CardTitle>Update Order Status</CardTitle>
             <CardDescription>
-              {order.orderStatus === 'completed' 
+              {order.orderStatus === 'completed'
                 ? 'Order delivered successfully. You are not able to update order delivery status.'
                 : order.orderStatus === 'transportation'
                 ? 'Order is being delivered. Status cannot be changed.'
@@ -320,7 +342,12 @@ const OrderDetailPage = () => {
               <Select
                 value={selectedStatus}
                 onValueChange={(value) => setSelectedStatus(value as typeof selectedStatus)}
-                disabled={!order.paymentStatus || statusUpdating || order.orderStatus === 'transportation' || order.orderStatus === 'completed'}
+                disabled={
+                  !order.paymentStatus ||
+                  statusUpdating ||
+                  order.orderStatus === 'transportation' ||
+                  order.orderStatus === 'completed'
+                }
               >
                 <SelectTrigger className='w-full sm:w-60'>
                   <SelectValue placeholder='Select status' />
@@ -338,7 +365,12 @@ const OrderDetailPage = () => {
             </div>
             <Button
               onClick={handleStatusUpdate}
-              disabled={statusUpdating || !order.paymentStatus || order.orderStatus === 'transportation' || order.orderStatus === 'completed'}
+              disabled={
+                statusUpdating ||
+                !order.paymentStatus ||
+                order.orderStatus === 'transportation' ||
+                order.orderStatus === 'completed'
+              }
               className='self-start'
             >
               {statusUpdating ? 'Updating...' : 'Save status'}
@@ -349,12 +381,8 @@ const OrderDetailPage = () => {
         {order.orderStatus === 'completed' && order.courierId && (
           <Card>
             <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                ✅ Order Completed
-              </CardTitle>
-              <CardDescription>
-                This order has been successfully delivered.
-              </CardDescription>
+              <CardTitle className='flex items-center gap-2'>✅ Order Completed</CardTitle>
+              <CardDescription>This order has been successfully delivered.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className='border rounded-lg p-4 bg-green-50 dark:bg-green-950'>
@@ -363,9 +391,11 @@ const OrderDetailPage = () => {
                 </p>
                 <div className='flex items-center gap-3'>
                   {order.courierId.image && (
-                    <img
+                    <Image
                       src={order.courierId.image}
                       alt={order.courierId.name}
+                      width={40}
+                      height={40}
                       className='w-10 h-10 rounded-full'
                     />
                   )}
@@ -388,7 +418,7 @@ const OrderDetailPage = () => {
                 {order.courierId ? '📍 Order Being Transported' : '📦 Order Set to be Transported'}
               </CardTitle>
               <CardDescription>
-                {order.courierId 
+                {order.courierId
                   ? 'This order is currently being transported to the customer.'
                   : 'This order is ready for transportation. Please assign a courier to start delivery.'}
               </CardDescription>
@@ -402,9 +432,11 @@ const OrderDetailPage = () => {
                     </p>
                     <div className='flex items-center gap-3'>
                       {order.courierId.image && (
-                        <img
+                        <Image
                           src={order.courierId.image}
                           alt={order.courierId.name}
+                          width={40}
+                          height={40}
                           className='w-10 h-10 rounded-full'
                         />
                       )}
@@ -428,7 +460,9 @@ const OrderDetailPage = () => {
                       <div className='space-y-2'>
                         <label className='text-sm font-medium'>Select Available Courier</label>
                         {couriers.length === 0 ? (
-                          <p className='text-sm text-amber-600'>No available couriers at the moment.</p>
+                          <p className='text-sm text-amber-600'>
+                            No available couriers at the moment.
+                          </p>
                         ) : (
                           <select
                             value={selectedCourier}
@@ -447,11 +481,11 @@ const OrderDetailPage = () => {
                       {selectedCourier && (
                         <div className='flex gap-2'>
                           <Button
-                            onClick={handleAssignCourier}
+                            onClick={handleConfirmAssignment}
                             disabled={assigningCourier || !selectedCourier}
                             className='flex-1'
                           >
-                            {assigningCourier ? 'Assigning...' : 'Confirm Assignment'}
+                            Confirm Assignment
                           </Button>
                           <Button
                             variant='outline'
@@ -472,6 +506,24 @@ const OrderDetailPage = () => {
             </CardContent>
           </Card>
         )}
+
+        <AlertDialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Courier Assignment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to assign this order to this courier? This action will notify
+                the courier to start the delivery.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={assigningCourier}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleAssignCourier} disabled={assigningCourier}>
+                {assigningCourier ? 'Assigning...' : 'Yes, Assign Courier'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <CustomerInfoCard
           email={order.email}

@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { CartProvider } from '@/contexts/CartContext';
 import { ThemeProvider } from '@/components/theme/ThemeProvider';
 import './globals.css';
+import 'leaflet/dist/leaflet.css';
 import Header from '../components/shared/Header';
 import Footer from '../components/shared/Footer';
 import AppContext from '@/contexts/AppContext';

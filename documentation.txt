@@ -790,3 +790,9 @@ Add courier delivery history and update courier UI
 Update README with detailed project overview
 
 -add app description in README.md file
+
+
+Add order delivery map and courier assignment confirmation
+
+-in folder courier create component OrderMap.tsx
+-update ui in component orders/[id]/page.tsx
