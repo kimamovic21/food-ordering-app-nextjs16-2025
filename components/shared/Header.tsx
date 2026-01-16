@@ -133,12 +133,20 @@ const Header = () => {
                       My Orders
                     </Link>
                     {isCourier && (
-                      <Link
-                        className={`${pathname === '/courier' ? 'text-primary font-semibold' : ''}`}
-                        href={'/courier'}
-                      >
-                        Courier
-                      </Link>
+                      <>
+                        <Link
+                          className={`${pathname === '/courier' ? 'text-primary font-semibold' : ''}`}
+                          href={'/courier'}
+                        >
+                          Courier
+                        </Link>
+                        <Link
+                          className={`${pathname === '/my-deliveries' ? 'text-primary font-semibold' : ''}`}
+                          href={'/my-deliveries'}
+                        >
+                          My Deliveries
+                        </Link>
+                      </>
                     )}
                     {isAdmin && (
                       <>
@@ -332,13 +340,22 @@ const Header = () => {
                   My Orders
                 </Link>
                 {isCourier && (
-                  <Link
-                    href='/courier'
-                    onClick={() => setMobileOpen(false)}
-                    className='hover:text-primary'
-                  >
-                    Courier
-                  </Link>
+                  <>
+                    <Link
+                      href='/courier'
+                      onClick={() => setMobileOpen(false)}
+                      className='hover:text-primary'
+                    >
+                      Courier
+                    </Link>
+                    <Link
+                      href='/my-deliveries'
+                      onClick={() => setMobileOpen(false)}
+                      className='hover:text-primary'
+                    >
+                      My Deliveries
+                    </Link>
+                  </>
                 )}
                 {isAdmin && (
                   <>

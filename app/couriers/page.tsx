@@ -7,21 +7,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbSeparator,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import Link from 'next/link';
 
 type CourierType = {
   _id: string;
@@ -68,8 +56,13 @@ const CouriersPage = () => {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
         <div className='space-y-4'>
-          <Skeleton className='h-8 w-32' />
-          <Skeleton className='h-96 w-full' />
+          <Skeleton className='h-10 w-48' />
+          <Skeleton className='h-5 w-32' />
+          <div className='space-y-4'>
+            {[...Array(4)].map((_, idx) => (
+              <Skeleton key={idx} className='h-20 w-full' />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -87,10 +80,11 @@ const CouriersPage = () => {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
         <div className='space-y-4'>
-          <Skeleton className='h-8 w-32' />
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-            {[...Array(6)].map((_, idx) => (
-              <Skeleton key={idx} className='h-48 w-full' />
+          <Skeleton className='h-10 w-48' />
+          <Skeleton className='h-5 w-32' />
+          <div className='space-y-4'>
+            {[...Array(4)].map((_, idx) => (
+              <Skeleton key={idx} className='h-20 w-full' />
             ))}
           </div>
         </div>
@@ -100,20 +94,6 @@ const CouriersPage = () => {
 
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
-      <Breadcrumb className='mb-6'>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href='/'>Dashboard</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>Couriers</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div className='mb-6'>
         <h1 className='text-3xl font-bold text-foreground'>Couriers</h1>
         <p className='text-muted-foreground mt-2'>
@@ -134,55 +114,42 @@ const CouriersPage = () => {
           </CardContent>
         </Card>
       ) : (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+        <div className='space-y-4'>
           {couriers.map((courier) => (
             <Card key={courier._id} className='hover:shadow-lg transition-shadow'>
-              <CardHeader className='pb-3'>
-                <div className='flex items-start justify-between'>
-                  <div className='flex items-center gap-3'>
-                    <Avatar>
-                      <AvatarImage src={courier.image} alt={courier.name} />
-                      <AvatarFallback>
-                        {courier.name
-                          ?.split(' ')
-                          .map((n) => n[0])
-                          .join('')
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className='text-lg'>{courier.name}</CardTitle>
-                      <p className='text-sm text-muted-foreground'>{courier.email}</p>
-                    </div>
+              <CardContent className='py-4'>
+                <div className='flex items-center gap-4'>
+                  <Avatar className='h-12 w-12'>
+                    <AvatarImage src={courier.image} alt={courier.name} />
+                    <AvatarFallback>
+                      {courier.name
+                        ?.split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  
+                  <div className='flex-1'>
+                    <h3 className='text-lg font-semibold'>{courier.name}</h3>
+                    <p className='text-sm text-muted-foreground'>{courier.email}</p>
                   </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className='space-y-3'>
+
                   <div className='flex items-center gap-2'>
                     <span className='text-sm font-medium text-muted-foreground'>
                       Availability:
                     </span>
                     <Badge
-                      variant={courier.availability ? 'default' : 'secondary'}
+                      variant={courier.availability ? 'default' : 'destructive'}
                       className={
                         courier.availability
                           ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-gray-400 hover:bg-gray-500'
+                          : 'bg-red-600 hover:bg-red-700'
                       }
                     >
                       {courier.availability ? 'Online' : 'Offline'}
                     </Badge>
                   </div>
-
-                  {courier.takenOrder && (
-                    <div className='text-sm'>
-                      <span className='font-medium text-muted-foreground'>Current Order: </span>
-                      <span className='text-foreground font-semibold'>
-                        {courier.takenOrder.toString().slice(-8).toUpperCase()}
-                      </span>
-                    </div>
-                  )}
 
                   <div className='text-xs text-muted-foreground'>
                     Joined: {new Date(courier.createdAt).toLocaleDateString()}

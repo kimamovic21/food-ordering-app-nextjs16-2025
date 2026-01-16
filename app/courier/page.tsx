@@ -144,9 +144,17 @@ const CourierPage = () => {
   if (profileLoading) {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-4'>
-          <Skeleton className='h-8 w-32' />
-          <Skeleton className='h-96 w-full' />
+        <div className='space-y-6'>
+          <div>
+            <Skeleton className='h-10 w-96' />
+            <Skeleton className='h-5 w-80 mt-2' />
+          </div>
+          <Skeleton className='h-24 w-full' />
+          <div className='space-y-4'>
+            {[...Array(2)].map((_, idx) => (
+              <Skeleton key={idx} className='h-64 w-full' />
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -163,11 +171,15 @@ const CourierPage = () => {
   if (loading) {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-4'>
-          <Skeleton className='h-8 w-32' />
+        <div className='space-y-6'>
+          <div>
+            <Skeleton className='h-10 w-96' />
+            <Skeleton className='h-5 w-80 mt-2' />
+          </div>
+          <Skeleton className='h-24 w-full' />
           <div className='space-y-4'>
-            {[...Array(3)].map((_, idx) => (
-              <Skeleton key={idx} className='h-48 w-full' />
+            {[...Array(2)].map((_, idx) => (
+              <Skeleton key={idx} className='h-64 w-full' />
             ))}
           </div>
         </div>
@@ -177,32 +189,18 @@ const CourierPage = () => {
 
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
-      <Breadcrumb className='mb-6'>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <Link href='/'>Dashboard</Link>
-            </BreadcrumbLink>
-          </BreadcrumbItem>
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage>My Deliveries</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <div className='mb-6'>
-        <h1 className='text-3xl font-bold text-foreground'>My Deliveries</h1>
+        <h1 className='text-3xl font-bold text-foreground'>Current Delivery</h1>
         <p className='text-muted-foreground mt-2'>
           Active orders ready for delivery: {orders.length}
         </p>
       </div>
 
       {/* Availability Toggle */}
-      <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-4'>
-        <div className='flex items-center gap-3'>
+      <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-6 gap-8 min-w-[600px]'>
+        <div className='flex items-center gap-4 flex-1'>
           <div
-            className={`w-3 h-3 rounded-full ${availability ? 'bg-green-500' : 'bg-red-500'}`}
+            className={`w-3 h-3 rounded-full shrink-0 ${availability ? 'bg-green-500' : 'bg-red-500'}`}
           ></div>
           <div>
             <p className='font-semibold text-foreground'>
@@ -217,7 +215,11 @@ const CourierPage = () => {
           onClick={handleToggleAvailability}
           disabled={togglingAvailability}
           variant={availability ? 'destructive' : 'default'}
-          className='whitespace-nowrap'
+          className={`whitespace-nowrap w-[130px] shrink-0 ${
+            availability 
+              ? 'bg-red-600 hover:bg-red-700' 
+              : 'bg-green-600 hover:bg-green-700'
+          }`}
         >
           {togglingAvailability ? 'Updating...' : availability ? 'Go Offline' : 'Go Online'}
         </Button>

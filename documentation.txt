@@ -779,3 +779,9 @@ Add courier management and delivery assignment features
 -in folder api create new folders and route.ts file ho handle logic for courier
 -create folders courier, couriers and tsx components to display ui for courier logic
 -update register with Google logic in authOptions.ts file
+
+
+Add courier delivery history and update courier UI
+
+-add logic for tracking deliveries for courier
+-update existing ui

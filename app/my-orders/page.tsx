@@ -164,7 +164,7 @@ const MyOrdersPage = () => {
               <Skeleton className='h-5 w-28' />
               <Skeleton className='h-9 w-24' />
             </div>
-          ) : (
+          ) : orders.length > 0 ? (
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
@@ -198,7 +198,7 @@ const MyOrdersPage = () => {
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
-          )}
+          ) : null}
         </div>
       </div>
     </section>

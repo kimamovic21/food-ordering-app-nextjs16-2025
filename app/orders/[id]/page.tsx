@@ -385,10 +385,12 @@ const OrderDetailPage = () => {
           <Card>
             <CardHeader>
               <CardTitle className='flex items-center gap-2'>
-                📍 Order Being Transported
+                {order.courierId ? '📍 Order Being Transported' : '📦 Order Set to be Transported'}
               </CardTitle>
               <CardDescription>
-                This order is currently being transported to the customer.
+                {order.courierId 
+                  ? 'This order is currently being transported to the customer.'
+                  : 'This order is ready for transportation. Please assign a courier to start delivery.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
