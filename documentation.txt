@@ -785,3 +785,8 @@ Add courier delivery history and update courier UI
 
 -add logic for tracking deliveries for courier
 -update existing ui
+
+
+Update README with detailed project overview
+
+-add app description in README.md file

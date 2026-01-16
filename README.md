@@ -1,8 +1,129 @@
 # Fullstack Food Ordering App with Next.js
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+A comprehensive full-stack food ordering application built with Next.js 16, featuring user authentication, menu management, shopping cart, order tracking, payment processing, and delivery management. This application includes admin panels for managing menu items, orders, users, and couriers, along with real-time statistics and analytics.
+
+## Project Description
+
+This is a modern food ordering platform that allows users to browse menus, add items to cart, place orders, and track deliveries. Administrators can manage the entire restaurant operation including menu items, categories, orders, and user accounts. The application features role-based access control, secure payment processing via Stripe, and real-time order tracking with delivery assignment to couriers.
+
+## 🚀 Technologies Used
+
+### **Frontend**
+
+- **Next.js 16.0.7** - React framework with App Router
+- **React 19.2.0** - UI library
+- **TypeScript 5** - Type-safe development
+- **Tailwind CSS 4** - Utility-first CSS framework
+- **Radix UI** - Headless UI components (Alert Dialog, Avatar, Dropdown Menu, Label, Select, Slot)
+- **Lucide React** - Icon library
+- **React Icons** - Additional icon library
+- **React Hook Form 7.69.0** - Form management
+- **Zod 4.2.1** - Schema validation
+- **@hookform/resolvers 5.2.2** - Form validation resolver
+- **Next Themes 0.4.6** - Dark mode support
+- **React Hot Toast 2.6.0** - Toast notifications
+- **Recharts 2.15.4** - Data visualization and charts
+
+### **Backend & Database**
+
+- **MongoDB 6.21.0** - Database client
+- **Mongoose 9.0.0** - MongoDB ODM
+- **NextAuth.js 4.24.13** - Authentication
+- **@auth/mongodb-adapter 3.11.1** - NextAuth MongoDB adapter
+- **Bcrypt 6.0.0** - Password hashing
+
+### **Payment Processing**
+
+- **Stripe 20.1.0** - Payment gateway
+- **@stripe/react-stripe-js 5.4.1** - React components for Stripe
+
+### **Image Storage**
+
+- **Cloudinary 2.8.0** - Cloud image storage and management
+
+### **Maps & Location**
+
+- **Leaflet 1.9.4** - Interactive maps
+- **React Leaflet 5.0.0** - React components for Leaflet
+- **@types/leaflet 1.9.21** - TypeScript types for Leaflet
+- **leaflet-defaulticon-compatibility 0.1.2** - Icon compatibility
+
+### **Development Tools**
+
+- **ESLint 9** - Code linting
+- **PostCSS** - CSS processing
+- **tw-animate-css 1.4.0** - Tailwind animations
+
+## 🔗 Third-Party Services Setup
+
+### **Google Cloud Console**
+
+Create OAuth credentials for Google authentication:
+
+- [https://console.cloud.google.com/](https://console.cloud.google.com/)
+- Set up OAuth 2.0 credentials for Google Sign-In
+
+### **Cloudinary**
+
+Set up cloud storage for menu item images:
+
+- [https://cloudinary.com/](https://cloudinary.com/)
+- All uploaded images are stored and managed here
+
+### **MongoDB Atlas**
+
+Your database is hosted on MongoDB Atlas:
+
+- [https://www.mongodb.com/cloud/atlas](https://www.mongodb.com/cloud/atlas)
+- Create a cluster and get your connection string
+
+### **Stripe**
+
+Track all payments and manage subscriptions:
+
+- [https://stripe.com/](https://stripe.com/)
+- Set up your Stripe account and get API keys
+
+### **Stripe Webhook Testing**
+
+To test Stripe webhooks locally, run this command in your terminal:
+
+```bash
+stripe listen --forward-to localhost:3000/api/webhook
+```
+
+Or use the npm script:
+
+```bash
+npm run stripe:listen
+```
+
+## ⚙️ Environment Variables
+
+Create a `.env` file in the root directory with the following variables (see `example.env` for reference):
+
+- MongoDB connection string
+- NextAuth configuration
+- Google OAuth credentials
+- Cloudinary credentials
+- Stripe API keys
+
+## 📋 Available Scripts
+
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run stripe:listen    # Listen to Stripe webhooks
+npm run stripe:trigger   # Trigger Stripe test events
+```
+
+---
 
 ## Getting Started
+
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 First, run the development server:
 
