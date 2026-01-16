@@ -6,6 +6,18 @@ A comprehensive full-stack food ordering application built with Next.js 16, feat
 
 This is a modern food ordering platform that allows users to browse menus, add items to cart, place orders, and track deliveries. Administrators can manage the entire restaurant operation including menu items, categories, orders, and user accounts. The application features role-based access control, secure payment processing via Stripe, and real-time order tracking with delivery assignment to couriers.
 
+### Recent Updates (January 2026)
+
+#### Courier Location Tracking
+
+- **Real-time Location Updates**: Couriers can now share their live location while making deliveries
+- **Map Visualization**: Interactive maps powered by Leaflet showing both courier (red marker) and customer (blue marker) locations
+- **Auto-Polling**: Map automatically fetches courier location every 60 seconds for minimal database load
+- **Immediate Refresh**: Location updates appear instantly on the map after sharing
+- **Distance Validation**: Prevents unrealistic location jumps (max 50km between updates) to catch bad GPS data
+- **Permission-Based**: Respects browser geolocation permissions with graceful fallbacks
+- **Location History**: Tracks last update timestamp for verification
+
 ## 🚀 Technologies Used
 
 ### **Frontend**
@@ -47,6 +59,45 @@ This is a modern food ordering platform that allows users to browse menus, add i
 - **React Leaflet 5.0.0** - React components for Leaflet
 - **@types/leaflet 1.9.21** - TypeScript types for Leaflet
 - **leaflet-defaulticon-compatibility 0.1.2** - Icon compatibility
+
+## 👨‍💼 Courier Features
+
+### Location Tracking System
+
+- **Share Location**: Couriers can share their real-time GPS location while on delivery
+- **Live Map Display**: Dual-marker map showing courier position (red) and delivery destination (blue)
+- **Route Visualization**: Visual route line connecting courier to customer on the map
+- **60-Second Auto-Polling**: Automatically fetches location updates every minute without overwhelming the database
+- **Immediate Updates**: Location appears on map instantly after sharing, not after the 60-second poll
+- **Location Validation**:
+  - Prevents location spoofing by validating coordinate ranges
+  - Rejects jumps > 50km between consecutive updates
+  - Tracks update timestamps for verification
+
+### API Endpoints for Couriers
+
+```api
+POST /api/courier/location
+- Share or update courier's current location
+- Body: { latitude: number, longitude: number }
+- Returns: Updated location with timestamp
+
+GET /api/courier/location
+- Fetch courier's current location
+- Returns: { location: { latitude, longitude, lastLocationUpdate } }
+```
+
+### Database Schema
+
+Couriers have the following location-related fields:
+
+```typescript
+latitude: Number | null           // Current latitude (null if not shared)
+longitude: Number | null          // Current longitude (null if not shared)
+lastLocationUpdate: Date | null   // Timestamp of last location update
+```
+
+## 🗺️ Maps & Location
 
 ### **Development Tools**
 
@@ -111,10 +162,10 @@ Create a `.env` file in the root directory with the following variables (see `ex
 ## 📋 Available Scripts
 
 ```bash
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
-npm run lint         # Run ESLint
+npm run dev              # Start development server
+npm run build            # Build for production
+npm run start            # Start production server
+npm run lint             # Run ESLint
 npm run stripe:listen    # Listen to Stripe webhooks
 npm run stripe:trigger   # Trigger Stripe test events
 ```

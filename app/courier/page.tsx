@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import {
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import useProfile from '@/contexts/UseProfile';
+import type { OrderMapHandle } from './OrderMap';
 
 // Dynamic import to prevent SSR issues with Leaflet
 const OrderMap = dynamic(() => import('./OrderMap'), {
@@ -63,6 +64,9 @@ const CourierPage = () => {
   const [completing, setCompleting] = useState<string | null>(null);
   const [availability, setAvailability] = useState(false);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
+  const [sharingLocation, setSharingLocation] = useState(false);
+  const [locationShared, setLocationShared] = useState(false);
+  const mapRefs = useRef<Map<string, OrderMapHandle>>(new Map());
 
   useEffect(() => {
     if (profileLoading || profileData?.role !== 'courier') return;
@@ -140,6 +144,77 @@ const CourierPage = () => {
       toast.error('Failed to toggle availability');
     } finally {
       setTogglingAvailability(false);
+    }
+  };
+
+  const handleShareLocation = async () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your browser');
+      return;
+    }
+
+    try {
+      setSharingLocation(true);
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude } = position.coords;
+
+          try {
+            const res = await fetch('/api/courier/location', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ latitude, longitude }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              toast.error(data.error || 'Failed to update location');
+              setSharingLocation(false);
+              return;
+            }
+
+            setLocationShared(true);
+            toast.success('Location shared successfully');
+
+            // Refetch location on all maps immediately
+            mapRefs.current.forEach((mapRef) => {
+              mapRef.refetchCourierLocation().catch((err) => {
+                console.error('Failed to refetch courier location:', err);
+              });
+            });
+
+            // Reset the button state after 2 seconds
+            setTimeout(() => {
+              setLocationShared(false);
+            }, 2000);
+          } catch (err) {
+            console.error(err);
+            toast.error('Failed to update location');
+          } finally {
+            setSharingLocation(false);
+          }
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+          setSharingLocation(false);
+
+          if (error.code === error.PERMISSION_DENIED) {
+            toast.error('Location permission denied. Please enable location access.');
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            toast.error('Location information is unavailable.');
+          } else if (error.code === error.TIMEOUT) {
+            toast.error('Location request timed out.');
+          } else {
+            toast.error('Failed to get your location');
+          }
+        },
+        { enableHighAccuracy: true, timeout: 5000 }
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to share location');
+      setSharingLocation(false);
     }
   };
 
@@ -227,6 +302,34 @@ const CourierPage = () => {
         </Button>
       </div>
 
+      {/* Location Sharing Button */}
+      <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-6 gap-8'>
+        <div className='flex items-center gap-4 flex-1'>
+          <div className='w-3 h-3 rounded-full shrink-0 bg-blue-500'></div>
+          <div>
+            <p className='font-semibold text-foreground'>
+              {locationShared ? '✓ Location Shared' : 'Share Your Location'}
+            </p>
+            <p className='text-sm text-muted-foreground'>
+              {locationShared
+                ? 'Your location is being tracked by the customer'
+                : 'Enable real-time location tracking for this delivery'}
+            </p>
+          </div>
+        </div>
+        <Button
+          onClick={handleShareLocation}
+          disabled={sharingLocation || !availability}
+          className='whitespace-nowrap w-[140px] shrink-0 bg-blue-600 hover:bg-blue-700'
+        >
+          {sharingLocation
+            ? 'Getting Location...'
+            : locationShared
+            ? 'Location Shared'
+            : 'Share Location'}
+        </Button>
+      </div>
+
       {error && (
         <div className='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6'>
           {error}
@@ -306,6 +409,10 @@ const CourierPage = () => {
                   <div>
                     <h3 className='font-semibold text-foreground mb-3'>Delivery Location</h3>
                     <OrderMap
+                      ref={(el) => {
+                        if (el) mapRefs.current.set(order._id, el);
+                        else mapRefs.current.delete(order._id);
+                      }}
                       address={order.streetAddress}
                       city={order.city}
                       postalCode={order.postalCode}

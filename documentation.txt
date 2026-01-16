@@ -796,3 +796,10 @@ Add order delivery map and courier assignment confirmation
 
 -in folder courier create component OrderMap.tsx
 -update ui in component orders/[id]/page.tsx
+
+
+Add real-time courier location tracking
+
+-create folder location and route.ts file
+-update model user.ts 
+-update component OrderMap.tsx to see courier current location

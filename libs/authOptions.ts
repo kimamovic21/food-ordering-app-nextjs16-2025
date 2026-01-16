@@ -9,7 +9,6 @@ import client from '@/libs/mongoConnect';
 // Use a dedicated database for NextAuth to avoid collection conflicts
 const mongoAdapter = MongoDBAdapter(client, { databaseName: 'next-auth' });
 
-
 export const authOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   adapter: mongoAdapter,
@@ -108,6 +107,9 @@ export const authOptions = {
               role: token?.role || 'user',
               availability: false,
               takenOrder: null,
+              latitude: null,
+              longitude: null,
+              lastLocationUpdate: null,
             });
 
             // Mirror data back into session
