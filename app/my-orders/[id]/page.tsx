@@ -40,6 +40,22 @@ type OrderDetailsType = {
   paymentStatus: boolean;
   orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
+  deliveryFee?: number;
+  deliveryFeeBreakdown?: {
+    baseFee: number;
+    altitudeAdjustment: number;
+    weatherAdjustment: number;
+    totalAdjustment: number;
+    altitude?: number;
+    weather?: {
+      condition: 'clear' | 'rain' | 'snow' | 'storm';
+      temperature: number;
+      windSpeed: number;
+    };
+  };
+  loyaltyDiscount?: number;
+  loyaltyDiscountPercentage?: number;
+  loyaltyTier?: string;
 };
 
 const MyOrderDetailPage = () => {
@@ -184,6 +200,8 @@ const MyOrderDetailPage = () => {
             paymentStatus={order.paymentStatus}
             orderStatus={order.orderStatus}
             createdAt={order.createdAt}
+            deliveryFee={order.deliveryFee}
+            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
           />
 
           <CustomerInfoCard
@@ -195,7 +213,15 @@ const MyOrderDetailPage = () => {
             country={order.country}
           />
 
-          <OrderItemsCard cartProducts={order.cartProducts} total={order.total} />
+          <OrderItemsCard 
+            cartProducts={order.cartProducts} 
+            total={order.total}
+            deliveryFee={order.deliveryFee}
+            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
+            loyaltyDiscount={order.loyaltyDiscount}
+            loyaltyDiscountPercentage={order.loyaltyDiscountPercentage}
+            loyaltyTier={order.loyaltyTier}
+          />
         </div>
       </div>
     </section>

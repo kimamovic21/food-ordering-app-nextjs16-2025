@@ -6,7 +6,6 @@ import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 import { IoCartOutline } from 'react-icons/io5';
 import { useCart } from '@/contexts/CartContext';
-import useProfile from '@/contexts/UseProfile';
 import {
   MenuLinkSkeleton,
   AboutLinkSkeleton,
@@ -26,8 +25,9 @@ import {
 } from './HeaderSkeletons';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import ModeToggle from '../theme/ModeToggle';
 import toast from 'react-hot-toast';
+import useProfile from '@/contexts/UseProfile';
+import ModeToggle from '../theme/ModeToggle';
 
 const Header = () => {
   const session = useSession();
@@ -48,13 +48,32 @@ const Header = () => {
   const totalItems = getTotalItems();
   const [bounce, setBounce] = useState(false);
   const prevCountRef = useRef(totalItems);
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (totalItems !== prevCountRef.current) {
-      setBounce(true);
-      const t = setTimeout(() => setBounce(false), 600);
       prevCountRef.current = totalItems;
-      return () => clearTimeout(t);
+
+      // Defer state update to avoid synchronous setState in effect
+      const updateBounce = setTimeout(() => {
+        setBounce(true);
+
+        // Clear any existing timeout before setting a new one
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+
+        timeoutRef.current = setTimeout(() => {
+          setBounce(false);
+        }, 600);
+      }, 0);
+
+      return () => {
+        clearTimeout(updateBounce);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+        }
+      };
     }
   }, [totalItems]);
 
@@ -73,7 +92,8 @@ const Header = () => {
     }
   }, [status]);
 
-  const isCourier = (session?.data?.user as any)?.role === 'courier' || profileData?.role === 'courier';
+  const isCourier =
+    (session?.data?.user as any)?.role === 'courier' || profileData?.role === 'courier';
   const isAdmin = (session?.data?.user as any)?.role === 'admin' || profileData?.role === 'admin';
 
   const handleLogout = async () => {
@@ -131,6 +151,12 @@ const Header = () => {
                       href={'/my-orders'}
                     >
                       My Orders
+                    </Link>
+                    <Link
+                      className={`${pathname === '/loyalty' ? 'text-primary font-semibold' : ''}`}
+                      href={'/loyalty'}
+                    >
+                      Loyalty
                     </Link>
                     {isCourier && (
                       <>
@@ -338,6 +364,13 @@ const Header = () => {
                   className='hover:text-primary'
                 >
                   My Orders
+                </Link>
+                <Link
+                  href='/loyalty'
+                  onClick={() => setMobileOpen(false)}
+                  className='hover:text-primary'
+                >
+                  Rewards
                 </Link>
                 {isCourier && (
                   <>

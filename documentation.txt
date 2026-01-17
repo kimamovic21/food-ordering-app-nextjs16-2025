@@ -810,3 +810,9 @@ Refactor order map and add admin courier location API
 -move component OrderMap.tsx to folder shared
 -create folder courier-location and route.ts file
 -update ui in existing tsx components
+
+
+Add delivery fee and loyalty discount system
+
+-add logic for delivery fee based on weather conditions
+-add loyalty discount logic for users who have ordered more orders

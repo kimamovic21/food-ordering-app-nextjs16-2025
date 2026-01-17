@@ -1,14 +1,30 @@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
+type DeliveryFeeBreakdown = {
+  baseFee?: number;
+  altitudeAdjustment?: number;
+  weatherAdjustment?: number;
+  totalAdjustment?: number;
+};
+
 type OrderInfoCardProps = {
   orderId: string;
   paymentStatus: boolean;
   orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
+  deliveryFee?: number;
+  deliveryFeeBreakdown?: DeliveryFeeBreakdown;
 };
 
-const OrderInfoCard = ({ orderId, paymentStatus, orderStatus, createdAt }: OrderInfoCardProps) => {
+const OrderInfoCard = ({ 
+  orderId, 
+  paymentStatus, 
+  orderStatus, 
+  createdAt,
+  deliveryFee,
+  deliveryFeeBreakdown,
+}: OrderInfoCardProps) => {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -56,6 +72,35 @@ const OrderInfoCard = ({ orderId, paymentStatus, orderStatus, createdAt }: Order
           <p className='text-sm text-muted-foreground'>Order Date</p>
           <p className='font-semibold'>{formatDate(createdAt)}</p>
         </div>
+
+        {/* Delivery Fee Details */}
+        {deliveryFee !== undefined && (
+          <div className='md:col-span-2 border-t pt-4'>
+            <p className='text-sm text-muted-foreground mb-2 font-semibold'>Delivery Fee Details</p>
+            <div className='space-y-1 text-sm'>
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground'>Base Fee:</span>
+                <span className='font-semibold text-foreground'>${(deliveryFeeBreakdown?.baseFee || 5).toFixed(2)}</span>
+              </div>
+              {deliveryFeeBreakdown?.altitudeAdjustment ? (
+                <div className='flex justify-between text-xs pl-2'>
+                  <span className='text-muted-foreground'>+ Altitude:</span>
+                  <span className='text-foreground'>${deliveryFeeBreakdown.altitudeAdjustment.toFixed(2)}</span>
+                </div>
+              ) : null}
+              {deliveryFeeBreakdown?.weatherAdjustment ? (
+                <div className='flex justify-between text-xs pl-2'>
+                  <span className='text-muted-foreground'>+ Weather:</span>
+                  <span className='text-foreground'>${deliveryFeeBreakdown.weatherAdjustment.toFixed(2)}</span>
+                </div>
+              ) : null}
+              <div className='flex justify-between border-t pt-1 font-semibold'>
+                <span className='text-foreground'>Total:</span>
+                <span className='text-foreground'>${deliveryFee.toFixed(2)}</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Card>
   );

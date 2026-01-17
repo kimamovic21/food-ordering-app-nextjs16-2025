@@ -16,6 +16,27 @@ const CartProductSchema = new Schema(
   { _id: false }
 );
 
+const DeliveryFeeSchema = new Schema(
+  {
+    baseFee: { 
+      type: Number, 
+      required: true,
+      min: 0,
+    },
+    weatherAdjustment: { 
+      type: Number, 
+      default: 0,
+      min: 0,
+    },
+    totalAdjustment: { 
+      type: Number, 
+      default: 0,
+      min: 0,
+    },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -26,6 +47,40 @@ const OrderSchema = new Schema(
     city: { type: String, required: true },
     country: { type: String, required: true },
     cartProducts: { type: [CartProductSchema], required: true },
+    
+    // Delivery fee breakdown
+    deliveryFee: { 
+      type: Number, 
+      required: true,
+      default: 5,
+      min: 0,
+    },
+    deliveryFeeBreakdown: { 
+      type: DeliveryFeeSchema, 
+      default: {
+        baseFee: 5,
+        weatherAdjustment: 0,
+        totalAdjustment: 0,
+      },
+    },
+    
+    // Loyalty discount
+    loyaltyDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    loyaltyDiscountPercentage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
+    loyaltyTier: {
+      type: String,
+      default: null,
+    },
+    
     total: { type: Number, required: true },
     orderPaid: { type: Boolean, default: false },
     orderStatus: {

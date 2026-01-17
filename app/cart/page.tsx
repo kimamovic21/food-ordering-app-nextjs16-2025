@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { calculateLoyaltyDiscount } from '@/libs/loyaltyCalculator';
+import type { FeeBreakdown } from '@/libs/deliveryFeeCalculator';
 import Image from 'next/image';
 import Link from 'next/link';
 import Pizza from '@/public/pizza.png';
@@ -106,10 +108,36 @@ const CartPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [deliveryFee, setDeliveryFee] = useState<FeeBreakdown | null>(null);
+  const [calculatingFee, setCalculatingFee] = useState(false);
+  const [loyaltyDiscountPercentage, setLoyaltyDiscountPercentage] = useState(0);
 
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  // Fetch user's loyalty discount
+  useEffect(() => {
+    const fetchLoyaltyDiscount = async () => {
+      if (!isLoggedIn) {
+        setLoyaltyDiscountPercentage(0);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/loyalty/discount');
+        if (response.ok) {
+          const data = await response.json();
+          setLoyaltyDiscountPercentage(data.discountPercentage || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch loyalty discount:', error);
+        setLoyaltyDiscountPercentage(0);
+      }
+    };
+
+    fetchLoyaltyDiscount();
+  }, [isLoggedIn]);
 
   useEffect(() => {
     if (profileData) {
@@ -126,6 +154,72 @@ const CartPage = () => {
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Calculate delivery fee when address changes
+  useEffect(() => {
+    const calculateFee = async () => {
+      if (!formData.city || !formData.country) {
+        setDeliveryFee(null);
+        return;
+      }
+
+      setCalculatingFee(true);
+      try {
+        const defaultCoords = getApproximateCoordinates(formData.city, formData.country);
+
+        if (!defaultCoords) {
+          setDeliveryFee(null);
+          return;
+        }
+
+        const response = await fetch('/api/delivery/calculate-fee', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            latitude: defaultCoords.latitude,
+            longitude: defaultCoords.longitude,
+            baseDeliveryFee: 5,
+          }),
+        });
+
+        if (response.ok) {
+          const feeData = await response.json();
+          setDeliveryFee(feeData);
+        }
+      } catch (error) {
+        console.error('Failed to calculate delivery fee:', error);
+        // Fallback to base fee if calculation fails
+        setDeliveryFee({
+          baseFee: 5,
+          weatherAdjustment: 0,
+          totalAdjustment: 0,
+          totalFee: 5,
+        });
+      } finally {
+        setCalculatingFee(false);
+      }
+    };
+
+    const debounce = setTimeout(calculateFee, 800);
+    return () => clearTimeout(debounce);
+  }, [formData.city, formData.country]);
+
+  // Approximate coordinates for common cities (for demo purposes)
+  const getApproximateCoordinates = (
+    city: string
+  ): { latitude: number; longitude: number } | null => {
+    const coordinates: Record<string, { latitude: number; longitude: number }> = {
+      sarajevo: { latitude: 43.8564, longitude: 18.4131 },
+      beirut: { latitude: 33.3128, longitude: 35.5454 },
+      paris: { latitude: 48.8566, longitude: 2.3522 },
+      london: { latitude: 51.5074, longitude: -0.1278 },
+      'new york': { latitude: 40.7128, longitude: -74.006 },
+      tokyo: { latitude: 35.6762, longitude: 139.6503 },
+    };
+
+    const key = city.toLowerCase();
+    return coordinates[key] || null;
   };
 
   const handleCheckout = async () => {
@@ -153,6 +247,12 @@ const CartPage = () => {
     setIsSubmitting(true);
 
     try {
+      const actualDeliveryFee = deliveryFee?.totalFee || 5;
+      const loyaltyDiscount = calculateLoyaltyDiscount(
+        actualDeliveryFee,
+        loyaltyDiscountPercentage
+      );
+
       const response = await fetch('/api/checkout', {
         method: 'POST',
         headers: {
@@ -161,6 +261,16 @@ const CartPage = () => {
         body: JSON.stringify({
           ...formData,
           cartItems,
+          deliveryFee: deliveryFee?.totalFee || 5,
+          deliveryFeeBreakdown: deliveryFee
+            ? {
+                baseFee: deliveryFee.baseFee,
+                weatherAdjustment: deliveryFee.weatherAdjustment,
+                totalAdjustment: deliveryFee.totalAdjustment,
+              }
+            : null,
+          loyaltyDiscount,
+          loyaltyDiscountPercentage,
         }),
       });
 
@@ -227,7 +337,9 @@ const CartPage = () => {
                   <div className='flex items-start gap-3 w-full sm:w-auto'>
                     <div className='w-16 h-16 sm:w-20 sm:h-20 shrink-0'>
                       {isRemoteImage ? (
-                        <img
+                        <Image
+                          width={80}
+                          height={80}
                           src={imageUrl}
                           alt={item.name}
                           className='w-full h-full object-contain rounded'
@@ -315,25 +427,103 @@ const CartPage = () => {
         </div>
 
         <div className='lg:col-span-1 space-y-4'>
-          <div className='bg-card border rounded-xl p-4 sm:p-6 space-y-2 sm:space-y-3'>
-            <h3 className='text-lg font-bold text-foreground mb-4'>Order Summary</h3>
-            <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
-              <span className='font-semibold'>Subtotal:</span>
-              <span>${getTotalPrice().toFixed(2)}</span>
+          <div className='bg-card border rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4'>
+            <h3 className='text-lg font-bold text-foreground'>Order Summary</h3>
+
+            <div className='space-y-2 border-b pb-3'>
+              <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
+                <span className='font-semibold'>Subtotal:</span>
+                <span>${getTotalPrice().toFixed(2)}</span>
+              </div>
+              <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
+                <span className='font-semibold'>Tax (10%):</span>
+                <span>${(getTotalPrice() * 0.1).toFixed(2)}</span>
+              </div>
             </div>
-            <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
-              <span className='font-semibold'>Tax (10%):</span>
-              <span>${(getTotalPrice() * 0.1).toFixed(2)}</span>
+
+            {calculatingFee && (
+              <div className='text-sm text-muted-foreground text-center py-2'>
+                Calculating delivery fee...
+              </div>
+            )}
+
+            <div className='space-y-2 border-b pb-3'>
+              {/* Base Delivery Fee - Always Show */}
+              <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
+                <span className='font-semibold'>Base Delivery Fee:</span>
+                <span>${(deliveryFee?.totalFee || 5).toFixed(2)}</span>
+              </div>
+
+              {/* Loyalty Discount on Delivery Fee */}
+              {loyaltyDiscountPercentage > 0 && (
+                <div className='flex justify-between text-green-600 text-sm sm:text-base pl-2'>
+                  <span>- Loyalty Discount ({loyaltyDiscountPercentage}%):</span>
+                  <span>
+                    -$
+                    {calculateLoyaltyDiscount(
+                      deliveryFee?.totalFee || 5,
+                      loyaltyDiscountPercentage
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              {deliveryFee && deliveryFee.weatherAdjustment > 0 && (
+                <div className='text-xs text-muted-foreground italic pl-2'>
+                  Includes weather surcharge (+${deliveryFee.weatherAdjustment?.toFixed(2) || '0.00'})
+                </div>
+              )}
+
+              {loyaltyDiscountPercentage > 0 && (
+                <div className='flex justify-between text-muted-foreground text-sm sm:text-base font-semibold border-t border-dashed pt-1'>
+                  <span>Final Delivery Fee:</span>
+                  <span>
+                    $
+                    {(
+                      (deliveryFee?.totalFee || 5) -
+                      calculateLoyaltyDiscount(
+                        deliveryFee?.totalFee || 5,
+                        loyaltyDiscountPercentage
+                      )
+                    ).toFixed(2)}
+                  </span>
+                </div>
+              )}
             </div>
-            <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
-              <span className='font-semibold'>Delivery Fee:</span>
-              <span>$5.00</span>
-            </div>
-            <div className='border-t border pt-2 sm:pt-3 mt-2 sm:mt-3'>
+
+            <div className='border-t pt-3'>
               <div className='flex justify-between text-lg sm:text-xl font-bold text-foreground'>
                 <span>Total:</span>
-                <span>${(getTotalPrice() * 1.1 + 5).toFixed(2)}</span>
+                <span>
+                  $
+                  {(
+                    getTotalPrice() +
+                    getTotalPrice() * 0.1 +
+                    (deliveryFee?.totalFee || 5) -
+                    calculateLoyaltyDiscount(deliveryFee?.totalFee || 5, loyaltyDiscountPercentage)
+                  ).toFixed(2)}
+                </span>
               </div>
+
+              {loyaltyDiscountPercentage > 0 && (
+                <div className='mt-2 text-xs text-center text-green-600'>
+                  🎉 You saved $
+                  {calculateLoyaltyDiscount(
+                    deliveryFee?.totalFee || 5,
+                    loyaltyDiscountPercentage
+                  ).toFixed(2)}{' '}
+                  on delivery with loyalty rewards!
+                </div>
+              )}
+
+              {isLoggedIn && loyaltyDiscountPercentage === 0 && (
+                <div className='mt-2 text-xs text-center text-muted-foreground'>
+                  Complete your first order to unlock loyalty rewards!{' '}
+                  <Link href='/loyalty' className='text-primary underline'>
+                    Learn more
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
 
