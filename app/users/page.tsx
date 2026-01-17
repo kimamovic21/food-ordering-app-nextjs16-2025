@@ -109,7 +109,7 @@ const UsersPage = () => {
                 />
               </PaginationItem>
 
-              <div className='flex items-center justify-center px-4 text-sm font-medium text-gray-700'>
+              <div className='flex items-center justify-center px-4 text-sm font-medium text-gray-700 dark:text-gray-200'>
                 Page {page} of {totalPages}
               </div>
 

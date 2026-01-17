@@ -803,3 +803,10 @@ Add real-time courier location tracking
 -create folder location and route.ts file
 -update model user.ts 
 -update component OrderMap.tsx to see courier current location
+
+
+Refactor order map and add admin courier location API
+
+-move component OrderMap.tsx to folder shared
+-create folder courier-location and route.ts file
+-update ui in existing tsx components

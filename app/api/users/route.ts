@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const totalUsers = await User.countDocuments({});
   const users = await User.find(
     {},
-    'name email image city country phone postalCode streetAddress admin'
+    'name email image city country phone postalCode streetAddress role'
   )
     .sort({ createdAt: -1 })
     .skip(skip)

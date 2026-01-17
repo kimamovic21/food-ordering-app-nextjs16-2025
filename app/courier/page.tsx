@@ -15,13 +15,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import type { OrderMapHandle } from '@/components/shared/OrderMap';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import useProfile from '@/contexts/UseProfile';
-import type { OrderMapHandle } from './OrderMap';
 
 // Dynamic import to prevent SSR issues with Leaflet
-const OrderMap = dynamic(() => import('./OrderMap'), {
+const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
   ssr: false,
   loading: () => (
     <div className='border rounded-lg p-4 h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
@@ -325,8 +325,8 @@ const CourierPage = () => {
           {sharingLocation
             ? 'Getting Location...'
             : locationShared
-            ? 'Location Shared'
-            : 'Share Location'}
+              ? 'Location Shared'
+              : 'Share Location'}
         </Button>
       </div>
 

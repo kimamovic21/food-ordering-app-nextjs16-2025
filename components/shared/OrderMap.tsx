@@ -13,6 +13,7 @@ type OrderMapProps = {
   postalCode: string;
   country: string;
   customerEmail: string;
+  orderId?: string; // Optional order ID for admin view
 };
 
 export type OrderMapHandle = {
@@ -35,7 +36,7 @@ const courierIcon = createCustomIcon('red');
 const customerIcon = createCustomIcon('blue');
 
 const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
-  ({ address, city, postalCode, country, customerEmail }, ref) => {
+  ({ address, city, postalCode, country, customerEmail, orderId }, ref) => {
     const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
     const [courierLocation, setCourierLocation] = useState<[number, number] | null>(null);
     const [loading, setLoading] = useState(true);
@@ -51,7 +52,13 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
     const fetchCourierLocation = async () => {
       try {
         setCourierLoading(true);
-        const res = await fetch('/api/courier/location');
+        
+        // Use different endpoint based on whether orderId is provided (admin view) or not (courier view)
+        const endpoint = orderId 
+          ? `/api/orders/courier-location?orderId=${orderId}`
+          : '/api/courier/location';
+        
+        const res = await fetch(endpoint);
         if (res.ok) {
           const data = await res.json();
           const { latitude, longitude } = data.location || {};
@@ -137,7 +144,7 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
       const interval = setInterval(fetchCourierLocation, 60000);
 
       return () => clearInterval(interval);
-    }, [address, city, postalCode, country]);
+    }, [address, city, postalCode, country, orderId]);
 
     if (loading) {
       return (

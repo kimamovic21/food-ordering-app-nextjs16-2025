@@ -22,6 +22,7 @@ type UserRow = {
   postalCode?: string;
   streetAddress?: string;
   role?: string;
+  admin?: boolean; // some APIs return boolean admin instead of string role
 };
 
 type UsersTableProps = {
@@ -38,11 +39,11 @@ const UsersTable = ({ users }: UsersTableProps) => {
             <TableHead className='p-3 w-28'>Photo</TableHead>
             <TableHead className='p-3 w-40'>Name</TableHead>
             <TableHead className='p-3 w-56'>Email</TableHead>
+            <TableHead className='p-3 w-24'>Role</TableHead>
             <TableHead className='p-3 w-36'>Phone</TableHead>
             <TableHead className='p-3 w-52'>Street address</TableHead>
             <TableHead className='p-3 w-44'>City / Postal</TableHead>
             <TableHead className='p-3 w-36'>Country</TableHead>
-            <TableHead className='p-3 w-24'>Role</TableHead>
             <TableHead className='p-3 w-24'>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -68,6 +69,30 @@ const UsersTable = ({ users }: UsersTableProps) => {
                 {user.name}
               </TableCell>
               <TableCell className='p-3 text-gray-700 dark:text-gray-300'>{user.email}</TableCell>
+              <TableCell className='p-3'>
+                {(() => {
+                  const role = (user.role || (user.admin ? 'admin' : 'user')).toLowerCase();
+                  const label = role.charAt(0).toUpperCase() + role.slice(1);
+
+                  let className = 'capitalize';
+                  if (role === 'admin') {
+                    className +=
+                      ' bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-900 dark:text-green-100';
+                  } else if (role === 'courier') {
+                    className +=
+                      ' bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-900 dark:text-amber-100';
+                  } else if (role === 'manager') {
+                    className +=
+                      ' bg-blue-100 text-blue-800 hover:bg-blue-100 dark:bg-blue-900 dark:text-blue-100';
+                  }
+
+                  return (
+                    <Badge variant='secondary' className={className}>
+                      {label}
+                    </Badge>
+                  );
+                })()}
+              </TableCell>
               <TableCell className='p-3 text-gray-700 dark:text-gray-300'>
                 {user.phone || '—'}
               </TableCell>
@@ -79,11 +104,6 @@ const UsersTable = ({ users }: UsersTableProps) => {
               </TableCell>
               <TableCell className='p-3 text-gray-700 dark:text-gray-300'>
                 {user.country || '—'}
-              </TableCell>
-              <TableCell className='p-3'>
-                <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                  {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
-                </Badge>
               </TableCell>
               <TableCell className='p-3'>
                 <Link href={`/users/${user._id}`}>

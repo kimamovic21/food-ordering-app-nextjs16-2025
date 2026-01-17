@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,18 @@ import Link from 'next/link';
 import OrderInfoCard from './OrderInfoCard';
 import CustomerInfoCard from './CustomerInfoCard';
 import OrderItemsCard from './OrderItemsCard';
+import type { OrderMapHandle } from '@/components/shared/OrderMap';
+import dynamic from 'next/dynamic';
+
+// Dynamic import to prevent SSR issues with Leaflet
+const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
+  ssr: false,
+  loading: () => (
+    <div className='border rounded-lg p-4 h-[400px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
+      <p className='text-muted-foreground'>Loading map...</p>
+    </div>
+  ),
+});
 import {
   Select,
   SelectContent,
@@ -89,6 +101,7 @@ const OrderDetailPage = () => {
   const [assigningCourier, setAssigningCourier] = useState(false);
   const [showCourierSelect, setShowCourierSelect] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const mapRef = useRef<OrderMapHandle>(null);
   const { data: profileData, loading: profileLoading } = useProfile();
   const params = useParams();
   const orderId = params?.id as string;
@@ -218,7 +231,7 @@ const OrderDetailPage = () => {
 
   if (profileLoading || (loading && !order)) {
     return (
-      <section className='mt-8 max-w-6xl mx-auto px-4 sm:px-6 lg:px-10'>
+      <section className='mt-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10'>
         <Breadcrumb className='mb-6'>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -232,60 +245,102 @@ const OrderDetailPage = () => {
         </Breadcrumb>
 
         <div className='space-y-6'>
-          <Card>
-            <CardHeader>
-              <Skeleton className='h-6 w-full max-w-xs' />
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {[...Array(4)].map((_, idx) => (
-                  <div key={idx}>
-                    <Skeleton className='h-4 w-40 mb-2' />
-                    <Skeleton className='h-6 w-full' />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Skeleton className='h-6 w-full max-w-xs' />
-            </CardHeader>
-            <CardContent>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {[...Array(6)].map((_, idx) => (
-                  <div key={idx}>
-                    <Skeleton className='h-4 w-40 mb-2' />
-                    <Skeleton className='h-6 w-full' />
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <Skeleton className='h-6 w-full max-w-xs' />
-            </CardHeader>
-            <CardContent>
-              <div className='space-y-4'>
-                <div className='space-y-2'>
-                  {[...Array(3)].map((_, idx) => (
-                    <Skeleton key={idx} className='h-12 w-full' />
+          {/* Order Information and Order Items - Side by side on large screens */}
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+            <Card>
+              <CardHeader>
+                <Skeleton className='h-6 w-full max-w-xs' />
+              </CardHeader>
+              <CardContent>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  {[...Array(4)].map((_, idx) => (
+                    <div key={idx}>
+                      <Skeleton className='h-4 w-40 mb-2' />
+                      <Skeleton className='h-6 w-full' />
+                    </div>
                   ))}
                 </div>
-                <div className='border-t pt-4 space-y-2'>
-                  <div className='flex justify-between'>
-                    <Skeleton className='h-5 w-20' />
-                    <Skeleton className='h-5 w-16' />
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Skeleton className='h-6 w-full max-w-xs' />
+              </CardHeader>
+              <CardContent>
+                <div className='space-y-4'>
+                  <div className='space-y-2'>
+                    {[...Array(3)].map((_, idx) => (
+                      <Skeleton key={idx} className='h-12 w-full' />
+                    ))}
                   </div>
-                  <div className='flex justify-between border-t pt-2'>
-                    <Skeleton className='h-6 w-16' />
-                    <Skeleton className='h-6 w-20' />
+                  <div className='border-t pt-4 space-y-2'>
+                    <div className='flex justify-between'>
+                      <Skeleton className='h-5 w-20' />
+                      <Skeleton className='h-5 w-16' />
+                    </div>
+                    <div className='flex justify-between border-t pt-2'>
+                      <Skeleton className='h-6 w-16' />
+                      <Skeleton className='h-6 w-20' />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Customer Information and Status Update - Side by side on large screens */}
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+            <Card>
+              <CardHeader>
+                <Skeleton className='h-6 w-full max-w-xs' />
+              </CardHeader>
+              <CardContent>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  {[...Array(6)].map((_, idx) => (
+                    <div key={idx}>
+                      <Skeleton className='h-4 w-40 mb-2' />
+                      <Skeleton className='h-6 w-full' />
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <Skeleton className='h-6 w-full max-w-xs' />
+                <Skeleton className='h-4 w-full max-w-sm mt-2' />
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                <div className='space-y-2'>
+                  <Skeleton className='h-4 w-24' />
+                  <Skeleton className='h-10 w-full' />
+                </div>
+                <Skeleton className='h-10 w-full' />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Order Transportation Status */}
+          <Card>
+            <CardHeader>
+              <Skeleton className='h-6 w-full max-w-xs' />
+              <Skeleton className='h-4 w-full max-w-md mt-2' />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className='h-32 w-full rounded-lg' />
+            </CardContent>
+          </Card>
+
+          {/* Delivery Tracking Map */}
+          <Card>
+            <CardHeader>
+              <Skeleton className='h-6 w-full max-w-xs' />
+              <Skeleton className='h-4 w-full max-w-sm mt-2' />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className='h-[400px] w-full rounded-lg' />
             </CardContent>
           </Card>
         </div>
@@ -300,7 +355,7 @@ const OrderDetailPage = () => {
   if (!order) return <div className='mt-8'>Order not found</div>;
 
   return (
-    <section className='mt-8 max-w-6xl mx-auto px-4 sm:px-6 lg:px-10'>
+    <section className='mt-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10'>
       <Breadcrumb className='mb-6'>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -316,67 +371,84 @@ const OrderDetailPage = () => {
       </Breadcrumb>
 
       <div className='space-y-6'>
-        <OrderInfoCard
-          orderId={order._id}
-          paymentStatus={order.paymentStatus}
-          orderStatus={order.orderStatus}
-          createdAt={order.createdAt}
-          updatedAt={order.updatedAt}
-          stripeSessionId={order.stripeSessionId}
-        />
+        {/* Order Information and Order Items - Side by side on large screens */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          <OrderInfoCard
+            orderId={order._id}
+            paymentStatus={order.paymentStatus}
+            orderStatus={order.orderStatus}
+            createdAt={order.createdAt}
+            updatedAt={order.updatedAt}
+            stripeSessionId={order.stripeSessionId}
+          />
+          
+          <OrderItemsCard cartProducts={order.cartProducts} total={order.total} />
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Update Order Status</CardTitle>
-            <CardDescription>
-              {order.orderStatus === 'completed'
-                ? 'Order delivered successfully. You are not able to update order delivery status.'
-                : order.orderStatus === 'transportation'
-                ? 'Order is being delivered. Status cannot be changed.'
-                : 'You can only move the order forward after payment is completed.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-            <div className='flex-1 space-y-2'>
-              <p className='text-sm text-muted-foreground'>Order Status</p>
-              <Select
-                value={selectedStatus}
-                onValueChange={(value) => setSelectedStatus(value as typeof selectedStatus)}
+        {/* Customer Information and Status Update - Side by side on large screens */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
+          <CustomerInfoCard
+            email={order.email}
+            phone={order.phone}
+            streetAddress={order.streetAddress}
+            postalCode={order.postalCode}
+            city={order.city}
+            country={order.country}
+          />
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Update Order Status</CardTitle>
+              <CardDescription>
+                {order.orderStatus === 'completed'
+                  ? 'Order delivered successfully. You are not able to update order delivery status.'
+                  : order.orderStatus === 'transportation'
+                  ? 'Order is being delivered. Status cannot be changed.'
+                  : 'You can only move the order forward after payment is completed.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='flex flex-col h-full'>
+              <div className='space-y-2 flex-1'>
+                <p className='text-sm text-muted-foreground'>Order Status</p>
+                <Select
+                  value={selectedStatus}
+                  onValueChange={(value) => setSelectedStatus(value as typeof selectedStatus)}
+                  disabled={
+                    !order.paymentStatus ||
+                    statusUpdating ||
+                    order.orderStatus === 'transportation' ||
+                    order.orderStatus === 'completed'
+                  }
+                >
+                  <SelectTrigger className='w-full'>
+                    <SelectValue placeholder='Select status' />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='pending'>pending</SelectItem>
+                    <SelectItem value='processing'>processing</SelectItem>
+                    <SelectItem value='transportation'>transportation</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!order.paymentStatus && (
+                  <p className='text-xs text-amber-600'>Payment required before changing status.</p>
+                )}
+                {statusError && <p className='text-sm text-red-600'>{statusError}</p>}
+              </div>
+              <Button
+                onClick={handleStatusUpdate}
                 disabled={
-                  !order.paymentStatus ||
                   statusUpdating ||
+                  !order.paymentStatus ||
                   order.orderStatus === 'transportation' ||
                   order.orderStatus === 'completed'
                 }
+                className='w-full mt-4'
               >
-                <SelectTrigger className='w-full sm:w-60'>
-                  <SelectValue placeholder='Select status' />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='pending'>pending</SelectItem>
-                  <SelectItem value='processing'>processing</SelectItem>
-                  <SelectItem value='transportation'>transportation</SelectItem>
-                </SelectContent>
-              </Select>
-              {!order.paymentStatus && (
-                <p className='text-xs text-amber-600'>Payment required before changing status.</p>
-              )}
-              {statusError && <p className='text-sm text-red-600'>{statusError}</p>}
-            </div>
-            <Button
-              onClick={handleStatusUpdate}
-              disabled={
-                statusUpdating ||
-                !order.paymentStatus ||
-                order.orderStatus === 'transportation' ||
-                order.orderStatus === 'completed'
-              }
-              className='self-start'
-            >
-              {statusUpdating ? 'Updating...' : 'Save status'}
-            </Button>
-          </CardContent>
-        </Card>
+                {statusUpdating ? 'Updating...' : 'Save status'}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
 
         {order.orderStatus === 'completed' && order.courierId && (
           <Card>
@@ -525,16 +597,32 @@ const OrderDetailPage = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        <CustomerInfoCard
-          email={order.email}
-          phone={order.phone}
-          streetAddress={order.streetAddress}
-          postalCode={order.postalCode}
-          city={order.city}
-          country={order.country}
-        />
-
-        <OrderItemsCard cartProducts={order.cartProducts} total={order.total} />
+        {/* Order Map - Full width, only shown when order is in transportation or completed */}
+        {(order.orderStatus === 'transportation' || order.orderStatus === 'completed') && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery Tracking</CardTitle>
+              <CardDescription>
+                {order.orderStatus === 'completed'
+                  ? 'View the delivery route for this completed order.'
+                  : 'Track the real-time location of the delivery.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='h-[400px] rounded-lg overflow-hidden'>
+                <OrderMap
+                  ref={mapRef}
+                  address={order.streetAddress}
+                  city={order.city}
+                  postalCode={order.postalCode}
+                  country={order.country}
+                  customerEmail={order.email}
+                  orderId={order._id}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </section>
   );
