@@ -75,6 +75,22 @@ type OrderDetailsType = {
   createdAt: string;
   updatedAt: string;
   stripeSessionId?: string;
+  deliveryFee?: number;
+  deliveryFeeBreakdown?: {
+    baseFee: number;
+    altitudeAdjustment: number;
+    weatherAdjustment: number;
+    totalAdjustment: number;
+    altitude?: number;
+    weather?: {
+      condition: 'clear' | 'rain' | 'snow' | 'storm';
+      temperature: number;
+      windSpeed: number;
+    };
+  };
+  loyaltyDiscount?: number;
+  loyaltyDiscountPercentage?: number;
+  loyaltyTier?: string;
 };
 
 type CourierType = {
@@ -380,9 +396,19 @@ const OrderDetailPage = () => {
             createdAt={order.createdAt}
             updatedAt={order.updatedAt}
             stripeSessionId={order.stripeSessionId}
+            deliveryFee={order.deliveryFee}
+            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
           />
           
-          <OrderItemsCard cartProducts={order.cartProducts} total={order.total} />
+          <OrderItemsCard 
+            cartProducts={order.cartProducts} 
+            total={order.total}
+            deliveryFee={order.deliveryFee}
+            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
+            loyaltyDiscount={order.loyaltyDiscount}
+            loyaltyDiscountPercentage={order.loyaltyDiscountPercentage}
+            loyaltyTier={order.loyaltyTier}
+          />
         </div>
 
         {/* Customer Information and Status Update - Side by side on large screens */}

@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/libs/authOptions';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
+import { calculateLoyaltyStatus } from '@/libs/loyaltyCalculator';
 import mongoose from 'mongoose';
 import Stripe from 'stripe';
 
@@ -18,6 +19,12 @@ type CartItemPayload = {
   quantity: number;
 };
 
+type DeliveryFeeBreakdown = {
+  baseFee: number;
+  weatherAdjustment: number;
+  totalAdjustment: number;
+};
+
 export const runtime = 'nodejs';
 
 export async function POST(req: Request) {
@@ -31,13 +38,28 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { phone, streetAddress, postalCode, city, country, cartItems } = body as {
+  const { 
+    phone, 
+    streetAddress, 
+    postalCode, 
+    city, 
+    country, 
+    cartItems,
+    deliveryFee,
+    deliveryFeeBreakdown,
+    loyaltyDiscount,
+    loyaltyDiscountPercentage,
+  } = body as {
     phone?: string;
     streetAddress?: string;
     postalCode?: string;
     city?: string;
     country?: string;
     cartItems?: CartItemPayload[];
+    deliveryFee?: number;
+    deliveryFeeBreakdown?: DeliveryFeeBreakdown;
+    loyaltyDiscount?: number;
+    loyaltyDiscountPercentage?: number;
   };
 
   if (!phone || !streetAddress || !postalCode || !city || !country) {
@@ -71,10 +93,34 @@ export async function POST(req: Request) {
     return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
+  // Verify loyalty discount by checking user's actual order count
+  const completedOrderCount = await Order.countDocuments({
+    userId: user._id,
+    orderStatus: 'completed',
+  });
+
+  const loyaltyStatus = calculateLoyaltyStatus(completedOrderCount);
+  const verifiedLoyaltyDiscount = loyaltyDiscount || 0;
+  const verifiedLoyaltyPercentage = loyaltyDiscountPercentage || 0;
+
+  // Security check: ensure discount doesn't exceed what user should have
+  if (verifiedLoyaltyPercentage > loyaltyStatus.discountPercentage) {
+    return Response.json(
+      { error: 'Invalid loyalty discount' },
+      { status: 400 }
+    );
+  }
+
   const subtotal = sanitizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const tax = subtotal * 0.1;
-  const deliveryFee = 5;
-  const total = subtotal + tax + deliveryFee;
+  const calculatedDeliveryFee = deliveryFee || 5;
+  const discountedDeliveryFee = calculatedDeliveryFee - verifiedLoyaltyDiscount;
+  const calculatedDeliveryFeeBreakdown = deliveryFeeBreakdown || {
+    baseFee: 5,
+    weatherAdjustment: 0,
+    totalAdjustment: 0,
+  };
+  const total = subtotal + tax + discountedDeliveryFee;
 
   const order = await Order.create({
     userId: user._id,
@@ -91,6 +137,11 @@ export async function POST(req: Request) {
       quantity: item.quantity,
       price: item.price,
     })),
+    deliveryFee: calculatedDeliveryFee,
+    deliveryFeeBreakdown: calculatedDeliveryFeeBreakdown,
+    loyaltyDiscount: verifiedLoyaltyDiscount,
+    loyaltyDiscountPercentage: verifiedLoyaltyPercentage,
+    loyaltyTier: loyaltyStatus.currentTier?.name || null,
     total,
     orderPaid: false,
     paid: false,
@@ -111,6 +162,9 @@ export async function POST(req: Request) {
         },
       },
     })),
+  ];
+
+  lineItems.push(
     {
       quantity: 1,
       price_data: {
@@ -123,11 +177,15 @@ export async function POST(req: Request) {
       quantity: 1,
       price_data: {
         currency: 'usd',
-        unit_amount: deliveryFee * 100,
-        product_data: { name: 'Delivery Fee' },
+        unit_amount: Math.round(discountedDeliveryFee * 100),
+        product_data: { 
+          name: verifiedLoyaltyDiscount > 0 
+            ? `Delivery Fee (${verifiedLoyaltyPercentage}% loyalty discount applied)` 
+            : 'Delivery Fee'
+        },
       },
-    },
-  ];
+    }
+  );
 
   const stripeSession = await stripe.checkout.sessions.create({
     mode: 'payment',

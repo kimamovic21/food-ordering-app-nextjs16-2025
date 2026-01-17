@@ -17,6 +17,7 @@ import useProfile from '@/contexts/UseProfile';
 import OrderInfoCard from './OrderInfoCard';
 import CustomerInfoCard from './CustomerInfoCard';
 import OrderItemsCard from './OrderItemsCard';
+import OrderMap from '@/components/shared/OrderMap';
 
 type CartProduct = {
   productId: string;
@@ -40,6 +41,22 @@ type OrderDetailsType = {
   paymentStatus: boolean;
   orderStatus: 'pending' | 'processing' | 'completed';
   createdAt: string;
+  deliveryFee?: number;
+  deliveryFeeBreakdown?: {
+    baseFee: number;
+    altitudeAdjustment: number;
+    weatherAdjustment: number;
+    totalAdjustment: number;
+    altitude?: number;
+    weather?: {
+      condition: 'clear' | 'rain' | 'snow' | 'storm';
+      temperature: number;
+      windSpeed: number;
+    };
+  };
+  loyaltyDiscount?: number;
+  loyaltyDiscountPercentage?: number;
+  loyaltyTier?: string;
 };
 
 const MyOrderDetailPage = () => {
@@ -184,6 +201,8 @@ const MyOrderDetailPage = () => {
             paymentStatus={order.paymentStatus}
             orderStatus={order.orderStatus}
             createdAt={order.createdAt}
+            deliveryFee={order.deliveryFee}
+            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
           />
 
           <CustomerInfoCard
@@ -195,7 +214,24 @@ const MyOrderDetailPage = () => {
             country={order.country}
           />
 
-          <OrderItemsCard cartProducts={order.cartProducts} total={order.total} />
+          <OrderMap
+            address={order.streetAddress}
+            city={order.city}
+            postalCode={order.postalCode}
+            country={order.country}
+            customerEmail={order.email}
+            orderId={order._id}
+          />
+
+          <OrderItemsCard 
+            cartProducts={order.cartProducts} 
+            total={order.total}
+            deliveryFee={order.deliveryFee}
+            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
+            loyaltyDiscount={order.loyaltyDiscount}
+            loyaltyDiscountPercentage={order.loyaltyDiscountPercentage}
+            loyaltyTier={order.loyaltyTier}
+          />
         </div>
       </div>
     </section>

@@ -26,9 +26,9 @@ const HomeMenu = () => {
 
         const pizzaItems = data.filter((item: MenuItemType) => {
           if (typeof item.category === 'string') {
-            return item.category.toLowerCase() === 'pizza';
+            return item.category.toLowerCase() === 'pizzas';
           }
-          return item.category?.name?.toLowerCase() === 'pizza';
+          return item.category?.name?.toLowerCase() === 'pizzas';
         });
 
         setItems(pizzaItems);

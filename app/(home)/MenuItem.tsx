@@ -73,7 +73,9 @@ const MenuItem = ({ item }: MenuItemProps) => {
     <Card className='p-0 overflow-hidden hover:shadow-lg transition-shadow flex flex-col'>
       <div className='text-center relative h-40 p-4 bg-muted'>
         {isRemoteImage ? (
-          <img
+          <Image
+            width={140}
+            height={140}
             src={imageUrl}
             alt={displayItem.name}
             className='mx-auto h-40 w-auto object-contain'
