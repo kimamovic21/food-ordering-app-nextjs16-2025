@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import MenuItem from './MenuItem';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
 
 interface MenuItemType {
   _id: string;
@@ -13,6 +15,37 @@ interface MenuItemType {
   priceMedium: number;
   priceLarge: number;
 }
+
+const MenuSkeleton = () => (
+  <>
+    <div className='text-center mb-4'>
+      <Skeleton className='h-5 w-24 mx-auto mb-2' />
+      <Skeleton className='h-10 w-32 mx-auto' />
+    </div>
+    <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
+      {[...Array(6)].map((_, index) => (
+        <Card key={index} className='p-0 overflow-hidden flex flex-col'>
+          <div className='relative h-40 p-4 bg-muted'>
+            <Skeleton className='mx-auto h-32 w-32' />
+          </div>
+          <div className='p-4 flex flex-col flex-1'>
+            <Skeleton className='h-7 w-3/4 mb-4' />
+            <div className='space-y-2 flex-1'>
+              <Skeleton className='h-4 w-full' />
+              <Skeleton className='h-4 w-5/6' />
+            </div>
+            <div className='flex gap-1 justify-center mt-4'>
+              <Skeleton className='h-9 w-20' />
+              <Skeleton className='h-9 w-20' />
+              <Skeleton className='h-9 w-20' />
+            </div>
+            <Skeleton className='h-10 w-full mt-4' />
+          </div>
+        </Card>
+      ))}
+    </div>
+  </>
+);
 
 const HomeMenu = () => {
   const [items, setItems] = useState<MenuItemType[]>([]);
@@ -31,6 +64,8 @@ const HomeMenu = () => {
           return item.category?.name?.toLowerCase() === 'pizzas';
         });
 
+        // Add 1 second delay before showing content
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         setItems(pizzaItems);
       } catch (error) {
         console.error('Error fetching menu items:', error);
@@ -44,22 +79,22 @@ const HomeMenu = () => {
 
   return (
     <section className='my-16'>
-      <div className='text-center mb-4'>
-        <h3 className='uppercase text-gray-500 dark:text-gray-400 font-semibold leading-3'>
-          Check out
-        </h3>
-
-        <h2 className='text-primary font-bold text-4xl italic'>Menu</h2>
-      </div>
-
       {loading ? (
-        <div className='text-center py-8 dark:text-gray-300'>Loading menu items...</div>
+        <MenuSkeleton />
       ) : items.length > 0 ? (
-        <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
-          {items.map((item) => (
-            <MenuItem key={item._id} item={item} />
-          ))}
-        </div>
+        <>
+          <div className='text-center mb-4'>
+            <h3 className='uppercase text-gray-500 dark:text-gray-400 font-semibold leading-3'>
+              Check out
+            </h3>
+            <h2 className='text-primary font-bold text-4xl italic'>Menu</h2>
+          </div>
+          <div className='grid md:grid-cols-2 lg:grid-cols-3 gap-4'>
+            {items.map((item) => (
+              <MenuItem key={item._id} item={item} />
+            ))}
+          </div>
+        </>
       ) : (
         <div className='text-center py-8 text-gray-500 dark:text-gray-400'>
           No pizzas available at the moment...

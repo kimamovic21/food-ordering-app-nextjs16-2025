@@ -1,6 +1,7 @@
 import { FaArrowCircleRight } from 'react-icons/fa';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
+import Link from 'next/link';
 import Pizza from '@/public/pizza.png';
 
 const Hero = () => {
@@ -20,18 +21,16 @@ const Hero = () => {
         </p>
 
         <div className='flex gap-4'>
-          <Button className='uppercase rounded-full' size='lg'>
-            Order now <FaArrowCircleRight />
-          </Button>
-
-          <Button variant='outline' className='rounded-full' size='lg'>
-            Learn more <FaArrowCircleRight />
-          </Button>
+          <Link href='/menu'>
+            <Button className='uppercase rounded-full' size='lg'>
+              Order now <FaArrowCircleRight />
+            </Button>
+          </Link>
         </div>
       </div>
 
-      <div className='relative'>
-        <Image src={Pizza} alt='Pizza Cover' layout='fill' objectFit='contain' />
+      <div className='relative h-80 md:h-full w-full'>
+        <Image src={Pizza} alt='Pizza Cover' fill className='object-contain' priority />
       </div>
     </section>
   );

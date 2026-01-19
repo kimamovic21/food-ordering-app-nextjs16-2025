@@ -5,7 +5,7 @@ const ContactUs = () => {
         Contact us
       </h3>
 
-      <h2 className='text-primary font-bold text-3xl italic mb-4'>We're here to help!</h2>
+      <h2 className='text-primary font-bold text-3xl italic mb-4'>We&apos;re here to help!</h2>
 
       <div className='text-gray-600 dark:text-gray-300 mb-2'>
         <span>Call us at: </span>

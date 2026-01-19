@@ -816,3 +816,9 @@ Add delivery fee and loyalty discount system
 
 -add logic for delivery fee based on weather conditions
 -add loyalty discount logic for users who have ordered more orders
+
+
+Add skeleton loaders to Hero and HomeMenu
+
+-create component HeroWrapper.tsx
+-update ui in landing page

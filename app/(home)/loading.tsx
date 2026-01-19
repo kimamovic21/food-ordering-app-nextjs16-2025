@@ -16,7 +16,6 @@ const HomePageLoading = () => {
 
           <div className='flex gap-4'>
             <Skeleton className='h-12 w-40 rounded-full' />
-            <Skeleton className='h-12 w-40 rounded-full' />
           </div>
         </div>
 

@@ -1,14 +1,12 @@
-import Hero from './Hero';
+import HeroWrapper from './HeroWrapper';
 import HomeMenu from './HomeMenu';
 import AboutUs from './AboutUs';
 import ContactUs from './ContactUs';
 
-const HomePage = async () => {
-  await new Promise((resolve) => setTimeout(resolve, 500));
-
+const HomePage = () => {
   return (
     <>
-      <Hero />
+      <HeroWrapper />
       <HomeMenu />
       <AboutUs />
       <ContactUs />
