@@ -21,13 +21,13 @@ const CheckoutContent = () => {
 
   return (
     <div className='max-w-2xl mx-auto text-center py-12 space-y-6'>
-      <h1 className='text-3xl font-bold text-gray-800'>
+      <h1 className='text-3xl font-bold text-gray-800 dark:text-gray-100'>
         {isSuccess && 'Payment successful!'}
         {isCancelled && 'Payment cancelled'}
         {!isSuccess && !isCancelled && 'Checkout status'}
       </h1>
 
-      <p className='text-gray-600'>
+      <p className='text-gray-600 dark:text-gray-300'>
         {isSuccess && 'Thanks for your order. We are preparing your food.'}
         {isCancelled && 'Your payment was cancelled. You can return to the cart and try again.'}
         {!isSuccess && !isCancelled && 'We are processing your request. If you just paid, you will receive a confirmation shortly.'}

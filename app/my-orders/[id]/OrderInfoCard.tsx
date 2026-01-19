@@ -11,7 +11,7 @@ type DeliveryFeeBreakdown = {
 type OrderInfoCardProps = {
   orderId: string;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'completed';
+  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
   createdAt: string;
   deliveryFee?: number;
   deliveryFeeBreakdown?: DeliveryFeeBreakdown;
@@ -45,13 +45,8 @@ const OrderInfoCard = ({
           <p className='font-semibold break-all'>{orderId}</p>
         </div>
         <div>
-          <p className='text-sm text-muted-foreground'>Payment Status</p>
-          <Badge
-            variant={paymentStatus ? 'secondary' : 'destructive'}
-            className={paymentStatus ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' : ''}
-          >
-            {paymentStatus ? 'Paid' : 'Unpaid'}
-          </Badge>
+          <p className='text-sm text-muted-foreground'>Order Date</p>
+          <p className='font-semibold'>{formatDate(createdAt)}</p>
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>Order Status</p>
@@ -62,6 +57,8 @@ const OrderInfoCard = ({
                 ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
                 : orderStatus === 'processing'
                 ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                : orderStatus === 'transportation'
+                ? 'bg-purple-100 text-purple-800 hover:bg-purple-100 capitalize'
                 : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
             }
           >
@@ -69,8 +66,13 @@ const OrderInfoCard = ({
           </Badge>
         </div>
         <div>
-          <p className='text-sm text-muted-foreground'>Order Date</p>
-          <p className='font-semibold'>{formatDate(createdAt)}</p>
+          <p className='text-sm text-muted-foreground'>Payment Status</p>
+          <Badge
+            variant={paymentStatus ? 'secondary' : 'destructive'}
+            className={paymentStatus ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' : ''}
+          >
+            {paymentStatus ? 'Paid' : 'Unpaid'}
+          </Badge>
         </div>
 
         {/* Delivery Fee Details */}

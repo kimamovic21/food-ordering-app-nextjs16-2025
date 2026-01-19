@@ -39,7 +39,7 @@ type OrderDetailsType = {
   cartProducts: CartProduct[];
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'completed';
+  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
   createdAt: string;
   deliveryFee?: number;
   deliveryFeeBreakdown?: {
@@ -105,7 +105,7 @@ const MyOrderDetailPage = () => {
   if (profileLoading) {
     return (
       <section className='mt-8'>
-        <div className='mt-8 max-w-4xl mx-auto'>
+        <div className='mt-8 max-w-[1600px] mx-auto px-4'>
           <div className='flex items-center gap-2 mb-6'>
             <Skeleton className='h-5 w-16' />
             <Skeleton className='h-4 w-4' />
@@ -113,26 +113,36 @@ const MyOrderDetailPage = () => {
           </div>
           <Skeleton className='h-10 w-56 mb-6' />
 
-          <div className='space-y-6'>
-            {[...Array(3)].map((_, idx) => (
-              <Card
-                key={idx}
-                className='p-6 bg-card text-card-foreground border border-border shadow-sm'
-              >
-                <div className='space-y-5'>
-                  <Skeleton className='h-6 w-64' />
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <Skeleton className='h-4 w-56' />
-                    <Skeleton className='h-6 w-16 rounded-full' />
-                    <Skeleton className='h-4 w-40' />
-                    <Skeleton className='h-5 w-72' />
-                    <Skeleton className='h-4 w-32' />
-                    <Skeleton className='h-5 w-60' />
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+            <div className='space-y-6'>
+              {[...Array(2)].map((_, idx) => (
+                <Card
+                  key={idx}
+                  className='p-6 bg-card text-card-foreground border border-border shadow-sm'
+                >
+                  <div className='space-y-5'>
+                    <Skeleton className='h-6 w-64' />
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                      <Skeleton className='h-4 w-56' />
+                      <Skeleton className='h-6 w-16 rounded-full' />
+                      <Skeleton className='h-4 w-40' />
+                      <Skeleton className='h-5 w-72' />
+                      <Skeleton className='h-4 w-32' />
+                      <Skeleton className='h-5 w-60' />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))}
+            </div>
+            <Card className='p-6 bg-card border border-border shadow-sm'>
+              <div className='space-y-5'>
+                <Skeleton className='h-6 w-64' />
+                <Skeleton className='h-32 w-full' />
+              </div>
+            </Card>
           </div>
+          
+          <Skeleton className='h-96 w-full' />
         </div>
       </section>
     );
@@ -142,7 +152,7 @@ const MyOrderDetailPage = () => {
   if (loading) {
     return (
       <section className='mt-8'>
-        <div className='mt-8 max-w-4xl mx-auto'>
+        <div className='mt-8 max-w-[1600px] mx-auto px-4'>
           <div className='flex items-center gap-2 mb-6'>
             <Skeleton className='h-5 w-16' />
             <Skeleton className='h-4 w-4' />
@@ -150,23 +160,33 @@ const MyOrderDetailPage = () => {
           </div>
           <Skeleton className='h-10 w-56 mb-6' />
 
-          <div className='space-y-6'>
-            {[...Array(3)].map((_, idx) => (
-              <Card key={idx} className='p-6 bg-card border border-border shadow-sm'>
-                <div className='space-y-5'>
-                  <Skeleton className='h-6 w-64' />
-                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                    <Skeleton className='h-4 w-56' />
-                    <Skeleton className='h-6 w-16 rounded-full' />
-                    <Skeleton className='h-4 w-40' />
-                    <Skeleton className='h-5 w-72' />
-                    <Skeleton className='h-4 w-32' />
-                    <Skeleton className='h-5 w-60' />
+          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+            <div className='space-y-6'>
+              {[...Array(2)].map((_, idx) => (
+                <Card key={idx} className='p-6 bg-card border border-border shadow-sm'>
+                  <div className='space-y-5'>
+                    <Skeleton className='h-6 w-64' />
+                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                      <Skeleton className='h-4 w-56' />
+                      <Skeleton className='h-6 w-16 rounded-full' />
+                      <Skeleton className='h-4 w-40' />
+                      <Skeleton className='h-5 w-72' />
+                      <Skeleton className='h-4 w-32' />
+                      <Skeleton className='h-5 w-60' />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))}
+            </div>
+            <Card className='p-6 bg-card border border-border shadow-sm'>
+              <div className='space-y-5'>
+                <Skeleton className='h-6 w-64' />
+                <Skeleton className='h-32 w-full' />
+              </div>
+            </Card>
           </div>
+          
+          <Skeleton className='h-96 w-full' />
         </div>
       </section>
     );
@@ -178,7 +198,7 @@ const MyOrderDetailPage = () => {
 
   return (
     <section className='mt-8'>
-      <div className='mt-8 max-w-4xl mx-auto'>
+      <div className='mt-8 max-w-[1600px] mx-auto px-4'>
         <Breadcrumb className='mb-6'>
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -195,44 +215,71 @@ const MyOrderDetailPage = () => {
 
         <h1 className='text-3xl font-bold mb-6'>Order Details</h1>
 
-        <div className='space-y-6'>
-          <OrderInfoCard
-            orderId={order._id}
-            paymentStatus={order.paymentStatus}
-            orderStatus={order.orderStatus}
-            createdAt={order.createdAt}
-            deliveryFee={order.deliveryFee}
-            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
-          />
+        {/* Grid layout: On large screens, left column has Order Info + Delivery Info, right column has Order Items */}
+        <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
+          {/* Left column: Order Information and Delivery Information */}
+          <div className='space-y-6'>
+            <OrderInfoCard
+              orderId={order._id}
+              paymentStatus={order.paymentStatus}
+              orderStatus={order.orderStatus}
+              createdAt={order.createdAt}
+              deliveryFee={order.deliveryFee}
+              deliveryFeeBreakdown={order.deliveryFeeBreakdown}
+            />
 
-          <CustomerInfoCard
-            email={order.email}
-            phone={order.phone}
-            streetAddress={order.streetAddress}
-            postalCode={order.postalCode}
-            city={order.city}
-            country={order.country}
-          />
+            <CustomerInfoCard
+              email={order.email}
+              phone={order.phone}
+              streetAddress={order.streetAddress}
+              postalCode={order.postalCode}
+              city={order.city}
+              country={order.country}
+            />
+          </div>
 
-          <OrderMap
-            address={order.streetAddress}
-            city={order.city}
-            postalCode={order.postalCode}
-            country={order.country}
-            customerEmail={order.email}
-            orderId={order._id}
-          />
-
-          <OrderItemsCard 
-            cartProducts={order.cartProducts} 
-            total={order.total}
-            deliveryFee={order.deliveryFee}
-            deliveryFeeBreakdown={order.deliveryFeeBreakdown}
-            loyaltyDiscount={order.loyaltyDiscount}
-            loyaltyDiscountPercentage={order.loyaltyDiscountPercentage}
-            loyaltyTier={order.loyaltyTier}
-          />
+          {/* Right column: Order Items */}
+          <div>
+            <OrderItemsCard 
+              cartProducts={order.cartProducts} 
+              total={order.total}
+              deliveryFee={order.deliveryFee}
+              deliveryFeeBreakdown={order.deliveryFeeBreakdown}
+              loyaltyDiscount={order.loyaltyDiscount}
+              loyaltyDiscountPercentage={order.loyaltyDiscountPercentage}
+              loyaltyTier={order.loyaltyTier}
+            />
+          </div>
         </div>
+
+        {/* Delivered Success Message - Show only when order is completed */}
+        {order.orderStatus === 'completed' && (
+          <div className='bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-6 mb-6'>
+            <div className='flex items-start gap-3'>
+              <div className='text-green-600 dark:text-green-400 text-2xl'>✓</div>
+              <div>
+                <h3 className='text-green-900 dark:text-green-100 font-semibold text-lg'>Order Delivered Successfully!</h3>
+                <p className='text-green-800 dark:text-green-200 mt-1'>
+                  Your order has been delivered. Thank you for your purchase!
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Map section at the bottom, full width - Hide when order is completed */}
+        {order.orderStatus !== 'completed' && (
+          <div className='w-full'>
+            <OrderMap
+              address={order.streetAddress}
+              city={order.city}
+              postalCode={order.postalCode}
+              country={order.country}
+              customerEmail={order.email}
+              orderId={order._id}
+            />
+          </div>
+        )}
       </div>
     </section>
   );

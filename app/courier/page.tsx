@@ -395,13 +395,13 @@ const CourierPage = () => {
                               Size: {product.size} x {product.quantity}
                             </p>
                           </div>
-                          <p className='font-medium text-foreground'>${product.price}</p>
+                          <p className='font-medium text-foreground'>${product.price.toFixed(2)}</p>
                         </div>
                       ))}
                     </div>
                     <div className='border-t mt-4 pt-4 flex justify-between font-semibold'>
                       <span>Total:</span>
-                      <span>${order.total}</span>
+                      <span>${order.total.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -422,11 +422,11 @@ const CourierPage = () => {
                   </div>
 
                   {/* Delivery Status */}
-                  <div className='bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm'>
-                    <p className='text-blue-900 font-semibold'>
+                  <div className='bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm'>
+                    <p className='text-blue-900 dark:text-blue-100 font-semibold'>
                       📍 This order is currently being transported
                     </p>
-                    <p className='text-blue-800 mt-2'>
+                    <p className='text-blue-800 dark:text-blue-200 mt-2'>
                       Please complete delivery and mark as delivered when done.
                     </p>
                   </div>

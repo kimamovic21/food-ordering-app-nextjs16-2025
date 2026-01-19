@@ -822,3 +822,8 @@ Add skeleton loaders to Hero and HomeMenu
 
 -create component HeroWrapper.tsx
 -update ui in landing page
+
+
+Improve order page layout and update UI styles
+
+-update ui in tsx components

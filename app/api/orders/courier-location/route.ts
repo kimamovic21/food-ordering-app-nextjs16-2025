@@ -13,12 +13,12 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // Check if user is admin
+  // Get user information
   const userEmail = session.user.email;
   const user = await User.findOne({ email: userEmail });
 
-  if (!user || user.role !== 'admin') {
-    return Response.json({ error: 'Only admin can access courier location' }, { status: 403 });
+  if (!user) {
+    return Response.json({ error: 'User not found' }, { status: 404 });
   }
 
   const url = new URL(request.url);
@@ -34,6 +34,11 @@ export async function GET(request: Request) {
 
     if (!order) {
       return Response.json({ error: 'Order not found' }, { status: 404 });
+    }
+
+    // Check authorization: only admin or the customer who placed the order can access
+    if (user.role !== 'admin' && order.email !== userEmail) {
+      return Response.json({ error: 'Not authorized to view this order' }, { status: 403 });
     }
 
     // Check if order has a courier assigned

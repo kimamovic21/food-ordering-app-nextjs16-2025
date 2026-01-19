@@ -45,10 +45,10 @@ const OrderItemsCard = ({
   const discountedDeliveryFee = calculatedDeliveryFee - discount;
 
   return (
-    <Card className='p-6 bg-card text-card-foreground border border-border shadow-sm'>
+    <Card className='p-6 bg-card text-card-foreground border border-border shadow-sm h-full flex flex-col'>
       <h2 className='text-lg font-semibold mb-4'>Order Items</h2>
-      <div className='overflow-x-auto'>
-        <table className='min-w-full'>
+      <div className='overflow-hidden'>
+        <table className='w-full'>
           <thead className='bg-muted border-b border-border'>
             <tr>
               <th className='px-4 py-2 text-left text-sm font-semibold text-muted-foreground'>
@@ -86,7 +86,7 @@ const OrderItemsCard = ({
         </table>
       </div>
 
-      <div className='mt-6 space-y-2 border-t border-border pt-4'>
+      <div className='mt-auto pt-6 space-y-2 border-t border-border'>
         <div className='flex justify-between text-muted-foreground'>
           <span>Subtotal:</span>
           <span>${subtotal.toFixed(2)}</span>
