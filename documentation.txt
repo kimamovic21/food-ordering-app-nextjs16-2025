@@ -839,3 +839,9 @@ Add manager role support and management actions
 Improve order status handling and courier assignment
 
 -update ui in existing tsx components
+
+
+Refactor order status workflow and add 'ready' stage
+
+-update enum in model order.ts
+-update logic for ordering in tsx components and route.ts files

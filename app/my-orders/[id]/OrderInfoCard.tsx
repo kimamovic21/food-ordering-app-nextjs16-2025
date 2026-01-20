@@ -11,7 +11,7 @@ type DeliveryFeeBreakdown = {
 type OrderInfoCardProps = {
   orderId: string;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
+  orderStatus: 'placed' | 'processing' | 'ready' | 'transportation' | 'completed';
   createdAt: string;
   deliveryFee?: number;
   deliveryFeeBreakdown?: DeliveryFeeBreakdown;

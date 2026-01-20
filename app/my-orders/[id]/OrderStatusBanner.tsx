@@ -1,7 +1,7 @@
 import type { ComponentType } from 'react';
-import { ChefHat, CheckCircle2, Clock, Truck } from 'lucide-react';
+import { ChefHat, CheckCircle2, Clock, Truck, PackageCheck } from 'lucide-react';
 
-export type OrderStatus = 'pending' | 'processing' | 'transportation' | 'completed';
+export type OrderStatus = 'placed' | 'processing' | 'ready' | 'transportation' | 'completed';
 
 type StatusTone = 'amber' | 'sky' | 'blue' | 'green';
 
@@ -49,7 +49,7 @@ const statusContent: Record<
     tone: StatusTone;
   }
 > = {
-  pending: {
+  placed: {
     title: 'Order placed',
     description: 'We received your order and are confirming the details.',
     subtext: 'You will get an update as soon as the kitchen starts preparing it.',
@@ -62,6 +62,13 @@ const statusContent: Record<
     subtext: 'Typical prep takes 10–20 minutes before handoff to a courier.',
     icon: ChefHat,
     tone: 'sky',
+  },
+  ready: {
+    title: 'Order is ready for pickup',
+    description: 'Your order has been prepared and is waiting to be assigned to a courier.',
+    subtext: 'A courier will be assigned shortly to deliver your order.',
+    icon: PackageCheck,
+    tone: 'blue',
   },
   transportation: {
     title: 'Your order is on the way',

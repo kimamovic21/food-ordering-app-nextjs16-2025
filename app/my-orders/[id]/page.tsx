@@ -41,7 +41,7 @@ type OrderDetailsType = {
   cartProducts: CartProduct[];
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
+  orderStatus: 'placed' | 'processing' | 'ready' | 'transportation' | 'completed';
   createdAt: string;
   deliveryFee?: number;
   deliveryFeeBreakdown?: {
@@ -115,7 +115,7 @@ const MyOrderDetailPage = () => {
       // Poll for order updates every 30 seconds when order is in transportation
       // This ensures the UI reflects courier assignment changes
       const pollInterval = setInterval(() => {
-        if (order?.orderStatus === 'transportation' || order?.orderStatus === 'processing') {
+        if (order?.orderStatus === 'transportation' || order?.orderStatus === 'processing' || order?.orderStatus === 'ready') {
           fetchOrder();
         }
       }, 30000);

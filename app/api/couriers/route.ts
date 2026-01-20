@@ -64,20 +64,28 @@ export async function PATCH(request: Request) {
     );
   }
 
-  // Update courier's taken order
-  courier.takenOrder = orderId;
-  await courier.save();
-
-  // Also update the order to set courierId
-  const order = await Order.findByIdAndUpdate(
-    orderId,
-    { courierId: courierId },
-    { new: true }
-  );
+  const order = await Order.findById(orderId);
 
   if (!order) {
     return Response.json({ error: 'Order not found' }, { status: 404 });
   }
+
+  // Order must be in 'ready' status to assign a courier
+  if (order.orderStatus !== 'ready') {
+    return Response.json(
+      { error: 'Order must be in ready status before assigning a courier' },
+      { status: 400 }
+    );
+  }
+
+  // Update courier's taken order
+  courier.takenOrder = orderId;
+  await courier.save();
+
+  // Update order with courier and change status to transportation
+  order.courierId = courierId;
+  order.orderStatus = 'transportation';
+  await order.save();
 
   return Response.json({ courier, order });
 }

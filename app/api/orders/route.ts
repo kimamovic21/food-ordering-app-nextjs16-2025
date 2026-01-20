@@ -5,7 +5,7 @@ import mongoose from 'mongoose';
 const normalizeOrder = (order: any) => ({
   ...order,
   paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
-  orderStatus: order.orderStatus || 'pending',
+  orderStatus: order.orderStatus || 'placed',
 });
 
 export async function GET(request: Request) {
@@ -63,15 +63,22 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'Invalid order ID' }, { status: 400 });
   }
 
-  const allowedStatuses = ['pending', 'processing', 'transportation', 'completed'];
+  const allowedStatuses = ['placed', 'processing', 'ready', 'transportation', 'completed'];
   if (!allowedStatuses.includes(orderStatus)) {
     return Response.json({ error: 'Invalid order status' }, { status: 400 });
   }
 
-  // Admin cannot mark order as completed
+  // Admin cannot mark order as completed or transportation
   if (orderStatus === 'completed') {
     return Response.json(
       { error: 'Only courier can mark order as completed' },
+      { status: 400 }
+    );
+  }
+
+  if (orderStatus === 'transportation') {
+    return Response.json(
+      { error: 'Order automatically moves to transportation when courier is assigned' },
       { status: 400 }
     );
   }

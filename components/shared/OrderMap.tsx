@@ -1,18 +1,18 @@
 'use client';
 
-import { useEffect, useState, forwardRef, useImperativeHandle } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
+import { useEffect, useState, forwardRef, useImperativeHandle, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import 'leaflet-defaulticon-compatibility';
 
 type OrderMapProps = {
-  address: string;
-  city: string;
-  postalCode: string;
-  country: string;
-  customerEmail: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  country?: string;
+  customerEmail?: string;
   orderId?: string; // Optional order ID for admin view
 };
 
@@ -35,6 +35,47 @@ const createCustomIcon = (color: string) => {
 const courierIcon = createCustomIcon('red');
 const customerIcon = createCustomIcon('blue');
 
+// Component to update map view when locations change
+function MapUpdater({ 
+  coordinates, 
+  courierLocation,
+  hasCustomerLocation
+}: { 
+  coordinates: [number, number] | null; 
+  courierLocation: [number, number] | null;
+  hasCustomerLocation: boolean;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    let center: [number, number];
+    let zoom: number;
+
+    if (courierLocation && coordinates && hasCustomerLocation) {
+      // Calculate center point between courier and customer
+      center = [
+        (coordinates[0] + courierLocation[0]) / 2,
+        (coordinates[1] + courierLocation[1]) / 2
+      ];
+      zoom = 14;
+    } else if (courierLocation) {
+      // Only courier location
+      center = courierLocation;
+      zoom = 15;
+    } else if (coordinates) {
+      // Only customer location
+      center = coordinates;
+      zoom = 15;
+    } else {
+      return;
+    }
+
+    map.setView(center, zoom);
+  }, [map, coordinates, courierLocation, hasCustomerLocation]);
+
+  return null;
+}
+
 const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
   ({ address, city, postalCode, country, customerEmail, orderId }, ref) => {
     const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
@@ -42,6 +83,7 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [courierLoading, setCourierLoading] = useState(false);
+    const isMountedRef = useRef(true);
 
     // Expose refetch method to parent component
     useImperativeHandle(ref, () => ({
@@ -50,6 +92,8 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
     // Fetch courier location every 60 seconds
     const fetchCourierLocation = async () => {
+      if (!isMountedRef.current) return;
+
       try {
         setCourierLoading(true);
         
@@ -72,10 +116,14 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
             !isNaN(latitude) &&
             !isNaN(longitude)
           ) {
-            setCourierLocation([latitude, longitude]);
+            if (isMountedRef.current) {
+              setCourierLocation([latitude, longitude]);
+            }
           } else {
             console.warn('Invalid courier location data:', data.location);
-            setCourierLocation(null);
+            if (isMountedRef.current) {
+              setCourierLocation(null);
+            }
           }
         } else {
           console.error('Failed to fetch courier location:', res.status);
@@ -83,14 +131,28 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
       } catch (err) {
         console.error('Failed to fetch courier location:', err);
       } finally {
-        setCourierLoading(false);
+        if (isMountedRef.current) {
+          setCourierLoading(false);
+        }
       }
     };
 
     useEffect(() => {
+      isMountedRef.current = true;
+
       const geocodeAddress = async () => {
         try {
           setLoading(true);
+          
+          // Only geocode if we have all required address components
+          if (!address || !city || !postalCode || !country) {
+            if (isMountedRef.current) {
+              setCoordinates(null);
+              setError(null);
+            }
+            return;
+          }
+          
           // Format address for geocoding
           const fullAddress = `${address}, ${city}, ${postalCode}, ${country}`;
           const encodedAddress = encodeURIComponent(fullAddress);
@@ -108,8 +170,10 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
           if (data && data.length > 0) {
             const { lat, lon } = data[0];
-            setCoordinates([parseFloat(lat), parseFloat(lon)]);
-            setError(null);
+            if (isMountedRef.current) {
+              setCoordinates([parseFloat(lat), parseFloat(lon)]);
+              setError(null);
+            }
           } else {
             // Fallback to city-level geocoding if full address fails
             const cityResponse = await fetch(
@@ -121,17 +185,25 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
             if (cityData && cityData.length > 0) {
               const { lat, lon } = cityData[0];
-              setCoordinates([parseFloat(lat), parseFloat(lon)]);
-              setError('Showing approximate location (city center)');
+              if (isMountedRef.current) {
+                setCoordinates([parseFloat(lat), parseFloat(lon)]);
+                setError('Showing approximate location (city center)');
+              }
             } else {
-              setError('Unable to locate address on map');
+              if (isMountedRef.current) {
+                setError('Unable to locate address on map');
+              }
             }
           }
         } catch (err) {
           console.error('Geocoding error:', err);
-          setError('Failed to load map location');
+          if (isMountedRef.current) {
+            setError('Failed to load map location');
+          }
         } finally {
-          setLoading(false);
+          if (isMountedRef.current) {
+            setLoading(false);
+          }
         }
       };
 
@@ -143,10 +215,13 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
       // Set interval for polling every 60 seconds
       const interval = setInterval(fetchCourierLocation, 60000);
 
-      return () => clearInterval(interval);
+      return () => {
+        isMountedRef.current = false;
+        clearInterval(interval);
+      };
     }, [address, city, postalCode, country, orderId]);
 
-    if (loading) {
+    if (loading && (address && city && postalCode && country)) {
       return (
         <div className='border rounded-lg p-4 h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
           <p className='text-muted-foreground'>Loading map...</p>
@@ -159,28 +234,53 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
         <div className='border rounded-lg p-4 h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
           <div className='text-center'>
             <p className='text-red-600 mb-2'>{error}</p>
-            <p className='text-sm text-muted-foreground'>
-              {address}, {city}, {postalCode}, {country}
-            </p>
+            {address && city && postalCode && country && (
+              <p className='text-sm text-muted-foreground'>
+                {address}, {city}, {postalCode}, {country}
+              </p>
+            )}
           </div>
         </div>
       );
     }
 
-    if (!coordinates) {
-      return null;
+    // If no coordinates and no courier location, show loading
+    if (!coordinates && !courierLocation) {
+      return (
+        <div className='border rounded-lg p-4 h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
+          <p className='text-muted-foreground'>Waiting for location...</p>
+        </div>
+      );
     }
 
-    // Calculate center point between courier and customer if both exist
-    const mapCenter = courierLocation
-      ? [(coordinates[0] + courierLocation[0]) / 2, (coordinates[1] + courierLocation[1]) / 2]
-      : coordinates;
+    // Determine map center based on what we have
+    let mapCenter: [number, number] = [20, 0]; // Default fallback
+    let mapZoom = 2;
+
+    if (coordinates && courierLocation) {
+      // Both courier and customer location - center between them
+      mapCenter = [
+        (coordinates[0] + courierLocation[0]) / 2,
+        (coordinates[1] + courierLocation[1]) / 2
+      ];
+      mapZoom = 14;
+    } else if (courierLocation) {
+      // Only courier location
+      mapCenter = courierLocation;
+      mapZoom = 15;
+    } else if (coordinates) {
+      // Only customer location
+      mapCenter = coordinates;
+      mapZoom = 15;
+    }
+
+    const hasCustomerLocation = coordinates !== null;
 
     return (
       <div className='border rounded-lg overflow-hidden'>
         <MapContainer
-          center={mapCenter as [number, number]}
-          zoom={courierLocation ? 14 : 15}
+          center={mapCenter}
+          zoom={mapZoom}
           style={{ height: '300px', width: '100%' }}
           scrollWheelZoom={false}
         >
@@ -188,8 +288,12 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             url='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
           />
-          {/* Draw route line if courier location is available */}
-          {courierLocation && (
+          
+          {/* Component to update map view when locations change */}
+          <MapUpdater coordinates={coordinates} courierLocation={courierLocation} hasCustomerLocation={hasCustomerLocation} />
+          
+          {/* Draw route line if courier location is available and customer location exists */}
+          {courierLocation && coordinates && (
             <Polyline
               positions={[courierLocation, coordinates]}
               color='#3b82f6'
@@ -217,20 +321,24 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
             </Marker>
           )}
 
-          {/* Customer Location Marker (Blue) */}
-          <Marker position={coordinates} icon={customerIcon}>
-            <Popup>
-              <div className='text-sm'>
-                <p className='font-semibold mb-1'>Delivery Location</p>
-                <p className='text-xs text-gray-600 mb-1'>{customerEmail}</p>
-                <p className='text-xs'>{address}</p>
-                <p className='text-xs'>
-                  {city}, {postalCode}
-                </p>
-                <p className='text-xs'>{country}</p>
-              </div>
-            </Popup>
-          </Marker>
+          {/* Customer Location Marker (Blue) - only show if we have customer location */}
+          {coordinates && (
+            <Marker position={coordinates} icon={customerIcon}>
+              <Popup>
+                <div className='text-sm'>
+                  <p className='font-semibold mb-1'>Delivery Location</p>
+                  {customerEmail && <p className='text-xs text-gray-600 mb-1'>{customerEmail}</p>}
+                  {address && <p className='text-xs'>{address}</p>}
+                  {city && postalCode && (
+                    <p className='text-xs'>
+                      {city}, {postalCode}
+                    </p>
+                  )}
+                  {country && <p className='text-xs'>{country}</p>}
+                </div>
+              </Popup>
+            </Marker>
+          )}
         </MapContainer>
         {error && (
           <div className='bg-amber-50 border-t border-amber-200 px-3 py-2'>

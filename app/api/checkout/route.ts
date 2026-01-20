@@ -145,7 +145,7 @@ export async function POST(req: Request) {
     total,
     orderPaid: false,
     paid: false,
-    orderStatus: 'pending',
+    orderStatus: 'placed',
   });
 
   const origin =

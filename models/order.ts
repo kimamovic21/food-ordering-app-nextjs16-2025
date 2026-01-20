@@ -85,8 +85,8 @@ const OrderSchema = new Schema(
     orderPaid: { type: Boolean, default: false },
     orderStatus: {
       type: String,
-      enum: ['pending', 'processing', 'transportation', 'completed'],
-      default: 'pending',
+      enum: ['placed', 'processing', 'ready', 'transportation', 'completed'],
+      default: 'placed',
       required: true,
     },
     courierId: { type: Schema.Types.ObjectId, ref: 'User', default: null },

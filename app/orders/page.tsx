@@ -28,7 +28,7 @@ type OrderType = {
   email: string;
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'completed';
+  orderStatus: 'placed' | 'processing' | 'ready' | 'completed';
   createdAt: string;
 };
 
@@ -54,9 +54,11 @@ const OrdersPage = () => {
     const currentPage = Math.max(1, parseInt(searchParams?.get('page') || '1', 10));
     setPage(currentPage);
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (showLoading = true) => {
       try {
-        setLoadingOrders(true);
+        if (showLoading) {
+          setLoadingOrders(true);
+        }
         const res = await fetch(`/api/orders?page=${currentPage}`);
 
         if (!res.ok) {
@@ -73,12 +75,22 @@ const OrdersPage = () => {
       } catch (error) {
         console.error('Failed to load orders', error);
       } finally {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setLoadingOrders(false);
+        if (showLoading) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          setLoadingOrders(false);
+        }
       }
     };
 
-    fetchOrders();
+    // Fetch immediately on mount with loading indicator
+    fetchOrders(true);
+
+    // Poll for order updates every 10 seconds without loading indicator
+    const interval = setInterval(() => {
+      fetchOrders(false);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [loading, data?.role, searchParams]);
 
   if (loading) {

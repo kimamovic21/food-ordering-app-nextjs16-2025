@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 const normalizeOrder = (order: any) => ({
   ...order,
   paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
-  orderStatus: order.orderStatus || 'pending',
+  orderStatus: order.orderStatus || 'placed',
 });
 
 export async function GET(request: Request) {

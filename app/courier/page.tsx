@@ -50,7 +50,7 @@ type OrderDetailsType = {
   cartProducts: CartProduct[];
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
+  orderStatus: 'placed' | 'processing' | 'ready' | 'transportation' | 'completed';
   courierId?: { _id: string; name: string; email: string; image?: string };
   createdAt: string;
   updatedAt: string;
@@ -67,6 +67,7 @@ const CourierPage = () => {
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationShared, setLocationShared] = useState(false);
   const mapRefs = useRef<Map<string, OrderMapHandle>>(new Map());
+  const isInitialLoadRef = useRef(true);
 
   useEffect(() => {
     if (profileLoading || profileData?.role !== 'courier') return;
@@ -76,9 +77,11 @@ const CourierPage = () => {
       setAvailability(profileData.availability);
     }
 
-    const fetchOrders = async () => {
+    const fetchOrders = async (showLoading = true) => {
       try {
-        setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
         const res = await fetch('/api/courier/orders');
         if (!res.ok) {
           throw new Error('Failed to fetch orders');
@@ -89,11 +92,22 @@ const CourierPage = () => {
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
+        isInitialLoadRef.current = false;
       }
     };
 
-    fetchOrders();
+    // Fetch immediately on mount with loading indicator
+    fetchOrders(true);
+
+    // Poll for new orders every 10 seconds without loading indicator
+    const interval = setInterval(() => {
+      fetchOrders(false);
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [profileData?.role, profileLoading, profileData?.availability]);
 
   const handleCompleteOrder = async (orderId: string) => {
@@ -177,7 +191,7 @@ const CourierPage = () => {
             setLocationShared(true);
             toast.success('Location shared successfully');
 
-            // Refetch location on all maps immediately
+            // Refetch location on all order maps immediately
             mapRefs.current.forEach((mapRef) => {
               mapRef.refetchCourierLocation().catch((err) => {
                 console.error('Failed to refetch courier location:', err);
@@ -336,12 +350,29 @@ const CourierPage = () => {
         </div>
       )}
 
+      {/* Show courier location map only when no active orders */}
       {orders.length === 0 ? (
-        <Card>
-          <CardContent className='py-12 text-center'>
-            <p className='text-muted-foreground'>No active deliveries at the moment</p>
-          </CardContent>
-        </Card>
+        <>
+          <Card className='mb-6'>
+            <CardHeader>
+              <CardTitle>Your Location</CardTitle>
+              <CardDescription>Real-time location tracking for deliveries</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <OrderMap
+                ref={(el) => {
+                  if (el) mapRefs.current.set('courier-location', el);
+                  else mapRefs.current.delete('courier-location');
+                }}
+              />
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className='py-12 text-center'>
+              <p className='text-muted-foreground'>No active deliveries at the moment</p>
+            </CardContent>
+          </Card>
+        </>
       ) : (
         <div className='space-y-4'>
           {orders.map((order) => (
@@ -357,7 +388,12 @@ const CourierPage = () => {
                       {new Date(order.createdAt).toLocaleTimeString()}
                     </CardDescription>
                   </div>
-                  <Badge className='bg-blue-600 hover:bg-blue-700'>In Delivery</Badge>
+                  <Badge 
+                    variant='secondary' 
+                    className='bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                  >
+                    Transportation
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -405,9 +441,13 @@ const CourierPage = () => {
                     </div>
                   </div>
 
-                  {/* Map */}
+                  {/* Map - Show delivery location with courier tracking */}
                   <div>
-                    <h3 className='font-semibold text-foreground mb-3'>Delivery Location</h3>
+                    <h3 className='font-semibold text-foreground mb-3'>
+                      {order.orderStatus === 'transportation' 
+                        ? 'Delivery Tracking' 
+                        : 'Delivery Location'}
+                    </h3>
                     <OrderMap
                       ref={(el) => {
                         if (el) mapRefs.current.set(order._id, el);

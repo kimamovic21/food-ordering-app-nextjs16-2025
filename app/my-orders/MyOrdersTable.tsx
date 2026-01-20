@@ -20,7 +20,7 @@ type OrderType = {
   email: string;
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'completed';
+  orderStatus: 'placed' | 'processing' | 'ready' | 'completed';
   createdAt: string;
 };
 

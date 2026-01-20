@@ -70,7 +70,7 @@ type OrderDetailsType = {
   cartProducts: CartProduct[];
   total: number;
   paymentStatus: boolean;
-  orderStatus: 'pending' | 'processing' | 'transportation' | 'completed';
+  orderStatus: 'placed' | 'processing' | 'ready' | 'transportation' | 'completed';
   courierId?: { _id: string; name: string; email: string; image?: string };
   createdAt: string;
   updatedAt: string;
@@ -107,8 +107,8 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState<OrderDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<'pending' | 'processing' | 'transportation'>(
-    'pending'
+  const [selectedStatus, setSelectedStatus] = useState<'placed' | 'processing' | 'ready'>(
+    'placed'
   );
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusError, setStatusError] = useState('');
@@ -125,9 +125,11 @@ const OrderDetailPage = () => {
   useEffect(() => {
     if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager')) return;
 
-    const fetchOrder = async () => {
+    const fetchOrder = async (showLoading = true) => {
       try {
-        setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
         const res = await fetch(`/api/orders?id=${orderId}`);
         if (!res.ok) {
           throw new Error('Failed to fetch order');
@@ -135,26 +137,36 @@ const OrderDetailPage = () => {
         const json = await res.json();
         setOrder(json.order);
         setSelectedStatus(
-          (json.order.orderStatus === 'completed' ? 'transportation' : json.order.orderStatus) ||
-            'pending'
+          (json.order.orderStatus === 'completed' || json.order.orderStatus === 'transportation' ? 'ready' : json.order.orderStatus) ||
+            'placed'
         );
         setStatusError('');
       } catch (err) {
         console.error('Failed to load order', err);
         setError('Failed to load order details');
       } finally {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
       }
     };
 
     if (orderId) {
-      fetchOrder();
+      // Fetch immediately on mount with loading indicator
+      fetchOrder(true);
+
+      // Poll for order updates every 10 seconds without loading indicator
+      const interval = setInterval(() => {
+        fetchOrder(false);
+      }, 10000);
+
+      return () => clearInterval(interval);
     }
   }, [orderId, profileData?.role, profileLoading]);
 
-  // Fetch available couriers when order status is transportation
+  // Fetch available couriers when order status is ready (for courier assignment)
   useEffect(() => {
-    if (order?.orderStatus === 'transportation') {
+    if (order?.orderStatus === 'ready') {
       const fetchCouriers = async () => {
         try {
           const res = await fetch('/api/couriers?availableOnly=true');
@@ -165,7 +177,16 @@ const OrderDetailPage = () => {
           console.error('Failed to fetch couriers', err);
         }
       };
+
+      // Fetch immediately on mount
       fetchCouriers();
+
+      // Poll for courier availability updates every 5 seconds
+      const interval = setInterval(() => {
+        fetchCouriers();
+      }, 5000);
+
+      return () => clearInterval(interval);
     }
   }, [order?.orderStatus]);
 
@@ -208,6 +229,23 @@ const OrderDetailPage = () => {
   const handleAssignCourier = async () => {
     if (!order || !selectedCourier) return;
 
+    // Check if selected courier is still available
+    const selectedCourierData = couriers.find(c => c._id === selectedCourier);
+    if (!selectedCourierData || !selectedCourierData.availability) {
+      toast.error('Selected courier is no longer available. Please choose another courier.');
+      // Refresh courier list
+      try {
+        const res = await fetch('/api/couriers?availableOnly=true');
+        if (res.ok) {
+          const data = await res.json();
+          setCouriers(data.couriers);
+        }
+      } catch (err) {
+        console.error('Failed to refresh couriers', err);
+      }
+      return;
+    }
+
     try {
       setAssigningCourier(true);
       const res = await fetch('/api/couriers', {
@@ -223,16 +261,17 @@ const OrderDetailPage = () => {
         return;
       }
 
-      // Update order with courier info
+      // Update order with courier info and transportation status
       const updatedOrder = {
         ...order,
         courierId: data.courier,
+        orderStatus: 'transportation' as const,
       };
       setOrder(updatedOrder);
       setShowCourierSelect(false);
       setSelectedCourier('');
       setShowConfirmModal(false);
-      toast.success('Courier assigned successfully');
+      toast.success('Courier assigned successfully - Order is now in transportation');
 
       // Trigger map refresh to fetch the newly assigned courier's location
       if (mapRef.current) {
@@ -435,7 +474,9 @@ const OrderDetailPage = () => {
                   ? 'Order delivered successfully. You are not able to update order delivery status.'
                   : order.orderStatus === 'transportation'
                   ? 'Order is being delivered. Status cannot be changed.'
-                  : 'You can only move the order forward after payment is completed.'}
+                  : order.orderStatus === 'ready'
+                  ? 'Order is ready. Please assign a courier to start delivery.'
+                  : 'Move the order forward through stages: placed → processing → ready.'}
               </CardDescription>
             </CardHeader>
             <CardContent className='flex flex-col h-full'>
@@ -447,6 +488,7 @@ const OrderDetailPage = () => {
                   disabled={
                     !order.paymentStatus ||
                     statusUpdating ||
+                    order.orderStatus === 'ready' ||
                     order.orderStatus === 'transportation' ||
                     order.orderStatus === 'completed'
                   }
@@ -456,27 +498,30 @@ const OrderDetailPage = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem
-                      value='pending'
-                      disabled={order.orderStatus !== 'pending'}
+                      value='placed'
+                      disabled={order.orderStatus !== 'placed'}
                     >
-                      pending
+                      placed
                     </SelectItem>
                     <SelectItem
                       value='processing'
-                      disabled={order.orderStatus === 'transportation'}
+                      disabled={order.orderStatus === 'ready'}
                     >
                       processing
                     </SelectItem>
                     <SelectItem
-                      value='transportation'
-                      disabled={order.orderStatus === 'pending'}
+                      value='ready'
+                      disabled={order.orderStatus === 'placed'}
                     >
-                      transportation
+                      ready
                     </SelectItem>
                   </SelectContent>
                 </Select>
                 {!order.paymentStatus && (
                   <p className='text-xs text-amber-600'>Payment required before changing status.</p>
+                )}
+                {order.orderStatus === 'ready' && (
+                  <p className='text-xs text-green-600'>Order is ready! Assign a courier below to start delivery.</p>
                 )}
                 {statusError && <p className='text-sm text-red-600'>{statusError}</p>}
               </div>
@@ -485,6 +530,7 @@ const OrderDetailPage = () => {
                 disabled={
                   statusUpdating ||
                   !order.paymentStatus ||
+                  order.orderStatus === 'ready' ||
                   order.orderStatus === 'transportation' ||
                   order.orderStatus === 'completed'
                 }
@@ -529,6 +575,83 @@ const OrderDetailPage = () => {
           </Card>
         )}
 
+        {order.orderStatus === 'ready' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className='flex items-center gap-2'>
+                📦 Order Ready for Pickup
+              </CardTitle>
+              <CardDescription>
+                The order is prepared and ready. Please assign an available courier to start delivery.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='space-y-4'>
+                {!showCourierSelect ? (
+                  <Button onClick={() => setShowCourierSelect(true)} className='w-full'>
+                    Assign Courier
+                  </Button>
+                ) : (
+                  <div className='space-y-3'>
+                    <div className='space-y-2'>
+                      <label className='text-sm font-medium'>Select Available Courier</label>
+                      {couriers.length === 0 ? (
+                        <p className='text-sm text-amber-600'>
+                          No available couriers at the moment. All couriers are currently delivering orders.
+                        </p>
+                      ) : (
+                        <>
+                          <select
+                            value={selectedCourier}
+                            onChange={(e) => setSelectedCourier(e.target.value)}
+                            className='w-full px-3 py-2 border border-input rounded-md bg-background'
+                          >
+                            <option value=''>Choose a courier...</option>
+                            {couriers.map((courier) => (
+                              <option 
+                                key={courier._id} 
+                                value={courier._id}
+                                disabled={!!courier.takenOrder}
+                              >
+                                {courier.name} - {courier.email}
+                                {courier.takenOrder ? ' (Currently delivering)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                          <p className='text-xs text-muted-foreground'>
+                            Only couriers who are not currently delivering an order are available for assignment.
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    {selectedCourier && (
+                      <div className='flex gap-2'>
+                        <Button
+                          onClick={handleConfirmAssignment}
+                          disabled={assigningCourier || !selectedCourier}
+                          className='flex-1'
+                        >
+                          Confirm Assignment
+                        </Button>
+                        <Button
+                          variant='outline'
+                          onClick={() => {
+                            setShowCourierSelect(false);
+                            setSelectedCourier('');
+                          }}
+                          className='flex-1'
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {order.orderStatus === 'transportation' && (
           <Card>
             <CardHeader>
@@ -538,11 +661,11 @@ const OrderDetailPage = () => {
               <CardDescription>
                 {order.courierId
                   ? 'This order is currently being transported to the customer.'
-                  : 'This order is ready for transportation. Please assign a courier to start delivery.'}
+                  : 'This order is ready for transportation.'}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {order.courierId ? (
+              {order.courierId && (
                 <div className='space-y-3'>
                   <div className='border rounded-lg p-4 bg-green-50 dark:bg-green-950'>
                     <p className='font-semibold text-green-900 dark:text-green-100 mb-2'>
@@ -567,69 +690,6 @@ const OrderDetailPage = () => {
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className='space-y-4'>
-                  {!showCourierSelect ? (
-                    <Button onClick={() => setShowCourierSelect(true)} className='w-full'>
-                      Assign Courier
-                    </Button>
-                  ) : (
-                    <div className='space-y-3'>
-                      <div className='space-y-2'>
-                        <label className='text-sm font-medium'>Select Available Courier</label>
-                        {couriers.length === 0 ? (
-                          <p className='text-sm text-amber-600'>
-                            No available couriers at the moment. All couriers are currently delivering orders.
-                          </p>
-                        ) : (
-                          <>
-                            <select
-                              value={selectedCourier}
-                              onChange={(e) => setSelectedCourier(e.target.value)}
-                              className='w-full px-3 py-2 border border-input rounded-md bg-background'
-                            >
-                              <option value=''>Choose a courier...</option>
-                              {couriers.map((courier) => (
-                                <option 
-                                  key={courier._id} 
-                                  value={courier._id}
-                                  disabled={!!courier.takenOrder}
-                                >
-                                  {courier.name} - {courier.email}
-                                  {courier.takenOrder ? ' (Currently delivering)' : ''}
-                                </option>
-                              ))}
-                            </select>
-                            <p className='text-xs text-muted-foreground'>
-                              Only couriers who are not currently delivering an order are available for assignment.
-                            </p>
-                          </>
-                        )}
-                      </div>
-                      {selectedCourier && (
-                        <div className='flex gap-2'>
-                          <Button
-                            onClick={handleConfirmAssignment}
-                            disabled={assigningCourier || !selectedCourier}
-                            className='flex-1'
-                          >
-                            Confirm Assignment
-                          </Button>
-                          <Button
-                            variant='outline'
-                            onClick={() => {
-                              setShowCourierSelect(false);
-                              setSelectedCourier('');
-                            }}
-                            className='flex-1'
-                          >
-                            Cancel
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
               )}
             </CardContent>
           </Card>
@@ -652,6 +712,31 @@ const OrderDetailPage = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Order Map - Show customer location for placed, processing, ready statuses */}
+        {(order.orderStatus === 'placed' || order.orderStatus === 'processing' || order.orderStatus === 'ready') && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Delivery Location</CardTitle>
+              <CardDescription>
+                Customer's delivery address location.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='h-[400px] rounded-lg overflow-hidden'>
+                <OrderMap
+                  ref={mapRef}
+                  address={order.streetAddress}
+                  city={order.city}
+                  postalCode={order.postalCode}
+                  country={order.country}
+                  customerEmail={order.email}
+                  orderId={order._id}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Order Map - Full width, only shown when order is in transportation */}
         {order.orderStatus === 'transportation' && (
