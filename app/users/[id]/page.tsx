@@ -58,6 +58,7 @@ const UserDetailsPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [makingCourier, setMakingCourier] = useState(false);
+  const [makingManager, setMakingManager] = useState(false);
   const { data: profileData, loading: profileLoading } = useProfile();
 
   useEffect(() => {
@@ -139,6 +140,62 @@ const UserDetailsPage = () => {
     }
   };
 
+  const handleMakeManager = async () => {
+    if (!user) return;
+
+    try {
+      setMakingManager(true);
+      const res = await fetch('/api/users/make-manager', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to make manager');
+        return;
+      }
+
+      setUser({ ...user, role: 'manager' });
+      toast.success('User has been promoted to manager');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to make manager');
+    } finally {
+      setMakingManager(false);
+    }
+  };
+
+  const handleRemoveManager = async () => {
+    if (!user) return;
+
+    try {
+      setMakingManager(true);
+      const res = await fetch('/api/users/remove-manager', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to remove manager');
+        return;
+      }
+
+      setUser({ ...user, role: 'user' });
+      toast.success('User manager role has been removed');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to remove manager');
+    } finally {
+      setMakingManager(false);
+    }
+  };
+
   if (loading || profileLoading) {
     return <UserLoading />;
   }
@@ -175,8 +232,8 @@ const UserDetailsPage = () => {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className='flex flex-col gap-6 lg:flex-row'>
-        <div className='lg:w-[55%] space-y-6'>
+      <div className='flex flex-col gap-6'>
+        <div className='max-w-4xl mx-auto w-full space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>User Details</CardTitle>
@@ -202,11 +259,11 @@ const UserDetailsPage = () => {
               </div>
 
               <div className='grid gap-4 md:grid-cols-2'>
-                <div>
+                <div className='md:col-span-2'>
                   <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
                     Email:
                   </span>
-                  <p className='text-base mt-1 wrap-break-word'>{user.email}</p>
+                  <p className='text-base mt-1 break-all'>{user.email}</p>
                 </div>
 
                 <div>
@@ -263,8 +320,8 @@ const UserDetailsPage = () => {
                 )}
               </div>
 
-              {profileData?.role === 'admin' && user.role !== 'courier' && (
-                <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+              {profileData?.role === 'admin' && user.role !== 'courier' && user.role !== 'manager' && (
+                <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3'>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -285,6 +342,34 @@ const UserDetailsPage = () => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={handleMakeCourier}
+                          className='bg-primary hover:bg-primary/90'
+                        >
+                          Confirm
+                        </AlertDialogAction>
+                      </div>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        disabled={makingManager}
+                        className='w-full bg-primary hover:bg-primary/90'
+                      >
+                        {makingManager ? 'Making Manager...' : 'Make Manager'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Make Manager</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to make {user.name} a manager?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className='flex gap-3 justify-end'>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleMakeManager}
                           className='bg-primary hover:bg-primary/90'
                         >
                           Confirm
@@ -327,12 +412,43 @@ const UserDetailsPage = () => {
                   </AlertDialog>
                 </div>
               )}
+
+              {profileData?.role === 'admin' && user.role === 'manager' && (
+                <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        disabled={makingManager}
+                        variant='destructive'
+                        className='w-full'
+                      >
+                        {makingManager ? 'Removing Manager...' : 'Remove Manager'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Manager</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to remove {user.name} from manager role?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <div className='flex gap-3 justify-end'>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleRemoveManager}
+                          className='bg-red-600 hover:bg-red-700'
+                        >
+                          Confirm
+                        </AlertDialogAction>
+                      </div>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              )}
             </CardContent>
           </Card>
-        </div>
 
-        <div className='lg:w-[45%]'>
-          <Card className='h-full'>
+          <Card>
             <CardHeader>
               <CardTitle>Location</CardTitle>
             </CardHeader>

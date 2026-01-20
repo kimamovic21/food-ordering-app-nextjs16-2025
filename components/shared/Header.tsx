@@ -95,6 +95,8 @@ const Header = () => {
   const isCourier =
     (session?.data?.user as any)?.role === 'courier' || profileData?.role === 'courier';
   const isAdmin = (session?.data?.user as any)?.role === 'admin' || profileData?.role === 'admin';
+  const isManager = (session?.data?.user as any)?.role === 'manager' || profileData?.role === 'manager';
+  const isAdminOrManager = isAdmin || isManager;
 
   const handleLogout = async () => {
     toast.success('Successfully logged out');
@@ -174,7 +176,7 @@ const Header = () => {
                         </Link>
                       </>
                     )}
-                    {isAdmin && (
+                    {isAdminOrManager && (
                       <>
                         <Link
                           className={`${

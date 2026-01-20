@@ -36,6 +36,7 @@ interface MenuItemsProps {
   categories: Category[];
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  isAdmin?: boolean;
 }
 
 const getCategoryId = (item: MenuItem): string => {
@@ -47,10 +48,12 @@ const AdminItemCard = ({
   item,
   onEdit,
   onDelete,
+  isAdmin = true,
 }: {
   item: MenuItem;
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
+  isAdmin?: boolean;
 }) => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -115,17 +118,21 @@ const AdminItemCard = ({
         </CardContent>
 
         <CardFooter className='flex gap-2 pt-2'>
-          <Button className='flex-1' variant='outline' size='sm' onClick={() => onEdit(item._id)}>
-            Edit
-          </Button>
-          <Button
-            className='flex-1 hover:bg-red-700'
-            size='sm'
-            onClick={handleDeleteClick}
-            style={{ backgroundColor: '#dc2626', color: 'white' }}
-          >
-            Delete
-          </Button>
+          {isAdmin && (
+            <>
+              <Button className='flex-1' variant='outline' size='sm' onClick={() => onEdit(item._id)}>
+                Edit
+              </Button>
+              <Button
+                className='flex-1 hover:bg-red-700'
+                size='sm'
+                onClick={handleDeleteClick}
+                style={{ backgroundColor: '#dc2626', color: 'white' }}
+              >
+                Delete
+              </Button>
+            </>
+          )}
         </CardFooter>
       </Card>
 
@@ -147,7 +154,7 @@ const AdminItemCard = ({
   );
 };
 
-const MenuItems = ({ menuItems, categories, onEdit, onDelete }: MenuItemsProps) => {
+const MenuItems = ({ menuItems, categories, onEdit, onDelete, isAdmin = true }: MenuItemsProps) => {
   if (menuItems.length === 0) {
     return (
       <div className='mt-12'>
@@ -168,7 +175,7 @@ const MenuItems = ({ menuItems, categories, onEdit, onDelete }: MenuItemsProps) 
               <h3 className='text-2xl font-semibold mb-6 capitalize'>{category.name}</h3>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
                 {items.map((item) => (
-                  <AdminItemCard key={item._id} item={item} onEdit={onEdit} onDelete={onDelete} />
+                  <AdminItemCard key={item._id} item={item} onEdit={onEdit} onDelete={onDelete} isAdmin={isAdmin} />
                 ))}
               </div>
             </section>

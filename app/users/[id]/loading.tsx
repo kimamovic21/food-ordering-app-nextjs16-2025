@@ -15,20 +15,19 @@ const UserLoading = () => {
       <Breadcrumb className='mb-6'>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <Link href='/users' className='hover:underline'>
-              Users
-            </Link>
+            <Skeleton className='h-4 w-12' />
           </BreadcrumbItem>
-          <BreadcrumbSeparator />
+          <BreadcrumbSeparator>
+            <Skeleton className='h-4 w-2' />
+          </BreadcrumbSeparator>
           <BreadcrumbItem>
-            <BreadcrumbPage>User Details</BreadcrumbPage>
+            <Skeleton className='h-4 w-24' />
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className='flex flex-col gap-6 lg:flex-row'>
-        {/* Left Column - User Details Card */}
-        <div className='lg:w-[55%] space-y-6'>
+      <div className='flex flex-col gap-6'>
+        <div className='max-w-4xl mx-auto w-full space-y-6'>
           <Card>
             <CardHeader>
               <Skeleton className='h-6 w-32' />
@@ -84,11 +83,8 @@ const UserLoading = () => {
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        {/* Right Column - Location Map Skeleton */}
-        <div className='lg:w-[45%]'>
-          <Card className='h-full'>
+          <Card>
             <CardHeader>
               <Skeleton className='h-6 w-20' />
             </CardHeader>

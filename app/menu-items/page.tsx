@@ -82,7 +82,7 @@ const MenuItemsListPage = () => {
 
   const showSkeleton = loading || isLoading;
 
-  if (!loading && data?.role !== 'admin') return 'Not an admin.';
+  if (!loading && data?.role !== 'admin' && data?.role !== 'manager') return 'Not an admin or manager.';
 
   return (
     <section className='mt-8'>
@@ -141,7 +141,9 @@ const MenuItemsListPage = () => {
 
           <div className='flex items-center justify-between mb-6'>
             <Title>Menu Items</Title>
-            <Button onClick={() => router.push('/menu-items/new')}>Create New Item</Button>
+            {data?.role === 'admin' && (
+              <Button onClick={() => router.push('/menu-items/new')}>Create New Item</Button>
+            )}
           </div>
 
           <MenuItems
@@ -149,6 +151,7 @@ const MenuItemsListPage = () => {
             categories={categories}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            isAdmin={data?.role === 'admin'}
           />
         </>
       )}

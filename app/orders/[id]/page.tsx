@@ -123,7 +123,7 @@ const OrderDetailPage = () => {
   const orderId = params?.id as string;
 
   useEffect(() => {
-    if (profileLoading || profileData?.role !== 'admin') return;
+    if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager')) return;
 
     const fetchOrder = async () => {
       try {
@@ -364,7 +364,7 @@ const OrderDetailPage = () => {
     );
   }
 
-  if (!profileData?.role || profileData.role !== 'admin') return 'Not an admin';
+  if (!profileData?.role || (profileData.role !== 'admin' && profileData.role !== 'manager')) return 'Not an admin or manager';
 
   if (error) return <div className='mt-8 text-red-600'>{error}</div>;
 
@@ -623,15 +623,13 @@ const OrderDetailPage = () => {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Order Map - Full width, only shown when order is in transportation or completed */}
-        {(order.orderStatus === 'transportation' || order.orderStatus === 'completed') && (
+        {/* Order Map - Full width, only shown when order is in transportation */}
+        {order.orderStatus === 'transportation' && (
           <Card>
             <CardHeader>
               <CardTitle>Delivery Tracking</CardTitle>
               <CardDescription>
-                {order.orderStatus === 'completed'
-                  ? 'View the delivery route for this completed order.'
-                  : 'Track the real-time location of the delivery.'}
+                Track the real-time location of the delivery.
               </CardDescription>
             </CardHeader>
             <CardContent>

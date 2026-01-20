@@ -30,7 +30,7 @@ const CouriersPage = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profileLoading || profileData?.role !== 'admin') return;
+    if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager')) return;
 
     const fetchCouriers = async () => {
       try {
@@ -68,10 +68,10 @@ const CouriersPage = () => {
     );
   }
 
-  if (profileData?.role !== 'admin') {
+  if (profileData?.role !== 'admin' && profileData?.role !== 'manager') {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='text-red-500'>Unauthorized: Only admins can access this page</div>
+        <div className='text-red-500'>Unauthorized: Only admins or managers can access this page</div>
       </div>
     );
   }

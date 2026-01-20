@@ -19,9 +19,9 @@ export async function GET() {
 
     await mongoose.connect(process.env.MONGODB_URL as string);
 
-    // Get user to check admin status
+    // Get user to check admin or manager status
     const user = await User.findOne({ email: session.user.email });
-    if (!user || user.role !== 'admin') {
+    if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
