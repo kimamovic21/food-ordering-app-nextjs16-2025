@@ -27,23 +27,23 @@ const CustomerInfoCard = ({
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>Phone</p>
-          <p className='font-semibold'>{phone}</p>
+          <p className='font-semibold'>{phone || 'Not provided'}</p>
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>Street Address</p>
-          <p className='font-semibold'>{streetAddress}</p>
+          <p className='font-semibold'>{streetAddress || 'Not provided'}</p>
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>Postal Code</p>
-          <p className='font-semibold'>{postalCode}</p>
+          <p className='font-semibold'>{postalCode || 'Not provided'}</p>
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>City</p>
-          <p className='font-semibold'>{city}</p>
+          <p className='font-semibold'>{city || 'Not provided'}</p>
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>Country</p>
-          <p className='font-semibold'>{country}</p>
+          <p className='font-semibold'>{country || 'Not provided'}</p>
         </div>
       </div>
     </Card>

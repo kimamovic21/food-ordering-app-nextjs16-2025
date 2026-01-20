@@ -16,6 +16,8 @@ export async function GET(request: Request) {
   const filter: any = { role: 'courier' };
   if (availableOnly) {
     filter.availability = true;
+    // Only get couriers who don't have a taken order
+    filter.takenOrder = null;
   }
 
   const couriers = await User.find(filter).select(
@@ -50,6 +52,16 @@ export async function PATCH(request: Request) {
 
   if (courier.role !== 'courier') {
     return Response.json({ error: 'User is not a courier' }, { status: 400 });
+  }
+
+  // Check if courier already has a taken order
+  if (courier.takenOrder) {
+    return Response.json(
+      { 
+        error: 'This courier is currently delivering another order. Please wait for them to finish the delivery before assigning a new order.' 
+      }, 
+      { status: 400 }
+    );
   }
 
   // Update courier's taken order

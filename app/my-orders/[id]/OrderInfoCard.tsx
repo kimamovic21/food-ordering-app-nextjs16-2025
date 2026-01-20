@@ -17,10 +17,10 @@ type OrderInfoCardProps = {
   deliveryFeeBreakdown?: DeliveryFeeBreakdown;
 };
 
-const OrderInfoCard = ({ 
-  orderId, 
-  paymentStatus, 
-  orderStatus, 
+const OrderInfoCard = ({
+  orderId,
+  paymentStatus,
+  orderStatus,
   createdAt,
   deliveryFee,
   deliveryFeeBreakdown,
@@ -42,11 +42,18 @@ const OrderInfoCard = ({
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         <div>
           <p className='text-sm text-muted-foreground'>Order ID</p>
-          <p className='font-semibold break-all'>{orderId}</p>
+          <p className='font-semibold break-all text-xs sm:text-sm' title={orderId}>
+            {orderId}
+          </p>
         </div>
-        <div>
+        <div className='md:col-span-2'>
           <p className='text-sm text-muted-foreground'>Order Date</p>
-          <p className='font-semibold'>{formatDate(createdAt)}</p>
+          <p
+            className='font-semibold whitespace-nowrap text-sm md:text-base'
+            title={formatDate(createdAt)}
+          >
+            {formatDate(createdAt)}
+          </p>
         </div>
         <div>
           <p className='text-sm text-muted-foreground'>Order Status</p>
@@ -56,10 +63,8 @@ const OrderInfoCard = ({
               orderStatus === 'completed'
                 ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
                 : orderStatus === 'processing'
-                ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
-                : orderStatus === 'transportation'
-                ? 'bg-purple-100 text-purple-800 hover:bg-purple-100 capitalize'
-                : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                  ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                  : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
             }
           >
             {orderStatus}
@@ -82,18 +87,24 @@ const OrderInfoCard = ({
             <div className='space-y-1 text-sm'>
               <div className='flex justify-between'>
                 <span className='text-muted-foreground'>Base Fee:</span>
-                <span className='font-semibold text-foreground'>${(deliveryFeeBreakdown?.baseFee || 5).toFixed(2)}</span>
+                <span className='font-semibold text-foreground'>
+                  ${(deliveryFeeBreakdown?.baseFee || 5).toFixed(2)}
+                </span>
               </div>
               {deliveryFeeBreakdown?.altitudeAdjustment ? (
                 <div className='flex justify-between text-xs pl-2'>
                   <span className='text-muted-foreground'>+ Altitude:</span>
-                  <span className='text-foreground'>${deliveryFeeBreakdown.altitudeAdjustment.toFixed(2)}</span>
+                  <span className='text-foreground'>
+                    ${deliveryFeeBreakdown.altitudeAdjustment.toFixed(2)}
+                  </span>
                 </div>
               ) : null}
               {deliveryFeeBreakdown?.weatherAdjustment ? (
                 <div className='flex justify-between text-xs pl-2'>
                   <span className='text-muted-foreground'>+ Weather:</span>
-                  <span className='text-foreground'>${deliveryFeeBreakdown.weatherAdjustment.toFixed(2)}</span>
+                  <span className='text-foreground'>
+                    ${deliveryFeeBreakdown.weatherAdjustment.toFixed(2)}
+                  </span>
                 </div>
               ) : null}
               <div className='flex justify-between border-t pt-1 font-semibold'>

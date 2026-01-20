@@ -12,12 +12,14 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import useProfile from '@/contexts/UseProfile';
 import OrderInfoCard from './OrderInfoCard';
 import CustomerInfoCard from './CustomerInfoCard';
 import OrderItemsCard from './OrderItemsCard';
-import OrderMap from '@/components/shared/OrderMap';
+import OrderStatusBanner from './OrderStatusBanner';
+import Title from '@/components/shared/Title';
 
 type CartProduct = {
   productId: string;
@@ -59,6 +61,16 @@ type OrderDetailsType = {
   loyaltyTier?: string;
 };
 
+// Map loads client-side only because Leaflet touches window during module init
+const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
+  ssr: false,
+  loading: () => (
+    <div className='border rounded-lg p-4 h-[300px] flex items-center justify-center bg-slate-50 dark:bg-slate-900'>
+      <Skeleton className='h-6 w-40' />
+    </div>
+  ),
+});
+
 const MyOrderDetailPage = () => {
   const [order, setOrder] = useState<OrderDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -73,7 +85,7 @@ const MyOrderDetailPage = () => {
 
     const fetchOrder = async () => {
       try {
-        setLoading(true);
+        if (!order) setLoading(true);
         const res = await fetch(`/api/my-orders?id=${orderId}`);
 
         if (res.status === 403) {
@@ -99,8 +111,18 @@ const MyOrderDetailPage = () => {
 
     if (orderId) {
       fetchOrder();
+
+      // Poll for order updates every 30 seconds when order is in transportation
+      // This ensures the UI reflects courier assignment changes
+      const pollInterval = setInterval(() => {
+        if (order?.orderStatus === 'transportation' || order?.orderStatus === 'processing') {
+          fetchOrder();
+        }
+      }, 30000);
+
+      return () => clearInterval(pollInterval);
     }
-  }, [orderId, profileData?.email, profileLoading, router]);
+  }, [orderId, profileData?.email, profileLoading, router, order?.orderStatus, order]);
 
   if (profileLoading) {
     return (
@@ -112,6 +134,18 @@ const MyOrderDetailPage = () => {
             <Skeleton className='h-5 w-32' />
           </div>
           <Skeleton className='h-10 w-56 mb-6' />
+
+          {/* Status banner skeleton */}
+          <div className='rounded-lg border border-border bg-card/70 p-6 mb-6'>
+            <div className='flex items-start gap-3'>
+              <Skeleton className='h-10 w-10 rounded-full' />
+              <div className='flex-1 space-y-2'>
+                <Skeleton className='h-5 w-48' />
+                <Skeleton className='h-4 w-72' />
+                <Skeleton className='h-4 w-64' />
+              </div>
+            </div>
+          </div>
 
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
             <div className='space-y-6'>
@@ -137,12 +171,15 @@ const MyOrderDetailPage = () => {
             <Card className='p-6 bg-card border border-border shadow-sm'>
               <div className='space-y-5'>
                 <Skeleton className='h-6 w-64' />
-                <Skeleton className='h-32 w-full' />
+                <div className='space-y-3'>
+                  {[...Array(4)].map((_, idx) => (
+                    <Skeleton key={idx} className='h-5 w-full' />
+                  ))}
+                  <Skeleton className='h-5 w-4/5' />
+                </div>
               </div>
             </Card>
           </div>
-          
-          <Skeleton className='h-96 w-full' />
         </div>
       </section>
     );
@@ -159,6 +196,18 @@ const MyOrderDetailPage = () => {
             <Skeleton className='h-5 w-32' />
           </div>
           <Skeleton className='h-10 w-56 mb-6' />
+
+          {/* Status banner skeleton */}
+          <div className='rounded-lg border border-border bg-card/70 p-6 mb-6'>
+            <div className='flex items-start gap-3'>
+              <Skeleton className='h-10 w-10 rounded-full' />
+              <div className='flex-1 space-y-2'>
+                <Skeleton className='h-5 w-48' />
+                <Skeleton className='h-4 w-72' />
+                <Skeleton className='h-4 w-64' />
+              </div>
+            </div>
+          </div>
 
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
             <div className='space-y-6'>
@@ -181,12 +230,15 @@ const MyOrderDetailPage = () => {
             <Card className='p-6 bg-card border border-border shadow-sm'>
               <div className='space-y-5'>
                 <Skeleton className='h-6 w-64' />
-                <Skeleton className='h-32 w-full' />
+                <div className='space-y-3'>
+                  {[...Array(4)].map((_, idx) => (
+                    <Skeleton key={idx} className='h-5 w-full' />
+                  ))}
+                  <Skeleton className='h-5 w-4/5' />
+                </div>
               </div>
             </Card>
           </div>
-          
-          <Skeleton className='h-96 w-full' />
         </div>
       </section>
     );
@@ -213,7 +265,9 @@ const MyOrderDetailPage = () => {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <h1 className='text-3xl font-bold mb-6'>Order Details</h1>
+        <Title>Order Details</Title>
+
+        <OrderStatusBanner status={order.orderStatus} />
 
         {/* Grid layout: On large screens, left column has Order Info + Delivery Info, right column has Order Items */}
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6'>
@@ -240,8 +294,8 @@ const MyOrderDetailPage = () => {
 
           {/* Right column: Order Items */}
           <div>
-            <OrderItemsCard 
-              cartProducts={order.cartProducts} 
+            <OrderItemsCard
+              cartProducts={order.cartProducts}
               total={order.total}
               deliveryFee={order.deliveryFee}
               deliveryFeeBreakdown={order.deliveryFeeBreakdown}
@@ -251,21 +305,6 @@ const MyOrderDetailPage = () => {
             />
           </div>
         </div>
-
-        {/* Delivered Success Message - Show only when order is completed */}
-        {order.orderStatus === 'completed' && (
-          <div className='bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-6 mb-6'>
-            <div className='flex items-start gap-3'>
-              <div className='text-green-600 dark:text-green-400 text-2xl'>✓</div>
-              <div>
-                <h3 className='text-green-900 dark:text-green-100 font-semibold text-lg'>Order Delivered Successfully!</h3>
-                <p className='text-green-800 dark:text-green-200 mt-1'>
-                  Your order has been delivered. Thank you for your purchase!
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Map section at the bottom, full width - Hide when order is completed */}
         {order.orderStatus !== 'completed' && (

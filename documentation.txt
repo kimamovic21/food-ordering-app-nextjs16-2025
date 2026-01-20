@@ -834,3 +834,8 @@ Add manager role support and management actions
 -update component Header.tsx
 -in folder api/users create make-manager and remove-manager folders and route.ts files
 -update ui in existing tsx components
+
+
+Improve order status handling and courier assignment
+
+-update ui in existing tsx components

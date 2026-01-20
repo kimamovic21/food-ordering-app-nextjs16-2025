@@ -233,6 +233,11 @@ const OrderDetailPage = () => {
       setSelectedCourier('');
       setShowConfirmModal(false);
       toast.success('Courier assigned successfully');
+
+      // Trigger map refresh to fetch the newly assigned courier's location
+      if (mapRef.current) {
+        await mapRef.current.refetchCourierLocation();
+      }
     } catch (err) {
       console.error(err);
       toast.error('Failed to assign courier');
@@ -450,9 +455,24 @@ const OrderDetailPage = () => {
                     <SelectValue placeholder='Select status' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='pending'>pending</SelectItem>
-                    <SelectItem value='processing'>processing</SelectItem>
-                    <SelectItem value='transportation'>transportation</SelectItem>
+                    <SelectItem
+                      value='pending'
+                      disabled={order.orderStatus !== 'pending'}
+                    >
+                      pending
+                    </SelectItem>
+                    <SelectItem
+                      value='processing'
+                      disabled={order.orderStatus === 'transportation'}
+                    >
+                      processing
+                    </SelectItem>
+                    <SelectItem
+                      value='transportation'
+                      disabled={order.orderStatus === 'pending'}
+                    >
+                      transportation
+                    </SelectItem>
                   </SelectContent>
                 </Select>
                 {!order.paymentStatus && (
@@ -559,21 +579,31 @@ const OrderDetailPage = () => {
                         <label className='text-sm font-medium'>Select Available Courier</label>
                         {couriers.length === 0 ? (
                           <p className='text-sm text-amber-600'>
-                            No available couriers at the moment.
+                            No available couriers at the moment. All couriers are currently delivering orders.
                           </p>
                         ) : (
-                          <select
-                            value={selectedCourier}
-                            onChange={(e) => setSelectedCourier(e.target.value)}
-                            className='w-full px-3 py-2 border border-input rounded-md bg-background'
-                          >
-                            <option value=''>Choose a courier...</option>
-                            {couriers.map((courier) => (
-                              <option key={courier._id} value={courier._id}>
-                                {courier.name} - {courier.email}
-                              </option>
-                            ))}
-                          </select>
+                          <>
+                            <select
+                              value={selectedCourier}
+                              onChange={(e) => setSelectedCourier(e.target.value)}
+                              className='w-full px-3 py-2 border border-input rounded-md bg-background'
+                            >
+                              <option value=''>Choose a courier...</option>
+                              {couriers.map((courier) => (
+                                <option 
+                                  key={courier._id} 
+                                  value={courier._id}
+                                  disabled={!!courier.takenOrder}
+                                >
+                                  {courier.name} - {courier.email}
+                                  {courier.takenOrder ? ' (Currently delivering)' : ''}
+                                </option>
+                              ))}
+                            </select>
+                            <p className='text-xs text-muted-foreground'>
+                              Only couriers who are not currently delivering an order are available for assignment.
+                            </p>
+                          </>
                         )}
                       </div>
                       {selectedCourier && (

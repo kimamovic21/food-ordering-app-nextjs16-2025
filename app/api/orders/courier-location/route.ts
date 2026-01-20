@@ -42,13 +42,17 @@ export async function GET(request: Request) {
     }
 
     // Check if order has a courier assigned
-    if (!order.courierId) {
+    let courier: any = order.courierId;
+
+    // Fallback: if no courierId on the order, try to find a courier currently holding this order
+    if (!courier) {
+      courier = await User.findOne({ takenOrder: order._id });
+    }
+
+    if (!courier) {
       return Response.json({ location: null, message: 'No courier assigned to this order' });
     }
 
-    // Get courier location from the populated courier data
-    const courier = order.courierId as any;
-    
     return Response.json({
       location: {
         latitude: courier.latitude ?? null,
