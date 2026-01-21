@@ -1,10 +1,12 @@
 # Fullstack Food Ordering App with Next.js
 
-A comprehensive full-stack food ordering application built with Next.js 16, featuring user authentication, menu management, shopping cart, order tracking, payment processing, and delivery management. This application includes admin panels for managing menu items, orders, users, and couriers, along with real-time statistics and analytics.
+A comprehensive full-stack food ordering platform built with Next.js 16. Users can browse menus, customize items, manage carts, and pay with Stripe; staff and admins can control menu items, categories, couriers, and orders with role-based permissions, loyalty tracking, delivery assignment, and real-time analytics. The app ships with end-to-end flows: authentication, profile management, checkout, delivery tracking with live courier maps, and admin dashboards for orders, couriers, users, and category/menu maintenance.
+
+**Production:** [https://foacwd.vercel.app/]
 
 ## Project Description
 
-This is a modern food ordering platform that allows users to browse menus, add items to cart, place orders, and track deliveries. Administrators can manage the entire restaurant operation including menu items, categories, orders, and user accounts. The application features role-based access control, secure payment processing via Stripe, and real-time order tracking with delivery assignment to couriers.
+This is a modern food ordering platform that allows customers to browse menus, customize items, add to cart, place orders, and track deliveries. Administrators can manage restaurant operations end to end: menu items and categories, inventory images via Cloudinary, user accounts, courier onboarding and location tracking, delivery assignment, and analytics/exports. The stack includes role-based access control, secure payments with Stripe, loyalty point accumulation, delivery fee calculations, profile editing with avatars, and real-time order tracking with courier location overlays on Leaflet maps.
 
 ### Recent Updates (January 2026)
 
@@ -26,6 +28,7 @@ This is a modern food ordering platform that allows users to browse menus, add i
 - **React 19.2.0** - UI library
 - **TypeScript 5** - Type-safe development
 - **Tailwind CSS 4** - Utility-first CSS framework
+- **shadcn/ui** - Component system built on Radix ([Studio](https://shadcnstudio.com/) and [Docs](https://ui.shadcn.com/))
 - **Radix UI** - Headless UI components (Alert Dialog, Avatar, Dropdown Menu, Label, Select, Slot)
 - **Lucide React** - Icon library
 - **React Icons** - Additional icon library
@@ -134,10 +137,11 @@ Track all payments and manage subscriptions:
 
 - [https://stripe.com/](https://stripe.com/)
 - Set up your Stripe account and get API keys
+- Install Stripe CLI: [https://docs.stripe.com/stripe-cli](https://docs.stripe.com/stripe-cli)
 
 ### **Stripe Webhook Testing**
 
-To test Stripe webhooks locally, run this command in your terminal:
+To test Stripe webhooks locally, install the Stripe CLI, then from your working directory (for example `cd Desktop`) run:
 
 ```bash
 stripe listen --forward-to localhost:3000/api/webhook
@@ -180,12 +184,6 @@ First, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.

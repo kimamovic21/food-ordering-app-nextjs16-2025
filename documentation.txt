@@ -859,3 +859,8 @@ Add search functionality to menu page
 -in folder menu create component SearchInput.tsx
 -update component menu/page.tsx
 -update breadcrumb Link logic
+
+
+Update README with expanded features and setup info
+
+-update README.md file with recent changes in project
