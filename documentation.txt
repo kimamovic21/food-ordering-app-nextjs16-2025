@@ -884,3 +884,8 @@ Add super admin controls for admin role management
 Add user account deletion with Cloudinary image cleanup
 
 -update route.ts file and component tsx so that user can delete his account
+
+
+Handle duplicate category names and improve error feedback
+
+-improve ui in categories page

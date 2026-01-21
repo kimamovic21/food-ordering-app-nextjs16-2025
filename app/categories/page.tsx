@@ -57,11 +57,9 @@ const CategoriesPage = () => {
 
     const creationPromise = new Promise(async (resolve, reject) => {
       const data: Partial<CategoryType> = { name: categoryName };
-
       if (editingCategory) {
         data._id = editingCategory._id;
       }
-
       const response = await fetch('/api/categories', {
         method: editingCategory ? 'PUT' : 'POST',
         headers: {
@@ -69,19 +67,28 @@ const CategoriesPage = () => {
         },
         body: JSON.stringify(data),
       });
-
       setCategoryName('');
       fetchCategories();
       setEditingCategory(null);
-
       if (response.ok) resolve(true);
-      else reject(false);
+      else {
+        const errorData = await response.json().catch(() => ({}));
+        if (errorData?.error && errorData.error.includes('already exists')) {
+          reject(new Error('A category with that name already exists. Try creating a category with a new name.'));
+        } else {
+          reject(false);
+        }
+      }
     });
-
     toast.promise(creationPromise, {
       loading: editingCategory ? 'Updating your category...' : 'Creating your new category...',
       success: editingCategory ? 'Category updated!' : 'Category created!',
-      error: editingCategory ? 'Failed to update category.' : 'Failed to create category.',
+      error: (err) => {
+        if (err instanceof Error && err.message.includes('already exists')) {
+          return 'A category with that name already exists. Try creating a category with a new name.';
+        }
+        return editingCategory ? 'Failed to update category.' : 'Failed to create category.';
+      },
     });
   };
 
@@ -178,7 +185,7 @@ const CategoriesPage = () => {
             </div>
 
             <div className='flex gap-2'>
-              <Button type='submit' className='bg-orange-500 hover:bg-orange-600'>
+              <Button type='submit' className='bg-primary hover:bg-primary/90 text-white'>
                 {editingCategory ? 'Update' : 'Create'}
               </Button>
               {editingCategory && (

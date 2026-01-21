@@ -7,10 +7,16 @@ export async function POST(request: Request) {
   mongoose.connect(process.env.MONGODB_URL as string);
 
   const { name } = await request.json();
-
-  const categoryDocument = await Category.create({ name });
-
-  return new Response(categoryDocument);
+  try {
+    const existing = await Category.findOne({ name });
+    if (existing) {
+      return new Response(JSON.stringify({ error: 'A category with that name already exists.' }), { status: 400 });
+    }
+    const categoryDocument = await Category.create({ name });
+    return new Response(JSON.stringify(categoryDocument));
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Failed to create category.' }), { status: 500 });
+  }
 }
 
 export async function PUT(request: Request) {
