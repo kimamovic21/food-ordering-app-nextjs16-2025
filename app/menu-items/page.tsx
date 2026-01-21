@@ -1,18 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-} from '@/components/ui/breadcrumb';
 import toast from 'react-hot-toast';
 import useProfile from '@/contexts/UseProfile';
 import Title from '@/components/shared/Title';
 import MenuItems from './MenuItems';
+import SearchInput from './SearchInput';
 
 interface MenuItem {
   _id: string;
@@ -32,15 +27,26 @@ interface Category {
 
 const MenuItemsListPage = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data, loading } = useProfile();
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchInput, setSearchInput] = useState('');
+  const [activeSearch, setActiveSearch] = useState('');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const query = searchParams.get('q');
+    if (query) {
+      setSearchInput(query);
+      setActiveSearch(query);
+    }
+  }, [searchParams]);
 
   const fetchData = async () => {
     try {
@@ -80,9 +86,44 @@ const MenuItemsListPage = () => {
     }
   };
 
+  const handleSearch = () => {
+    const trimmedSearch = searchInput.trim();
+    setActiveSearch(trimmedSearch);
+
+    if (trimmedSearch) {
+      router.push(`/menu-items?q=${encodeURIComponent(trimmedSearch)}`);
+    } else {
+      router.push('/menu-items');
+    }
+  };
+
+  const handleReset = () => {
+    setSearchInput('');
+    setActiveSearch('');
+    router.push('/menu-items');
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  const filteredItems = useMemo(() => {
+    if (!activeSearch) return menuItems;
+
+    const searchLower = activeSearch.toLowerCase();
+    return menuItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(searchLower) ||
+        item.description.toLowerCase().includes(searchLower)
+    );
+  }, [menuItems, activeSearch]);
+
   const showSkeleton = loading || isLoading;
 
-  if (!loading && data?.role !== 'admin' && data?.role !== 'manager') return 'Not an admin or manager.';
+  if (!loading && data?.role !== 'admin' && data?.role !== 'manager')
+    return 'Not an admin or manager.';
 
   return (
     <section className='mt-8'>
@@ -131,14 +172,6 @@ const MenuItemsListPage = () => {
         </div>
       ) : (
         <>
-          <Breadcrumb className='mb-4'>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbLink href='/menu-items'>Menu Items</BreadcrumbLink>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
-
           <div className='flex items-center justify-between mb-6'>
             <Title>Menu Items</Title>
             {data?.role === 'admin' && (
@@ -146,13 +179,76 @@ const MenuItemsListPage = () => {
             )}
           </div>
 
-          <MenuItems
-            menuItems={menuItems}
-            categories={categories}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            isAdmin={data?.role === 'admin'}
-          />
+          {/* Search Section */}
+          <div className='mb-8 max-w-2xl'>
+            <div className='flex gap-2 items-center'>
+              <div className='flex-1'>
+                <SearchInput
+                  value={searchInput}
+                  onChange={setSearchInput}
+                  onSearch={handleSearch}
+                  onClear={() => setSearchInput('')}
+                  onKeyPress={handleKeyPress}
+                />
+              </div>
+              {activeSearch && (
+                <Button
+                  onClick={handleReset}
+                  variant='outline'
+                  className='gap-2 h-11 px-6'
+                  type='button'
+                >
+                  Reset
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Search Results Section */}
+          {activeSearch && (
+            <div className='mb-10'>
+              <div className='bg-muted/50 rounded-lg p-6'>
+                <div className='flex items-center justify-between mb-4'>
+                  <h2 className='text-2xl font-semibold'>
+                    Search Results for &quot;{activeSearch}&quot;
+                  </h2>
+                  <span className='text-sm text-muted-foreground'>
+                    {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} found
+                  </span>
+                </div>
+
+                {filteredItems.length > 0 ? (
+                  <MenuItems
+                    menuItems={filteredItems}
+                    categories={categories}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    isAdmin={data?.role === 'admin'}
+                  />
+                ) : (
+                  <div className='text-center py-8'>
+                    <p className='text-muted-foreground'>
+                      No menu items found matching your search.
+                    </p>
+                    <Button onClick={handleReset} variant='outline' className='mt-4'>
+                      View All Menu Items
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Menu Items Section - Only show when not searching */}
+          {!activeSearch && (
+            <MenuItems
+              menuItems={menuItems}
+              categories={categories}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              isAdmin={data?.role === 'admin'}
+            />
+          )}
         </>
       )}
     </section>

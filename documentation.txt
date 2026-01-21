@@ -864,3 +864,9 @@ Add search functionality to menu page
 Update README with expanded features and setup info
 
 -update README.md file with recent changes in project
+
+
+Add search functionality to menu items page
+
+-in folder menu-items create component SearchInput.tsx
+-update component menu-items/page.tsx

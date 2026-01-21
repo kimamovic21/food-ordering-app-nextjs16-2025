@@ -1,12 +1,14 @@
 # Fullstack Food Ordering App with Next.js
 
-A comprehensive full-stack food ordering platform built with Next.js 16. Users can browse menus, customize items, manage carts, and pay with Stripe; staff and admins can control menu items, categories, couriers, and orders with role-based permissions, loyalty tracking, delivery assignment, and real-time analytics. The app ships with end-to-end flows: authentication, profile management, checkout, delivery tracking with live courier maps, and admin dashboards for orders, couriers, users, and category/menu maintenance.
-
 **Production:** [https://foacwd.vercel.app/]
 
 ## Project Description
 
-This is a modern food ordering platform that allows customers to browse menus, customize items, add to cart, place orders, and track deliveries. Administrators can manage restaurant operations end to end: menu items and categories, inventory images via Cloudinary, user accounts, courier onboarding and location tracking, delivery assignment, and analytics/exports. The stack includes role-based access control, secure payments with Stripe, loyalty point accumulation, delivery fee calculations, profile editing with avatars, and real-time order tracking with courier location overlays on Leaflet maps.
+A comprehensive full-stack food ordering platform built with Next.js 16 that delivers complete end-to-end flows: customer authentication, profile management with avatars, menu browsing with customization options, secure Stripe payments, real-time order tracking, and live courier location visualization on interactive maps.
+
+**For customers:** Browse menus, customize items, manage carts, place orders, and track deliveries in real-time with live courier maps.
+
+**For staff and admins:** Full operational control with role-based permissions—manage menu items and categories with Cloudinary image storage, handle user accounts and courier onboarding, assign deliveries, track courier locations on Leaflet maps in real-time, monitor orders and analytics, and generate exports. Features include loyalty point accumulation, intelligent delivery fee calculations, and comprehensive admin dashboards for orders, couriers, users, and inventory maintenance.
 
 ### Recent Updates (January 2026)
 
