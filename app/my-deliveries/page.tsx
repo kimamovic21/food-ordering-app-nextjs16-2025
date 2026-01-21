@@ -4,12 +4,6 @@ import { useEffect, useState } from 'react';
 import useProfile from '@/contexts/UseProfile';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Breadcrumb,
-  BreadcrumbList,
-  BreadcrumbItem,
-  BreadcrumbPage,
-} from '@/components/ui/breadcrumb';
 import { Package, Calendar, MapPin, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import Title from '@/components/shared/Title';
@@ -107,14 +101,6 @@ const MyDeliveriesPage = () => {
 
   return (
     <div className='container mx-auto px-4 py-8 max-w-7xl'>
-      <Breadcrumb className='mb-6'>
-        <BreadcrumbList>
-          <BreadcrumbItem>
-            <BreadcrumbPage>My Deliveries</BreadcrumbPage>
-          </BreadcrumbItem>
-        </BreadcrumbList>
-      </Breadcrumb>
-
       <Title className='mb-8'>My Deliveries</Title>
 
       {error && (

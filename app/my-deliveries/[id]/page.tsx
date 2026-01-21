@@ -145,7 +145,8 @@ const DeliveryDetailsPage = () => {
     );
   }
 
-  const subtotal = order.total - (order.deliveryFee || 0) + (order.loyaltyDiscount || 0);
+  const loyaltyDiscount = order.loyaltyDiscount ?? 0;
+  const subtotal = order.total - (order.deliveryFee || 0) + loyaltyDiscount;
 
   return (
     <div className='container mx-auto px-4 py-8 max-w-7xl'>
@@ -227,10 +228,10 @@ const DeliveryDetailsPage = () => {
                 <p className='text-sm text-muted-foreground'>Delivery Fee</p>
                 <p className='font-medium'>${(order.deliveryFee || 0).toFixed(2)}</p>
               </div>
-              {order.loyaltyDiscount > 0 && (
+              {loyaltyDiscount > 0 && (
                 <div className='flex justify-between'>
                   <p className='text-sm text-muted-foreground'>Loyalty Discount</p>
-                  <p className='font-medium text-green-600'>-${order.loyaltyDiscount.toFixed(2)}</p>
+                  <p className='font-medium text-green-600'>-${loyaltyDiscount.toFixed(2)}</p>
                 </div>
               )}
             </div>

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Link from 'next/link';
 import { Slot } from '@radix-ui/react-slot';
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import { cn } from '../../libs/utils';
@@ -30,23 +31,38 @@ function BreadcrumbItem({ className, ...props }: React.ComponentProps<'li'>) {
   );
 }
 
-function BreadcrumbLink({
-  asChild,
-  className,
-  ...props
-}: React.ComponentProps<'a'> & {
-  asChild?: boolean;
-}) {
-  const Comp = asChild ? Slot : 'a';
+type BreadcrumbLinkProps = React.AnchorHTMLAttributes<HTMLAnchorElement> &
+  Omit<React.ComponentPropsWithoutRef<typeof Link>, 'href'> & {
+    href?: React.ComponentPropsWithoutRef<typeof Link>['href'];
+    asChild?: boolean;
+  };
 
-  return (
-    <Comp
-      data-slot='breadcrumb-link'
-      className={cn('hover:text-foreground transition-colors', className)}
-      {...props}
-    />
-  );
-}
+const BreadcrumbLink = React.forwardRef<HTMLAnchorElement, BreadcrumbLinkProps>(
+  ({ asChild, className, href, ...props }, ref) => {
+    if (asChild) {
+      return (
+        <Slot
+          ref={ref}
+          data-slot='breadcrumb-link'
+          className={cn('hover:text-foreground transition-colors', className)}
+          {...props}
+        />
+      );
+    }
+
+    return (
+      <Link
+        ref={ref}
+        href={href ?? '#'}
+        data-slot='breadcrumb-link'
+        className={cn('hover:text-foreground transition-colors', className)}
+        {...props}
+      />
+    );
+  }
+);
+
+BreadcrumbLink.displayName = 'BreadcrumbLink';
 
 function BreadcrumbPage({ className, ...props }: React.ComponentProps<'span'>) {
   return (

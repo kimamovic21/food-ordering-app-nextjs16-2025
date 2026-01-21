@@ -852,3 +852,10 @@ Refactor and enhance courier deliveries feature
 -in folder my-deliveries create folder [id] and component page.tsx
 -in folder api create folders my-deliveries, [id] and route.ts files
 -update ui in my-deliveries/page.tsx component
+
+
+Add search functionality to menu page
+
+-in folder menu create component SearchInput.tsx
+-update component menu/page.tsx
+-update breadcrumb Link logic
