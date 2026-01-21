@@ -125,7 +125,7 @@ const CartPage = () => {
       }
 
       try {
-        const response = await fetch('/api/loyalty/discount');
+        const response = await fetch('/api/loyalty');
         if (response.ok) {
           const data = await response.json();
           setLoyaltyDiscountPercentage(data.discountPercentage || 0);
@@ -173,7 +173,7 @@ const CartPage = () => {
           return;
         }
 
-        const response = await fetch('/api/delivery/calculate-fee', {
+        const response = await fetch('/api/delivery', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -39,6 +39,18 @@ export const isAdminOrManager = async () => {
   return user.role === 'admin' || user.role === 'manager';
 };
 
+export const isSuperAdmin = async () => {
+  const session = await getServerSession(authOptions);
+  const userEmail = session?.user?.email;
+  const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+
+  if (!userEmail || !superAdminEmail) {
+    return false;
+  }
+
+  return userEmail === superAdminEmail;
+};
+
 const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };

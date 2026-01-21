@@ -870,3 +870,12 @@ Add search functionality to menu items page
 
 -in folder menu-items create component SearchInput.tsx
 -update component menu-items/page.tsx
+
+
+Add super admin controls for admin role management
+
+-in .env file create variable NEXT_PUBLIC_SUPER_ADMIN_EMAIL
+-update example.env file
+-update folder structure in folder api
+-in folder api/users create folder make-admin, remove-admin and route.ts files
+-in folder app/users update ui

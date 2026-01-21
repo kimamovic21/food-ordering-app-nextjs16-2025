@@ -59,6 +59,7 @@ const UserDetailsPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [makingCourier, setMakingCourier] = useState(false);
   const [makingManager, setMakingManager] = useState(false);
+  const [makingAdmin, setMakingAdmin] = useState(false);
   const { data: profileData, loading: profileLoading } = useProfile();
 
   useEffect(() => {
@@ -196,6 +197,62 @@ const UserDetailsPage = () => {
     }
   };
 
+  const handleMakeAdmin = async () => {
+    if (!user) return;
+
+    try {
+      setMakingAdmin(true);
+      const res = await fetch('/api/users/make-admin', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to make admin');
+        return;
+      }
+
+      setUser({ ...user, role: 'admin' });
+      toast.success('User has been promoted to admin');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to make admin');
+    } finally {
+      setMakingAdmin(false);
+    }
+  };
+
+  const handleRemoveAdmin = async () => {
+    if (!user) return;
+
+    try {
+      setMakingAdmin(true);
+      const res = await fetch('/api/users/remove-admin', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user._id }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to remove admin');
+        return;
+      }
+
+      setUser({ ...user, role: 'user' });
+      toast.success('User admin role has been removed');
+    } catch (err) {
+      console.error(err);
+      toast.error('Failed to remove admin');
+    } finally {
+      setMakingAdmin(false);
+    }
+  };
+
   if (loading || profileLoading) {
     return <UserLoading />;
   }
@@ -320,7 +377,7 @@ const UserDetailsPage = () => {
                 )}
               </div>
 
-              {profileData?.role === 'admin' && user.role !== 'courier' && user.role !== 'manager' && (
+              {profileData?.role === 'admin' && user.role !== 'courier' && user.role !== 'manager' && user.role !== 'admin' && (
                 <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3'>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -377,6 +434,36 @@ const UserDetailsPage = () => {
                       </div>
                     </AlertDialogContent>
                   </AlertDialog>
+
+                  {profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          disabled={makingAdmin}
+                          className='w-full bg-primary hover:bg-primary/90'
+                        >
+                          {makingAdmin ? 'Making Admin...' : 'Make Admin'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Make Admin</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to make {user.name} an admin?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className='flex gap-3 justify-end'>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleMakeAdmin}
+                            className='bg-primary hover:bg-primary/90'
+                          >
+                            Confirm
+                          </AlertDialogAction>
+                        </div>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               )}
 
@@ -445,6 +532,39 @@ const UserDetailsPage = () => {
                   </AlertDialog>
                 </div>
               )}
+
+                {profileData?.role === 'admin' && user.role === 'admin' && profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+                  <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          disabled={makingAdmin}
+                          variant='destructive'
+                          className='w-full'
+                        >
+                          {makingAdmin ? 'Removing Admin...' : 'Remove Admin'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Remove Admin</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to remove {user.name} from admin role?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className='flex gap-3 justify-end'>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleRemoveAdmin}
+                            className='bg-red-600 hover:bg-red-700'
+                          >
+                            Confirm
+                          </AlertDialogAction>
+                        </div>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
             </CardContent>
           </Card>
 
