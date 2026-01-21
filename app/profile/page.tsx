@@ -3,11 +3,24 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import toast from 'react-hot-toast';
 import Title from '@/components/shared/Title';
 import UserProfileForm from './UserProfileForm';
 import UserProfileImage from './UserProfileImage';
 import type { ExtendedUser } from '@/types/user';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Button } from '@/components/ui/button';
 
 const FALLBACK_IMAGE = '/user-default-image.webp';
 
@@ -28,6 +41,7 @@ const ProfilePage = () => {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isRemovingImage, setIsRemovingImage] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -219,6 +233,39 @@ const ProfilePage = () => {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+
+    const deletePromise = (async () => {
+      const deleteRes = await fetch('/api/profile', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!deleteRes.ok) {
+        const message = await deleteRes.text();
+        throw new Error(message || 'Failed to delete account.');
+      }
+
+      // Sign out the user after successful account deletion
+      await signOut({ callbackUrl: '/login' });
+
+      return deleteRes.json();
+    })();
+
+    toast.promise(deletePromise, {
+      loading: 'Deleting account...',
+      success: 'Account deleted successfully!',
+      error: (err) => (err instanceof Error ? err.message : 'Failed to delete account.'),
+    });
+
+    try {
+      await deletePromise;
+    } catch (error) {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <section className='mt-8 max-w-5xl mx-auto'>
       <Title>Profile</Title>
@@ -251,6 +298,40 @@ const ProfilePage = () => {
             onCityChange={setCity}
             onCountryChange={setCountry}
           />
+        </div>
+
+        <div className='max-w-4xl mx-auto mt-8'>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                variant='destructive' 
+                className='w-full bg-red-600 hover:bg-red-700 text-white font-semibold'
+                disabled={isDeleting || isSaving}
+              >
+                Delete Account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This action cannot be undone. This will permanently delete your account
+                  and remove your data from our servers. Your order history will be preserved
+                  in our records.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  disabled={isDeleting}
+                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+                >
+                  {isDeleting ? 'Deleting...' : 'Delete Account'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
     </section>

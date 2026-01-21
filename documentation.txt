@@ -879,3 +879,8 @@ Add super admin controls for admin role management
 -update folder structure in folder api
 -in folder api/users create folder make-admin, remove-admin and route.ts files
 -in folder app/users update ui
+
+
+Add user account deletion with Cloudinary image cleanup
+
+-update route.ts file and component tsx so that user can delete his account
