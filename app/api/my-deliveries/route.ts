@@ -19,7 +19,6 @@ export async function GET() {
     return Response.json({ error: 'Only couriers can access this' }, { status: 403 });
   }
 
-  // Find all completed orders delivered by this courier
   const deliveredOrders = await Order.find({
     courierId: user._id,
     orderStatus: 'completed',

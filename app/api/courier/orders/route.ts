@@ -10,7 +10,7 @@ const normalizeOrder = (order: any) => ({
   orderStatus: order.orderStatus || 'placed',
 });
 
-export async function GET(request: Request) {
+export async function GET() {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
   const session = await getServerSession(authOptions);
@@ -67,10 +67,7 @@ export async function PATCH(request: Request) {
 
   // Verify courier is assigned to this order
   if (order.courierId?.toString() !== user._id.toString()) {
-    return Response.json(
-      { error: 'You are not assigned to this order' },
-      { status: 403 }
-    );
+    return Response.json({ error: 'You are not assigned to this order' }, { status: 403 });
   }
 
   // Verify order status is transportation

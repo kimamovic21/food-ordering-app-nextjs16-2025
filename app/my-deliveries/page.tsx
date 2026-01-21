@@ -3,8 +3,16 @@
 import { useEffect, useState } from 'react';
 import useProfile from '@/contexts/UseProfile';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbPage,
+} from '@/components/ui/breadcrumb';
+import { Package, Calendar, MapPin, DollarSign } from 'lucide-react';
+import Link from 'next/link';
+import Title from '@/components/shared/Title';
 
 type CartProduct = {
   productId: string;
@@ -43,7 +51,7 @@ const MyDeliveriesPage = () => {
     const fetchDeliveredOrders = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/courier/my-deliveries');
+        const res = await fetch('/api/my-deliveries');
         if (!res.ok) {
           throw new Error('Failed to fetch delivered orders');
         }
@@ -62,31 +70,12 @@ const MyDeliveriesPage = () => {
 
   if (profileLoading) {
     return (
-      <div className='max-w-7xl mx-auto px-4 py-6'>
+      <div className='container mx-auto px-4 py-8 max-w-7xl'>
         <div className='space-y-4'>
           <Skeleton className='h-8 w-48' />
-          <Skeleton className='h-96 w-full' />
-        </div>
-      </div>
-    );
-  }
-
-  if (profileData?.role !== 'courier') {
-    return (
-      <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='text-red-500'>Unauthorized: Only couriers can access this page</div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-4'>
-          <Skeleton className='h-8 w-48' />
-          <div className='space-y-4'>
-            {[...Array(3)].map((_, idx) => (
-              <Skeleton key={idx} className='h-48 w-full' />
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {[...Array(6)].map((_, idx) => (
+              <Skeleton key={idx} className='h-64 w-full' />
             ))}
           </div>
         </div>
@@ -94,103 +83,104 @@ const MyDeliveriesPage = () => {
     );
   }
 
-  return (
-    <div className='max-w-7xl mx-auto px-4 py-6'>
-      <div className='mb-6'>
-        <h1 className='text-3xl font-bold text-foreground'>My Deliveries</h1>
-        <p className='text-muted-foreground mt-2'>
-          Total completed deliveries: {orders.length}
-        </p>
+  if (profileData?.role !== 'courier') {
+    return (
+      <div className='container mx-auto px-4 py-8 max-w-7xl'>
+        <div className='text-red-500'>Unauthorized: Only couriers can access this page</div>
       </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className='container mx-auto px-4 py-8 max-w-7xl'>
+        <Skeleton className='h-6 w-64 mb-6' />
+        <Skeleton className='h-10 w-48 mb-8' />
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {[...Array(6)].map((_, idx) => (
+            <Skeleton key={idx} className='h-64 w-full' />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className='container mx-auto px-4 py-8 max-w-7xl'>
+      <Breadcrumb className='mb-6'>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbPage>My Deliveries</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <Title className='mb-8'>My Deliveries</Title>
 
       {error && (
-        <div className='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6'>
+        <div className='bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-200 px-4 py-3 rounded-lg mb-6'>
           {error}
         </div>
       )}
 
       {orders.length === 0 ? (
-        <Card>
-          <CardContent className='py-12 text-center'>
-            <p className='text-muted-foreground'>No completed deliveries yet</p>
-          </CardContent>
-        </Card>
+        <div className='text-center py-12'>
+          <Package className='mx-auto h-12 w-12 text-gray-400 mb-4' />
+          <p className='text-muted-foreground'>No completed deliveries yet.</p>
+        </div>
       ) : (
-        <div className='space-y-4'>
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
           {orders.map((order) => (
-            <Card key={order._id} className='hover:shadow-lg transition-shadow'>
-              <CardHeader>
-                <div className='flex items-start justify-between'>
-                  <div>
-                    <CardTitle className='text-lg'>
-                      Order #{order._id.slice(-8).toUpperCase()}
-                    </CardTitle>
-                    <CardDescription>
-                      Delivered on {new Date(order.updatedAt).toLocaleDateString()} at{' '}
-                      {new Date(order.updatedAt).toLocaleTimeString()}
-                    </CardDescription>
-                  </div>
-                  <Badge className='bg-green-600 hover:bg-green-700'>Delivered</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className='space-y-4'>
-                  {/* Customer Info */}
-                  <div className='border rounded-lg p-4'>
-                    <h3 className='font-semibold text-foreground mb-3'>Customer Details</h3>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
-                      <div>
-                        <span className='text-muted-foreground'>Email:</span>
-                        <p className='text-foreground'>{order.email}</p>
-                      </div>
-                      <div>
-                        <span className='text-muted-foreground'>Phone:</span>
-                        <p className='text-foreground'>{order.phone}</p>
-                      </div>
-                      <div className='md:col-span-2'>
-                        <span className='text-muted-foreground'>Address:</span>
-                        <p className='text-foreground'>
-                          {order.streetAddress}, {order.postalCode} {order.city}, {order.country}
-                        </p>
-                      </div>
+            <Link
+              key={order._id}
+              href={`/my-deliveries/${order._id}`}
+              className='transition-transform hover:scale-105'
+            >
+              <Card className='cursor-pointer hover:shadow-lg h-full'>
+                <CardHeader>
+                  <CardTitle className='flex items-center justify-between gap-4'>
+                    <span className='text-lg'>Order #{order._id.slice(-6).toUpperCase()}</span>
+                    <span className='text-sm px-3 py-1 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'>
+                      Delivered
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-3'>
+                  <div className='flex items-start gap-2'>
+                    <MapPin className='h-4 w-4 mt-1 text-muted-foreground shrink-0' />
+                    <div className='text-sm'>
+                      <p className='font-medium'>Delivery Address:</p>
+                      <p className='text-muted-foreground'>
+                        {order.streetAddress}, {order.city}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Items */}
-                  <div className='border rounded-lg p-4'>
-                    <h3 className='font-semibold text-foreground mb-3'>Items</h3>
-                    <div className='space-y-2'>
-                      {order.cartProducts.map((product, idx) => (
-                        <div key={idx} className='flex justify-between items-center text-sm'>
-                          <div>
-                            <p className='font-medium text-foreground'>{product.name}</p>
-                            <p className='text-muted-foreground'>
-                              Size: {product.size} x {product.quantity}
-                            </p>
-                          </div>
-                          <p className='font-medium text-foreground'>${product.price}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className='border-t mt-4 pt-4 flex justify-between font-semibold'>
-                      <span>Total:</span>
-                      <span>${order.total}</span>
+                  <div className='flex items-center gap-2'>
+                    <Calendar className='h-4 w-4 text-muted-foreground' />
+                    <div className='text-sm'>
+                      <p className='text-muted-foreground'>
+                        {new Date(order.updatedAt).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
 
-                  {/* Order Timeline */}
-                  <div className='bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg p-4 text-sm'>
-                    <p className='text-green-900 dark:text-green-100 font-semibold'>
-                      ✅ Delivery Completed
-                    </p>
-                    <p className='text-green-800 dark:text-green-200 mt-1'>
-                      Order placed: {new Date(order.createdAt).toLocaleDateString()} at{' '}
-                      {new Date(order.createdAt).toLocaleTimeString()}
-                    </p>
+                  <div className='flex items-center gap-2'>
+                    <DollarSign className='h-4 w-4 text-muted-foreground' />
+                    <div className='text-sm'>
+                      <p className='font-medium'>${order.total.toFixed(2)}</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+
+                  <div className='flex items-center gap-2'>
+                    <Package className='h-4 w-4 text-muted-foreground' />
+                    <div className='text-sm'>
+                      <p className='text-muted-foreground'>{order.cartProducts.length} item(s)</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

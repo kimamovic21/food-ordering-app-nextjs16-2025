@@ -845,3 +845,10 @@ Refactor order status workflow and add 'ready' stage
 
 -update enum in model order.ts
 -update logic for ordering in tsx components and route.ts files
+
+
+Refactor and enhance courier deliveries feature
+
+-in folder my-deliveries create folder [id] and component page.tsx
+-in folder api create folders my-deliveries, [id] and route.ts files
+-update ui in my-deliveries/page.tsx component
