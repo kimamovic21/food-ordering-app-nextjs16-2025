@@ -895,3 +895,13 @@ Enhance auth forms with validation and password strength
 
 -open link: https://flyonui.com/docs/advanced-forms/strong-password/#indicator-and-hints
 -update registration and login form ui
+
+
+Refactor Hero section and add new UI components
+
+-open link: https://www.embla-carousel.com/
+-open link: https://www.npmjs.com/package/embla-carousel
+-open link: https://www.npmjs.com/package/embla-carousel-autoplay
+-open link: https://www.npmjs.com/package/embla-carousel-react
+-install new shadcn components
+-update UI in homepage
