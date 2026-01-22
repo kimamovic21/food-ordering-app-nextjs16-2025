@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import InputPasswordStrengthDemo from '@/components/shadcn-studio/input/input-46';
 import GoogleButton from 'react-google-button';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
@@ -31,8 +32,49 @@ const registerSchema = z.object({
     .max(100, { message: 'Email must be 100 characters or fewer.' }),
   password: z
     .string()
-    .min(6, { message: 'Password must be at least 6 characters.' })
-    .max(64, { message: 'Password must be 64 characters or fewer.' }),
+    .max(64, { message: 'Password must be 64 characters or fewer.' })
+    .superRefine((val, ctx) => {
+      if (val.length < 6) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Password must be at least 6 characters.',
+          path: [],
+        });
+        return;
+      }
+      if (!/[a-z]/.test(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Password must contain at least 1 lowercase letter.',
+          path: [],
+        });
+        return;
+      }
+      if (!/[A-Z]/.test(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Password must contain at least 1 uppercase letter.',
+          path: [],
+        });
+        return;
+      }
+      if (!/[0-9]/.test(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Password must contain at least 1 number.',
+          path: [],
+        });
+        return;
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Password must contain at least 1 special character.',
+          path: [],
+        });
+        return;
+      }
+    }),
 });
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
@@ -97,9 +139,15 @@ const RegisterUserForm = () => {
               <FormItem>
                 <FormLabel>Name</FormLabel>
                 <FormControl>
-                  <Input placeholder='Enter your name' disabled={isLoading} {...field} />
+                  <Input
+                    placeholder='Enter your name'
+                    disabled={isLoading}
+                    aria-invalid={!!form.formState.errors.name}
+                    className={'rounded-md ' + (form.formState.errors.name ? 'border-2 border-destructive ring-1 ring-destructive' : '')}
+                    {...field}
+                  />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className='text-destructive' />
               </FormItem>
             )}
           />
@@ -115,10 +163,12 @@ const RegisterUserForm = () => {
                     type='email'
                     placeholder='Enter your email'
                     disabled={isLoading}
+                    aria-invalid={!!form.formState.errors.email}
+                    className={'rounded-md!' + (form.formState.errors.email ? 'border-2 border-destructive ring-1 ring-destructive' : '')}
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className='text-destructive' />
               </FormItem>
             )}
           />
@@ -130,14 +180,19 @@ const RegisterUserForm = () => {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input
-                    type='password'
-                    placeholder='Enter your password'
-                    disabled={isLoading}
-                    {...field}
-                  />
+                  <div>
+                    {/* Password strength component, now controlled by react-hook-form */}
+                    <InputPasswordStrengthDemo
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </div>
                 </FormControl>
-                <FormMessage />
+                {form.formState.errors.password && (
+                  <FormMessage className='text-destructive'>
+                    {form.formState.errors.password.message}
+                  </FormMessage>
+                )}
               </FormItem>
             )}
           />

@@ -8,7 +8,7 @@ import RegisterUserForm from './RegisterUserForm';
 import RegisterLoading from './loading';
 
 const RegisterPage = () => {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
@@ -26,7 +26,7 @@ const RegisterPage = () => {
   }
 
   return (
-    <section className='mt-8 w-full sm:w-xl md:w-2xl lg:w-3xl max-w-3xl mx-auto px-4'>
+    <section className='mt-8 w-full sm:w-xl md:w-2xl max-w-2xl mx-auto px-4'>
       <div className='text-center mb-8'>
         <Title className='text-4xl'>Register</Title>
       </div>

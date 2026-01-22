@@ -889,3 +889,9 @@ Add user account deletion with Cloudinary image cleanup
 Handle duplicate category names and improve error feedback
 
 -improve ui in categories page
+
+
+Enhance auth forms with validation and password strength
+
+-open link: https://flyonui.com/docs/advanced-forms/strong-password/#indicator-and-hints
+-update registration and login form ui

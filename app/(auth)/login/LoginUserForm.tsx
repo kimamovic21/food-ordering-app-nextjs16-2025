@@ -92,10 +92,12 @@ const LoginUserForm = () => {
                     type='email'
                     placeholder='Enter your email'
                     disabled={isLoading}
+                    aria-invalid={!!form.formState.errors.email}
+                    className={'rounded-md!' + (form.formState.errors.email ? ' border-2 border-destructive ring-1 ring-destructive' : '')}
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className='text-destructive' />
               </FormItem>
             )}
           />
@@ -111,10 +113,12 @@ const LoginUserForm = () => {
                     type='password'
                     placeholder='Enter your password'
                     disabled={isLoading}
+                    aria-invalid={!!form.formState.errors.password}
+                    className={'rounded-md!' + (form.formState.errors.password ? ' border-2 border-destructive ring-1 ring-destructive' : '')}
                     {...field}
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className='text-destructive' />
               </FormItem>
             )}
           />
