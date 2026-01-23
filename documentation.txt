@@ -917,3 +917,10 @@ Add FeaturesSection and update menu item layout
 
 -create component FeaturesSection.tsx
 -in component page.tsx import component FeaturesSection
+
+
+Add testimonials section with carousel to homepage
+
+-create component Testimonials.tsx
+-in component page.tsx import component Testimonials
+-update ui in existing components

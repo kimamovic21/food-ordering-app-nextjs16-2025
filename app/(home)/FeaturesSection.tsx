@@ -5,23 +5,23 @@ const features = [
     icon: <UtensilsCrossed className='w-8 h-8 text-primary' />,
     title: 'Delicious Local Food',
     description:
-      'Enjoy specialties from our restaurant, prepared with fresh and high-quality ingredients.',
+      'Meals prepared with fresh and high-quality ingredients.',
+  },
+  {
+    icon: <Smartphone className='w-8 h-8 text-primary' />,
+    title: 'Easy Ordering',
+    description: 'Order your favorite meals easily and quickly through our website.',
   },
   {
     icon: <Rocket className='w-8 h-8 text-primary' />,
     title: 'Express Delivery',
     description: 'Your order arrives quickly and safely, wherever you are in the city.',
   },
-  {
-    icon: <Smartphone className='w-8 h-8 text-primary' />,
-    title: 'Easy Ordering',
-    description: 'Order your favorite meals easily and quickly through our app or website.',
-  },
 ];
 
 const FeaturesSection = () => {
   return (
-    <section className='py-12 bg-muted rounded-lg my-12'>
+    <section className='py-12 bg-muted rounded-lg mt-14 mb-10'>
       <div className='container mx-auto px-4'>
         <h2 className='text-2xl font-bold text-center mb-8 text-primary'>Why Choose Us</h2>
         <div className='grid grid-cols-1 md:grid-cols-3 gap-8 text-center'>

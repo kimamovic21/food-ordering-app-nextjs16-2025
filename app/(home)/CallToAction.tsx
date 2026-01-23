@@ -6,17 +6,17 @@ const CallToAction = () => {
   return (
     <div className='flex justify-center py-8'>
       <Card className='max-w-2xl w-full p-4 text-center shadow-lg'>
-        <h2 className='text-2xl font-bold mb-4 text-primary'>Free Registration</h2>
-        <p className='mb-6 text-muted-foreground'>
+        <h2 className='text-3xl font-bold mb-5 text-primary'>Free Registration</h2>
+        <p className='mb-7 text-base sm:text-lg text-muted-foreground'>
           Create your account in seconds and unlock exclusive benefits:
         </p>
-        <ul className='mb-6 text-left list-disc list-inside text-sm text-muted-foreground'>
+        <ul className='mb-7 text-left list-disc list-inside text-base sm:text-lg text-muted-foreground'>
           <li>Track your orders and deliveries in real-time</li>
           <li>Earn loyalty points and rewards</li>
           <li>Access special offers and discounts</li>
         </ul>
         <Link href='/register'>
-          <Button className='w-full' variant='default'>
+          <Button className='w-full text-base sm:text-lg' variant='default'>
             Register Now
           </Button>
         </Link>
