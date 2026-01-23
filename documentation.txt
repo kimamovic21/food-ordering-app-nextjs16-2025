@@ -911,3 +911,9 @@ Add CallToAction component to home page
 
 -create component CallToAction.tsx
 -in component page.tsx import component CallToAction
+
+
+Add FeaturesSection and update menu item layout
+
+-create component FeaturesSection.tsx
+-in component page.tsx import component FeaturesSection

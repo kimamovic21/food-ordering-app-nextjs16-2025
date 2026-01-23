@@ -6,7 +6,7 @@ const CallToAction = () => {
   return (
     <div className='flex justify-center py-8'>
       <Card className='max-w-2xl w-full p-4 text-center shadow-lg'>
-        <h2 className='text-2xl font-bold mb-4'>Free Registration</h2>
+        <h2 className='text-2xl font-bold mb-4 text-primary'>Free Registration</h2>
         <p className='mb-6 text-muted-foreground'>
           Create your account in seconds and unlock exclusive benefits:
         </p>

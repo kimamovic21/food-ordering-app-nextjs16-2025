@@ -92,9 +92,16 @@ const MenuItem = ({ item }: MenuItemProps) => {
       </div>
 
       <div className='p-4 flex flex-col flex-1'>
-        <h4 className='font-semibold text-xl'>{displayItem.name}</h4>
+        <div className='text-center mb-2'>
+          <h3 className='uppercase text-gray-500 dark:text-gray-400 font-semibold leading-3'>
+            Check out
+          </h3>
+          <h4 className='text-primary font-bold text-2xl italic'>{displayItem.name}</h4>
+        </div>
 
-        <p className='mt-4 text-muted-foreground text-sm flex-1'>{displayItem.description}</p>
+        <p className='mt-4 text-muted-foreground text-sm flex-1 text-center'>
+          {displayItem.description}
+        </p>
 
         <div className='flex gap-1 justify-center mt-4'>
           <Button
