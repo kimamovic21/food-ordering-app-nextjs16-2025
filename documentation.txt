@@ -905,3 +905,9 @@ Refactor Hero section and add new UI components
 -open link: https://www.npmjs.com/package/embla-carousel-react
 -install new shadcn components
 -update UI in homepage
+
+
+Add CallToAction component to home page
+
+-create component CallToAction.tsx
+-in component page.tsx import component CallToAction

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "stripe:listen": "stripe listen --forward-to localhost:3000/api/webhook",
+    "stripe:listen": "cd .. && stripe listen --forward-to localhost:3000/api/webhook",
     "stripe:trigger": "stripe trigger checkout.session.completed"
   },
   "dependencies": {
