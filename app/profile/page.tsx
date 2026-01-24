@@ -4,23 +4,11 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
+import type { ExtendedUser } from '@/types/user';
 import Title from '@/components/shared/Title';
 import UserProfileForm from './UserProfileForm';
 import UserProfileImage from './UserProfileImage';
-import type { ExtendedUser } from '@/types/user';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
 
 const FALLBACK_IMAGE = '/user-default-image.webp';
 
@@ -224,6 +212,10 @@ const ProfilePage = () => {
       loading: 'Saving profile...',
       success: 'Profile updated!',
       error: (err) => (err instanceof Error ? err.message : 'Failed to update profile.'),
+      style: {
+        background: '#22c55e', // Tailwind green-500
+        color: 'white',
+      },
     });
 
     try {
@@ -257,11 +249,16 @@ const ProfilePage = () => {
       loading: 'Deleting account...',
       success: 'Account deleted successfully!',
       error: (err) => (err instanceof Error ? err.message : 'Failed to delete account.'),
+      style: {
+        background: '#22c55e', // Tailwind green-500
+        color: 'white',
+      },
     });
 
     try {
       await deletePromise;
     } catch (error) {
+      console.error('Account deletion error:', error);
       setIsDeleting(false);
     }
   };
@@ -297,41 +294,9 @@ const ProfilePage = () => {
             onPostalCodeChange={setPostalCode}
             onCityChange={setCity}
             onCountryChange={setCountry}
+            onDeleteAccount={handleDeleteAccount}
+            isDeleting={isDeleting}
           />
-        </div>
-
-        <div className='max-w-4xl mx-auto mt-8'>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button 
-                variant='destructive' 
-                className='w-full bg-red-600 hover:bg-red-700 text-white font-semibold'
-                disabled={isDeleting || isSaving}
-              >
-                Delete Account
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This action cannot be undone. This will permanently delete your account
-                  and remove your data from our servers. Your order history will be preserved
-                  in our records.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleDeleteAccount}
-                  disabled={isDeleting}
-                  className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-                >
-                  {isDeleting ? 'Deleting...' : 'Delete Account'}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
         </div>
       </div>
     </section>

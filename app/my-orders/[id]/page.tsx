@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -71,6 +71,8 @@ const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
   ),
 });
 
+import { useRef } from 'react';
+
 const MyOrderDetailPage = () => {
   const [order, setOrder] = useState<OrderDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
@@ -79,13 +81,14 @@ const MyOrderDetailPage = () => {
   const params = useParams();
   const router = useRouter();
   const orderId = params?.id as string;
+  const isFirstLoad = useRef(true);
 
   useEffect(() => {
     if (profileLoading || !profileData?.email) return;
 
     const fetchOrder = async () => {
       try {
-        if (!order) setLoading(true);
+        if (isFirstLoad.current) setLoading(true);
         const res = await fetch(`/api/my-orders?id=${orderId}`);
 
         if (res.status === 403) {
@@ -104,25 +107,25 @@ const MyOrderDetailPage = () => {
         console.error('Failed to load order', err);
         setError('Failed to load order details');
       } finally {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setLoading(false);
+        if (isFirstLoad.current) {
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          setLoading(false);
+          isFirstLoad.current = false;
+        }
       }
     };
 
     if (orderId) {
       fetchOrder();
 
-      // Poll for order updates every 30 seconds when order is in transportation
-      // This ensures the UI reflects courier assignment changes
+      // Poll for order updates every 10 seconds, regardless of status
       const pollInterval = setInterval(() => {
-        if (order?.orderStatus === 'transportation' || order?.orderStatus === 'processing' || order?.orderStatus === 'ready') {
-          fetchOrder();
-        }
-      }, 30000);
+        fetchOrder();
+      }, 10000);
 
       return () => clearInterval(pollInterval);
     }
-  }, [orderId, profileData?.email, profileLoading, router, order?.orderStatus, order]);
+  }, [orderId, profileData?.email, profileLoading, router]);
 
   if (profileLoading) {
     return (
@@ -306,18 +309,32 @@ const MyOrderDetailPage = () => {
           </div>
         </div>
 
-        {/* Map section at the bottom, full width - Hide when order is completed */}
+        {/* Map section in a Card, styled like /orders/[id] */}
         {order.orderStatus !== 'completed' && (
-          <div className='w-full'>
-            <OrderMap
-              address={order.streetAddress}
-              city={order.city}
-              postalCode={order.postalCode}
-              country={order.country}
-              customerEmail={order.email}
-              orderId={order._id}
-            />
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {order.orderStatus === 'transportation' ? 'Delivery Tracking' : 'Delivery Location'}
+              </CardTitle>
+              <CardDescription>
+                {order.orderStatus === 'transportation'
+                  ? 'Track the real-time location of the delivery.'
+                  : "Customer's delivery address location."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className='h-[400px] rounded-lg overflow-hidden'>
+                <OrderMap
+                  address={order.streetAddress}
+                  city={order.city}
+                  postalCode={order.postalCode}
+                  country={order.country}
+                  customerEmail={order.email}
+                  orderId={order._id}
+                />
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
     </section>

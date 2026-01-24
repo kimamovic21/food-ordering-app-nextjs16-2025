@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Image from 'next/image';
 import Pizza from '@/public/pizza.png';
 

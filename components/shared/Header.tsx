@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { signOut } from 'next-auth/react';
 import { IoCartOutline } from 'react-icons/io5';
+import { toast } from 'sonner';
 import { useCart } from '@/contexts/CartContext';
 import {
   MenuLinkSkeleton,
@@ -25,7 +26,6 @@ import {
 } from './HeaderSkeletons';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import toast from 'react-hot-toast';
 import useProfile from '@/contexts/UseProfile';
 import ModeToggle from '../theme/ModeToggle';
 
@@ -83,7 +83,9 @@ const Header = () => {
     if (status === 'authenticated') {
       const hasShownToast = sessionStorage.getItem('loginToastShown');
       if (!hasShownToast) {
-        toast.success('Successfully logged in');
+        toast.success('Successfully logged in', {
+          style: { backgroundColor: '#22c55e', color: 'white' },
+        });
         sessionStorage.setItem('loginToastShown', 'true');
       }
     } else if (status === 'unauthenticated') {
@@ -95,11 +97,14 @@ const Header = () => {
   const isCourier =
     (session?.data?.user as any)?.role === 'courier' || profileData?.role === 'courier';
   const isAdmin = (session?.data?.user as any)?.role === 'admin' || profileData?.role === 'admin';
-  const isManager = (session?.data?.user as any)?.role === 'manager' || profileData?.role === 'manager';
+  const isManager =
+    (session?.data?.user as any)?.role === 'manager' || profileData?.role === 'manager';
   const isAdminOrManager = isAdmin || isManager;
 
   const handleLogout = async () => {
-    toast.success('Successfully logged out');
+    toast.success('Successfully logged out', {
+      style: { backgroundColor: '#22c55e', color: 'white' },
+    });
     await signOut({ redirect: false });
     router.push('/');
   };

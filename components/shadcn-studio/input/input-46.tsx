@@ -69,6 +69,7 @@ const InputPasswordStrengthDemo = ({ value, onChange }: InputPasswordStrengthDem
           className='pr-9 w-full rounded-md'
         />
         <Button
+          type='button'
           variant='ghost'
           size='icon'
           onClick={toggleVisibility}

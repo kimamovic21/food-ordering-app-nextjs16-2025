@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Trash2, Pencil } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +17,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import toast from 'react-hot-toast';
 import useProfile from '@/contexts/UseProfile';
 import Title from '@/components/shared/Title';
 
@@ -74,7 +74,11 @@ const CategoriesPage = () => {
       else {
         const errorData = await response.json().catch(() => ({}));
         if (errorData?.error && errorData.error.includes('already exists')) {
-          reject(new Error('A category with that name already exists. Try creating a category with a new name.'));
+          reject(
+            new Error(
+              'A category with that name already exists. Try creating a category with a new name.'
+            )
+          );
         } else {
           reject(false);
         }
@@ -82,12 +86,32 @@ const CategoriesPage = () => {
     });
     toast.promise(creationPromise, {
       loading: editingCategory ? 'Updating your category...' : 'Creating your new category...',
-      success: editingCategory ? 'Category updated!' : 'Category created!',
+      success: () => {
+        toast.success(editingCategory ? 'Category updated!' : 'Category created!', {
+          style: {
+            background: '#22c55e',
+            color: 'white',
+          },
+        });
+        return null;
+      },
       error: (err) => {
         if (err instanceof Error && err.message.includes('already exists')) {
-          return 'A category with that name already exists. Try creating a category with a new name.';
+          toast.error('A category with that name already exists. Try creating a category with a new name.', {
+            style: {
+              background: '#ef4444',
+              color: 'white',
+            },
+          });
+          return null;
         }
-        return editingCategory ? 'Failed to update category.' : 'Failed to create category.';
+        toast.error(editingCategory ? 'Failed to update category.' : 'Failed to create category.', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
+        return null;
       },
     });
   };
@@ -111,8 +135,24 @@ const CategoriesPage = () => {
 
     toast.promise(deletePromise, {
       loading: 'Deleting category and associated menu items...',
-      success: 'Category and associated menu items deleted successfully!',
-      error: 'Failed to delete category.',
+      success: () => {
+        toast.success('Category and associated menu items deleted successfully!', {
+          style: {
+            background: '#22c55e',
+            color: 'white',
+          },
+        });
+        return null;
+      },
+      error: () => {
+        toast.error('Failed to delete category.', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
+        return null;
+      },
     });
   };
 

@@ -26,44 +26,47 @@ A comprehensive full-stack food ordering platform built with Next.js 16 that del
 
 ### **Frontend**
 
-- **Next.js 16.0.7** - React framework with App Router
-- **React 19.2.0** - UI library
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
 - **TypeScript 5** - Type-safe development
 - **Tailwind CSS 4** - Utility-first CSS framework
-- **shadcn/ui** - Component system built on Radix ([Studio](https://shadcnstudio.com/) and [Docs](https://ui.shadcn.com/))
+- **shadcn/ui** - Component system built on Radix
+  [Docs](https://ui.shadcn.com/)
+  [Studio](https://shadcnstudio.com/)
+  [Blocks](https://www.shadcnblocks.com/)
 - **Radix UI** - Headless UI components (Alert Dialog, Avatar, Dropdown Menu, Label, Select, Slot)
 - **Lucide React** - Icon library
 - **React Icons** - Additional icon library
-- **React Hook Form 7.69.0** - Form management
-- **Zod 4.2.1** - Schema validation
-- **@hookform/resolvers 5.2.2** - Form validation resolver
-- **Next Themes 0.4.6** - Dark mode support
-- **React Hot Toast 2.6.0** - Toast notifications
-- **Recharts 2.15.4** - Data visualization and charts
+- **React Hook Form 7** - Form management
+- **Zod 4** - Schema validation
+- **@hookform/resolvers 5** - Form validation resolver
+- **Next Themes** - Dark mode support
+- **Sonner 2** - Toast notifications
+- **Recharts 2** - Data visualization and charts
 
 ### **Backend & Database**
 
-- **MongoDB 6.21.0** - Database client
+- **MongoDB 6** - Database client
 - **Mongoose 9.0.0** - MongoDB ODM
-- **NextAuth.js 4.24.13** - Authentication
-- **@auth/mongodb-adapter 3.11.1** - NextAuth MongoDB adapter
-- **Bcrypt 6.0.0** - Password hashing
+- **NextAuth.js 4** - Authentication
+- **@auth/mongodb-adapter 3** - NextAuth MongoDB adapter
+- **Bcrypt 6** - Password hashing
 
 ### **Payment Processing**
 
-- **Stripe 20.1.0** - Payment gateway
-- **@stripe/react-stripe-js 5.4.1** - React components for Stripe
+- **Stripe 20** - Payment gateway
+- **@stripe/react-stripe-js 5** - React components for Stripe
 
 ### **Image Storage**
 
-- **Cloudinary 2.8.0** - Cloud image storage and management
+- **Cloudinary 2** - Cloud image storage and management
 
 ### **Maps & Location**
 
-- **Leaflet 1.9.4** - Interactive maps
-- **React Leaflet 5.0.0** - React components for Leaflet
-- **@types/leaflet 1.9.21** - TypeScript types for Leaflet
-- **leaflet-defaulticon-compatibility 0.1.2** - Icon compatibility
+- **Leaflet** - Interactive maps
+- **React Leaflet 5** - React components for Leaflet
+- **@types/leaflet** - TypeScript types for Leaflet
+- **leaflet-defaulticon-compatibility** - Icon compatibility
 
 ## 👨‍💼 Courier Features
 
@@ -108,7 +111,7 @@ lastLocationUpdate: Date | null   // Timestamp of last location update
 
 - **ESLint 9** - Code linting
 - **PostCSS** - CSS processing
-- **tw-animate-css 1.4.0** - Tailwind animations
+- **tw-animate-css** - Tailwind animations
 
 ## 🔗 Third-Party Services Setup
 

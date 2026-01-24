@@ -924,3 +924,15 @@ Add testimonials section with carousel to homepage
 -create component Testimonials.tsx
 -in component page.tsx import component Testimonials
 -update ui in existing components
+
+
+Refactor cart page and switch to Sonner for toasts
+
+-in folder cart create components CartItems, DeliveryInformation and OrderSummary
+-in component cart/page.tsx import created components
+-open link: https://ui.shadcn.com/docs/components/radix/sonner
+-open link: https://www.npmjs.com/package/sonner
+-type command: npx shadcn@latest add sonner
+-replace react hot toast with sonner toast
+-update ui in existing components
+-create component InputPasswordEyeOnly.tsx

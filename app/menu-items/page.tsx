@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import useProfile from '@/contexts/UseProfile';
 import Title from '@/components/shared/Title';
 import MenuItems from './MenuItems';
@@ -60,7 +60,12 @@ const MenuItemsListPage = () => {
       setCategories(cats);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load data');
+      toast.error('Failed to load data', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setIsLoading(false);
     }
@@ -78,11 +83,21 @@ const MenuItemsListPage = () => {
 
       if (!res.ok) throw new Error('Delete failed');
 
-      toast.success('Menu item deleted');
+      toast.success('Menu item deleted', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
       fetchData();
     } catch (err) {
       console.error(err);
-      toast.error('Failed to delete menu item');
+      toast.error('Failed to delete menu item', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     }
   };
 

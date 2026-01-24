@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -24,9 +24,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import UserLoading from './loading';
-import toast from 'react-hot-toast';
 import useProfile from '@/contexts/UseProfile';
 
 type UserType = {
@@ -99,15 +99,30 @@ const UserDetailsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to make courier');
+        toast.error(data.error || 'Failed to make courier', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setUser({ ...user, role: 'courier' });
-      toast.success('User has been promoted to courier');
+      toast.success('User has been promoted to courier', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to make courier');
+      toast.error('Failed to make courier', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setMakingCourier(false);
     }
@@ -127,15 +142,30 @@ const UserDetailsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to remove courier');
+        toast.error(data.error || 'Failed to remove courier', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setUser({ ...user, role: 'user' });
-      toast.success('User courier role has been removed');
+      toast.success('User courier role has been removed', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to remove courier');
+      toast.error('Failed to remove courier', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setMakingCourier(false);
     }
@@ -155,15 +185,30 @@ const UserDetailsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to make manager');
+        toast.error(data.error || 'Failed to make manager', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setUser({ ...user, role: 'manager' });
-      toast.success('User has been promoted to manager');
+      toast.success('User has been promoted to manager', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to make manager');
+      toast.error('Failed to make manager', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setMakingManager(false);
     }
@@ -183,15 +228,30 @@ const UserDetailsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to remove manager');
+        toast.error(data.error || 'Failed to remove manager', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setUser({ ...user, role: 'user' });
-      toast.success('User manager role has been removed');
+      toast.success('User manager role has been removed', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to remove manager');
+      toast.error('Failed to remove manager', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setMakingManager(false);
     }
@@ -211,15 +271,30 @@ const UserDetailsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to make admin');
+        toast.error(data.error || 'Failed to make admin', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setUser({ ...user, role: 'admin' });
-      toast.success('User has been promoted to admin');
+      toast.success('User has been promoted to admin', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to make admin');
+      toast.error('Failed to make admin', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setMakingAdmin(false);
     }
@@ -239,15 +314,30 @@ const UserDetailsPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to remove admin');
+        toast.error(data.error || 'Failed to remove admin', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setUser({ ...user, role: 'user' });
-      toast.success('User admin role has been removed');
+      toast.success('User admin role has been removed', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to remove admin');
+      toast.error('Failed to remove admin', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setMakingAdmin(false);
     }
@@ -377,85 +467,31 @@ const UserDetailsPage = () => {
                 )}
               </div>
 
-              {profileData?.role === 'admin' && user.role !== 'courier' && user.role !== 'manager' && user.role !== 'admin' && (
-                <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3'>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={makingCourier}
-                        className='w-full bg-primary hover:bg-primary/90'
-                      >
-                        {makingCourier ? 'Making Courier...' : 'Make Courier'}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Make Courier</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to make {user.name} a courier?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <div className='flex gap-3 justify-end'>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleMakeCourier}
-                          className='bg-primary hover:bg-primary/90'
-                        >
-                          Confirm
-                        </AlertDialogAction>
-                      </div>
-                    </AlertDialogContent>
-                  </AlertDialog>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={makingManager}
-                        className='w-full bg-primary hover:bg-primary/90'
-                      >
-                        {makingManager ? 'Making Manager...' : 'Make Manager'}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Make Manager</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to make {user.name} a manager?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <div className='flex gap-3 justify-end'>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleMakeManager}
-                          className='bg-primary hover:bg-primary/90'
-                        >
-                          Confirm
-                        </AlertDialogAction>
-                      </div>
-                    </AlertDialogContent>
-                  </AlertDialog>
-
-                  {profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+              {profileData?.role === 'admin' &&
+                user.role !== 'courier' &&
+                user.role !== 'manager' &&
+                user.role !== 'admin' && (
+                  <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 space-y-3'>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button
-                          disabled={makingAdmin}
+                          disabled={makingCourier}
                           className='w-full bg-primary hover:bg-primary/90'
                         >
-                          {makingAdmin ? 'Making Admin...' : 'Make Admin'}
+                          {makingCourier ? 'Making Courier...' : 'Make Courier'}
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Make Admin</AlertDialogTitle>
+                          <AlertDialogTitle>Make Courier</AlertDialogTitle>
                           <AlertDialogDescription>
-                            Are you sure you want to make {user.name} an admin?
+                            Are you sure you want to make {user.name} a courier?
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <div className='flex gap-3 justify-end'>
                           <AlertDialogCancel>Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={handleMakeAdmin}
+                            onClick={handleMakeCourier}
                             className='bg-primary hover:bg-primary/90'
                           >
                             Confirm
@@ -463,19 +499,72 @@ const UserDetailsPage = () => {
                         </div>
                       </AlertDialogContent>
                     </AlertDialog>
-                  )}
-                </div>
-              )}
+
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          disabled={makingManager}
+                          className='w-full bg-primary hover:bg-primary/90'
+                        >
+                          {makingManager ? 'Making Manager...' : 'Make Manager'}
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Make Manager</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to make {user.name} a manager?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <div className='flex gap-3 justify-end'>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleMakeManager}
+                            className='bg-primary hover:bg-primary/90'
+                          >
+                            Confirm
+                          </AlertDialogAction>
+                        </div>
+                      </AlertDialogContent>
+                    </AlertDialog>
+
+                    {profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button
+                            disabled={makingAdmin}
+                            className='w-full bg-primary hover:bg-primary/90'
+                          >
+                            {makingAdmin ? 'Making Admin...' : 'Make Admin'}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Make Admin</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Are you sure you want to make {user.name} an admin?
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <div className='flex gap-3 justify-end'>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleMakeAdmin}
+                              className='bg-primary hover:bg-primary/90'
+                            >
+                              Confirm
+                            </AlertDialogAction>
+                          </div>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    )}
+                  </div>
+                )}
 
               {profileData?.role === 'admin' && user.role === 'courier' && (
                 <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={makingCourier}
-                        variant='destructive'
-                        className='w-full'
-                      >
+                      <Button disabled={makingCourier} variant='destructive' className='w-full'>
                         {makingCourier ? 'Removing Courier...' : 'Remove Courier'}
                       </Button>
                     </AlertDialogTrigger>
@@ -504,11 +593,7 @@ const UserDetailsPage = () => {
                 <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={makingManager}
-                        variant='destructive'
-                        className='w-full'
-                      >
+                      <Button disabled={makingManager} variant='destructive' className='w-full'>
                         {makingManager ? 'Removing Manager...' : 'Remove Manager'}
                       </Button>
                     </AlertDialogTrigger>
@@ -533,15 +618,13 @@ const UserDetailsPage = () => {
                 </div>
               )}
 
-                {profileData?.role === 'admin' && user.role === 'admin' && profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+              {profileData?.role === 'admin' &&
+                user.role === 'admin' &&
+                profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
                   <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button
-                          disabled={makingAdmin}
-                          variant='destructive'
-                          className='w-full'
-                        >
+                        <Button disabled={makingAdmin} variant='destructive' className='w-full'>
                           {makingAdmin ? 'Removing Admin...' : 'Remove Admin'}
                         </Button>
                       </AlertDialogTrigger>

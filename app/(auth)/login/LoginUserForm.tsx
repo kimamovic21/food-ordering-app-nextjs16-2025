@@ -16,9 +16,10 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import GoogleButton from 'react-google-button';
 import Link from 'next/link';
+import InputPasswordEyeOnly from './InputPasswordEyeOnly';
 
 const loginSchema = z.object({
   email: z
@@ -56,11 +57,15 @@ const LoginUserForm = () => {
       });
 
       if (result?.error) {
-        toast.error('Invalid email or password.');
+        toast.error('Invalid email or password.', {
+          style: { backgroundColor: '#ef4444', color: 'white' },
+        });
         return;
       }
 
-      toast.success('Welcome back!');
+      toast.success('Welcome back!', {
+        style: { backgroundColor: '#22c55e', color: 'white' },
+      });
       router.push(result?.url || '/');
     } catch (err) {
       console.error(err);
@@ -109,16 +114,19 @@ const LoginUserForm = () => {
               <FormItem>
                 <FormLabel>Password</FormLabel>
                 <FormControl>
-                  <Input
-                    type='password'
-                    placeholder='Enter your password'
-                    disabled={isLoading}
-                    aria-invalid={!!form.formState.errors.password}
-                    className={'rounded-md!' + (form.formState.errors.password ? ' border-2 border-destructive ring-1 ring-destructive' : '')}
-                    {...field}
-                  />
+                  <div>
+                    {/* Password input with only eye icon */}
+                    <InputPasswordEyeOnly
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                  </div>
                 </FormControl>
-                <FormMessage className='text-destructive' />
+                {form.formState.errors.password && (
+                  <FormMessage className='text-destructive'>
+                    {form.formState.errors.password.message}
+                  </FormMessage>
+                )}
               </FormItem>
             )}
           />

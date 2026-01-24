@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Form } from '@/components/ui/form';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import { useRouter, useParams } from 'next/navigation';
-import Title from '@/components/shared/Title';
-import useProfile from '@/contexts/UseProfile';
-import MenuItemImage from '../../MenuItemImage';
-import MenuItemForm from '../../MenuItemForm';
+import { Form } from '@/components/ui/form';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -16,6 +12,10 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import useProfile from '@/contexts/UseProfile';
+import Title from '@/components/shared/Title';
+import MenuItemImage from '../../MenuItemImage';
+import MenuItemForm from '../../MenuItemForm';
 
 interface Category {
   _id: string;
@@ -118,7 +118,12 @@ const EditMenuItemPage = () => {
       priceMedium.trim() === '' ||
       priceLarge.trim() === ''
     ) {
-      toast.error('Name, category, and all prices are required');
+      toast.error('Name, category, and all prices are required', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
       return;
     }
 
@@ -130,18 +135,23 @@ const EditMenuItemPage = () => {
       const l = Number(priceLarge);
 
       if (isNaN(s) || isNaN(m) || isNaN(l)) {
-        toast.error('All prices must be valid numbers');
+        toast.error('All prices must be valid numbers', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         setIsSaving(false);
         return;
       }
 
       let imageUrl = image;
       if (imageFile) {
-        imageUrl = await toast.promise(uploadImage(imageFile), {
+        imageUrl = (await toast.promise(uploadImage(imageFile), {
           loading: 'Uploading image...',
           success: 'Image uploaded!',
           error: 'Image upload failed',
-        });
+        })) as string;
       }
 
       const menuItemData = {
@@ -162,11 +172,21 @@ const EditMenuItemPage = () => {
 
       if (!response.ok) throw new Error('Failed to update menu item');
 
-      toast.success('Menu item updated!');
+      toast.success('Menu item updated!', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
       router.push('/menu-items');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to update menu item');
+      toast.error('Failed to update menu item', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setIsSaving(false);
     }

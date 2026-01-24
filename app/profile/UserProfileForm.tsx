@@ -3,6 +3,17 @@
 import { FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
@@ -22,6 +33,8 @@ type UserProfileFormProps = {
   onPostalCodeChange: (value: string) => void;
   onCityChange: (value: string) => void;
   onCountryChange: (value: string) => void;
+  onDeleteAccount?: () => void;
+  isDeleting?: boolean;
 };
 
 const UserProfileForm = ({
@@ -40,6 +53,8 @@ const UserProfileForm = ({
   onPostalCodeChange,
   onCityChange,
   onCountryChange,
+  onDeleteAccount,
+  isDeleting,
 }: UserProfileFormProps) => {
   return (
     <form className='grow space-y-4' onSubmit={onSubmit}>
@@ -125,6 +140,39 @@ const UserProfileForm = ({
       <Button type='submit' disabled={isSaving} className='w-full'>
         {isSaving ? 'Saving...' : 'Save'}
       </Button>
+
+      {/* Delete Account Button Below Save */}
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type='button'
+            variant='destructive'
+            className='w-full bg-red-700 hover:bg-red-800 text-white font-semibold mt-2 rounded-md!'
+            disabled={isDeleting || isSaving}
+          >
+            Delete Account
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete your account and remove
+              your data from our servers. Your order history will be preserved in our records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={onDeleteAccount}
+              disabled={isDeleting}
+              className='bg-red-700 text-white hover:bg-red-800 font-semibold'
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Account'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </form>
   );
 };

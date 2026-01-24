@@ -11,7 +11,7 @@ import {
   BreadcrumbList,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Title from '@/components/shared/Title';
 import useProfile from '@/contexts/UseProfile';
 import MenuItemImage from '../MenuItemImage';
@@ -98,7 +98,12 @@ const NewMenuItemPage = () => {
       priceMedium.trim() === '' ||
       priceLarge.trim() === ''
     ) {
-      toast.error('Name, category, and all prices are required');
+          toast.error('Name, category, and all prices are required', {
+            style: {
+              background: '#ef4444',
+              color: 'white',
+            },
+          });
       return;
     }
 
@@ -117,11 +122,14 @@ const NewMenuItemPage = () => {
 
       let imageUrl = '';
       if (imageFile) {
-        imageUrl = await toast.promise(uploadImage(imageFile), {
-          loading: 'Uploading image...',
-          success: 'Image uploaded!',
-          error: 'Image upload failed',
-        });
+        imageUrl = await toast.promise(
+          uploadImage(imageFile),
+          {
+            loading: 'Uploading image...',
+            success: 'Image uploaded!',
+            error: 'Image upload failed',
+          }
+        ) as string;
       }
 
       const menuItemData = {
@@ -142,11 +150,21 @@ const NewMenuItemPage = () => {
 
       if (!response.ok) throw new Error('Failed to create menu item');
 
-      toast.success('Menu item created!');
+        toast.success('Menu item created!', {
+          style: {
+            background: '#22c55e',
+            color: 'white',
+          },
+        });
       router.push('/menu-items');
     } catch (err) {
       console.error(err);
-      toast.error('Failed to create menu item');
+        toast.error('Failed to create menu item', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
     } finally {
       setIsSaving(false);
     }

@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import InputPasswordStrengthDemo from '@/components/shadcn-studio/input/input-46';
 import GoogleButton from 'react-google-button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Link from 'next/link';
 
 const registerSchema = z.object({
@@ -108,7 +108,9 @@ const RegisterUserForm = () => {
         throw new Error('Registration failed');
       }
 
-      toast.success('User created successfully! Please login.');
+      toast.success('User created successfully! Please login.', {
+        style: { backgroundColor: '#22c55e', color: 'white' },
+      });
       form.reset();
 
       setTimeout(() => {

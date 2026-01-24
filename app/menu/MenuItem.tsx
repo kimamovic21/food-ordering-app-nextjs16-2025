@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useCart } from '@/contexts/CartContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import Image from 'next/image';
 import Pizza from '@/public/pizza.png';
 
@@ -40,7 +40,9 @@ const MenuItem = ({ item }: MenuItemProps) => {
   };
 
   const imageUrl = displayItem.image || Pizza.src;
-  const isRemoteImage = typeof imageUrl === 'string' && (imageUrl.startsWith('http') || imageUrl.includes('cloudinary'));
+  const isRemoteImage =
+    typeof imageUrl === 'string' &&
+    (imageUrl.startsWith('http') || imageUrl.includes('cloudinary'));
 
   const getPrice = () => {
     switch (selectedSize) {
@@ -52,7 +54,7 @@ const MenuItem = ({ item }: MenuItemProps) => {
         return displayItem.priceLarge;
       default:
         return displayItem.priceSmall;
-    };
+    }
   };
 
   const handleAddToCart = () => {
@@ -64,27 +66,40 @@ const MenuItem = ({ item }: MenuItemProps) => {
       size: selectedSize,
       price: getPrice(),
     });
-    toast.success(`${displayItem.name} (${selectedSize}) added to cart!`);
+    toast.success(`${displayItem.name} (${selectedSize}) added to cart!`, {
+      style: {
+        background: '#22c55e', // Tailwind green-500
+        color: 'white',
+      },
+    });
   };
 
   return (
     <Card className='p-0 overflow-hidden hover:shadow-lg transition-shadow flex flex-col'>
       <div className='text-center relative h-40 p-4 bg-muted'>
         {isRemoteImage ? (
-          <img src={imageUrl} alt={displayItem.name} className='mx-auto h-40 w-auto object-contain' />
+          <Image
+            src={imageUrl}
+            alt={displayItem.name}
+             width={140}
+            height={140}
+            className='mx-auto h-40 w-auto object-contain'
+          />
         ) : (
-          <Image src={imageUrl} alt={displayItem.name} width={140} height={140} className='mx-auto' />
+          <Image
+            src={imageUrl}
+            alt={displayItem.name}
+            width={140}
+            height={140}
+            className='mx-auto'
+          />
         )}
       </div>
 
       <div className='p-4 flex flex-col flex-1'>
-        <h4 className='font-semibold text-xl'>
-          {displayItem.name}
-        </h4>
+        <h4 className='font-semibold text-xl'>{displayItem.name}</h4>
 
-        <p className='mt-4 text-muted-foreground text-sm flex-1'>
-          {displayItem.description}
-        </p>
+        <p className='mt-4 text-muted-foreground text-sm flex-1'>{displayItem.description}</p>
 
         <div className='flex gap-1 justify-center mt-4'>
           <Button
@@ -112,11 +127,7 @@ const MenuItem = ({ item }: MenuItemProps) => {
           </Button>
         </div>
 
-        <Button
-          onClick={handleAddToCart}
-          className='w-full mt-4'
-          size='lg'
-        >
+        <Button onClick={handleAddToCart} className='w-full mt-4' size='lg'>
           Add to cart ${getPrice()?.toFixed(2) || '0.00'}
         </Button>
       </div>

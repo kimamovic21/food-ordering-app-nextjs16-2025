@@ -16,7 +16,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { OrderMapHandle } from '@/components/shared/OrderMap';
-import toast from 'react-hot-toast';
+import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import useProfile from '@/contexts/UseProfile';
 
@@ -122,15 +122,30 @@ const CourierPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to complete order');
+        toast.error(data.error || 'Failed to complete order', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setOrders(orders.filter((o) => o._id !== orderId));
-      toast.success('Order delivered successfully');
+      toast.success('Order delivered successfully', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to complete order');
+      toast.error('Failed to complete order', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setCompleting(null);
     }
@@ -147,15 +162,30 @@ const CourierPage = () => {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to toggle availability');
+        toast.error(data.error || 'Failed to toggle availability', {
+          style: {
+            background: '#ef4444',
+            color: 'white',
+          },
+        });
         return;
       }
 
       setAvailability(data.availability);
-      toast.success(data.message);
+      toast.success(data.message, {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
     } catch (err) {
       console.error(err);
-      toast.error('Failed to toggle availability');
+      toast.error('Failed to toggle availability', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
     } finally {
       setTogglingAvailability(false);
     }
@@ -163,7 +193,12 @@ const CourierPage = () => {
 
   const handleShareLocation = async () => {
     if (!navigator.geolocation) {
-      toast.error('Geolocation is not supported by your browser');
+      toast.error('Geolocation is not supported by your browser', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
       return;
     }
 
@@ -183,13 +218,23 @@ const CourierPage = () => {
             const data = await res.json();
 
             if (!res.ok) {
-              toast.error(data.error || 'Failed to update location');
+              toast.error(data.error || 'Failed to update location', {
+                style: {
+                  background: '#ef4444',
+                  color: 'white',
+                },
+              });
               setSharingLocation(false);
               return;
             }
 
             setLocationShared(true);
-            toast.success('Location shared successfully');
+            toast.success('Location shared successfully', {
+              style: {
+                background: '#22c55e',
+                color: 'white',
+              },
+            });
 
             // Refetch location on all order maps immediately
             mapRefs.current.forEach((mapRef) => {
@@ -204,7 +249,12 @@ const CourierPage = () => {
             }, 2000);
           } catch (err) {
             console.error(err);
-            toast.error('Failed to update location');
+            toast.error('Failed to update location', {
+              style: {
+                background: '#ef4444',
+                color: 'white',
+              },
+            });
           } finally {
             setSharingLocation(false);
           }
@@ -214,20 +264,45 @@ const CourierPage = () => {
           setSharingLocation(false);
 
           if (error.code === error.PERMISSION_DENIED) {
-            toast.error('Location permission denied. Please enable location access.');
+            toast.error('Location permission denied. Please enable location access.', {
+              style: {
+                background: '#ef4444',
+                color: 'white',
+              },
+            });
           } else if (error.code === error.POSITION_UNAVAILABLE) {
-            toast.error('Location information is unavailable.');
+            toast.error('Location information is unavailable.', {
+              style: {
+                background: '#ef4444',
+                color: 'white',
+              },
+            });
           } else if (error.code === error.TIMEOUT) {
-            toast.error('Location request timed out.');
+            toast.error('Location request timed out.', {
+              style: {
+                background: '#ef4444',
+                color: 'white',
+              },
+            });
           } else {
-            toast.error('Failed to get your location');
+            toast.error('Failed to get your location', {
+              style: {
+                background: '#ef4444',
+                color: 'white',
+              },
+            });
           }
         },
         { enableHighAccuracy: true, timeout: 5000 }
       );
     } catch (err) {
       console.error(err);
-      toast.error('Failed to share location');
+      toast.error('Failed to share location', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
       setSharingLocation(false);
     }
   };
@@ -319,7 +394,7 @@ const CourierPage = () => {
       {/* Location Sharing Button */}
       <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-6 gap-8'>
         <div className='flex items-center gap-4 flex-1'>
-          <div className='w-3 h-3 rounded-full shrink-0 bg-blue-500'></div>
+          <div className='w-3 h-3 rounded-full shrink-0 bg-primary'></div>
           <div>
             <p className='font-semibold text-foreground'>
               {locationShared ? '✓ Location Shared' : 'Share Your Location'}
@@ -334,7 +409,7 @@ const CourierPage = () => {
         <Button
           onClick={handleShareLocation}
           disabled={sharingLocation || !availability}
-          className='whitespace-nowrap w-[140px] shrink-0 bg-blue-600 hover:bg-blue-700'
+          className='whitespace-nowrap w-[140px] shrink-0 bg-primary hover:bg-primary/90'
         >
           {sharingLocation
             ? 'Getting Location...'
@@ -476,7 +551,7 @@ const CourierPage = () => {
                     <AlertDialogTrigger asChild>
                       <Button
                         disabled={completing === order._id}
-                        className='w-full bg-green-600 hover:bg-green-700'
+                        className='w-full bg-primary hover:bg-primary/90'
                       >
                         {completing === order._id ? 'Marking as Delivered...' : 'Mark as Delivered'}
                       </Button>
@@ -493,7 +568,7 @@ const CourierPage = () => {
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction
                           onClick={() => handleCompleteOrder(order._id)}
-                          className='bg-green-600 hover:bg-green-700'
+                          className='bg-primary hover:bg-primary/90'
                         >
                           Confirm
                         </AlertDialogAction>
