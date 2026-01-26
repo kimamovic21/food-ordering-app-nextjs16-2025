@@ -94,6 +94,9 @@ export const authOptions = {
         } else {
           // Create the user in our app DB on first OAuth session
           try {
+            // Check if this is the first user in the database
+            const userCount = await User.countDocuments();
+            const role = userCount === 0 ? 'admin' : (token?.role || 'user');
             userInDb = await User.create({
               name: session.user.name || 'User',
               email: session.user.email,
@@ -104,7 +107,7 @@ export const authOptions = {
               postalCode: '',
               city: '',
               country: '',
-              role: token?.role || 'user',
+              role,
               availability: false,
               takenOrder: null,
               latitude: null,
@@ -166,6 +169,9 @@ export const authOptions = {
         await mongoose.connect(process.env.MONGODB_URL as string);
         const existing = await User.findOne({ email: user?.email });
         if (!existing && user?.email) {
+          // Check if this is the first user in the database
+          const userCount = await User.countDocuments();
+          const role = userCount === 0 ? 'admin' : 'user';
           await User.create({
             name: user?.name || '',
             email: user.email,
@@ -176,7 +182,7 @@ export const authOptions = {
             postalCode: '',
             city: '',
             country: '',
-            role: 'user',
+            role,
             availability: false,
             takenOrder: null,
           });

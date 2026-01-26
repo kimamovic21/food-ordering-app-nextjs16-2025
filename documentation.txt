@@ -936,3 +936,9 @@ Refactor cart page and switch to Sonner for toasts
 -replace react hot toast with sonner toast
 -update ui in existing components
 -create component InputPasswordEyeOnly.tsx
+
+
+Assign admin role to first registered user
+
+-update authOptions.ts file and register/route.ts file
+-update ui in folders courier and couriers

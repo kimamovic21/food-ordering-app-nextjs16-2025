@@ -1,15 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import useProfile from '@/contexts/UseProfile';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import useProfile from '@/contexts/UseProfile';
+import Title from '@/components/shared/Title';
 
 type CourierType = {
   _id: string;
@@ -24,13 +21,13 @@ type CourierType = {
 
 const CouriersPage = () => {
   const { data: profileData, loading: profileLoading } = useProfile();
-  const session = useSession();
   const [couriers, setCouriers] = useState<CourierType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager')) return;
+    if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager'))
+      return;
 
     const fetchCouriers = async () => {
       try {
@@ -71,7 +68,9 @@ const CouriersPage = () => {
   if (profileData?.role !== 'admin' && profileData?.role !== 'manager') {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='text-red-500'>Unauthorized: Only admins or managers can access this page</div>
+        <div className='text-red-500'>
+          Unauthorized: Only admins or managers can access this page
+        </div>
       </div>
     );
   }
@@ -93,12 +92,10 @@ const CouriersPage = () => {
   }
 
   return (
-    <div className='max-w-7xl mx-auto px-4 py-6'>
+    <section className='w-full md:w-4xl lg:w-5xl max-w-5xl mx-auto px-4 py-6'>
       <div className='mb-6'>
-        <h1 className='text-3xl font-bold text-foreground'>Couriers</h1>
-        <p className='text-muted-foreground mt-2'>
-          Total couriers: {couriers.length}
-        </p>
+        <Title>Couriers Management</Title>
+        <p className='text-muted-foreground mt-2'>Total couriers: {couriers.length}</p>
       </div>
 
       {error && (
@@ -108,11 +105,13 @@ const CouriersPage = () => {
       )}
 
       {couriers.length === 0 ? (
-        <Card>
-          <CardContent className='py-12 text-center'>
-            <p className='text-muted-foreground'>No couriers found</p>
-          </CardContent>
-        </Card>
+        <div className='flex justify-center'>
+          <Card className='w-full max-w-2xl'>
+            <CardContent className='py-16 text-center text-lg'>
+              <p className='text-muted-foreground'>No couriers found</p>
+            </CardContent>
+          </Card>
+        </div>
       ) : (
         <div className='space-y-4'>
           {couriers.map((courier) => (
@@ -129,16 +128,14 @@ const CouriersPage = () => {
                         .toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  
+
                   <div className='flex-1'>
                     <h3 className='text-lg font-semibold'>{courier.name}</h3>
                     <p className='text-sm text-muted-foreground'>{courier.email}</p>
                   </div>
 
                   <div className='flex items-center gap-2'>
-                    <span className='text-sm font-medium text-muted-foreground'>
-                      Availability:
-                    </span>
+                    <span className='text-sm font-medium text-muted-foreground'>Availability:</span>
                     <Badge
                       variant={courier.availability ? 'default' : 'destructive'}
                       className={
@@ -160,7 +157,7 @@ const CouriersPage = () => {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 };
 

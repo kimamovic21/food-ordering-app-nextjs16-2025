@@ -19,6 +19,7 @@ import type { OrderMapHandle } from '@/components/shared/OrderMap';
 import { toast } from 'sonner';
 import dynamic from 'next/dynamic';
 import useProfile from '@/contexts/UseProfile';
+import Title from '@/components/shared/Title';
 
 // Dynamic import to prevent SSR issues with Leaflet
 const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
@@ -356,7 +357,7 @@ const CourierPage = () => {
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
       <div className='mb-6'>
-        <h1 className='text-3xl font-bold text-foreground'>Current Delivery</h1>
+        <Title>Current Delivery</Title>
         <p className='text-muted-foreground mt-2'>
           Active orders ready for delivery: {orders.length}
         </p>

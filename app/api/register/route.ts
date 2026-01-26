@@ -26,6 +26,9 @@ export async function POST(req: Request) {
     const salt = bcrypt.genSaltSync(10);
     const hashedPassword = bcrypt.hashSync(pass, salt);
 
+    const userCount = await User.countDocuments();
+    const role = userCount === 0 ? 'admin' : 'user';
+
     const createdUser = await User.create({
       name: body.name,
       email: body.email,
@@ -36,7 +39,7 @@ export async function POST(req: Request) {
       postalCode: '',
       city: '',
       country: '',
-      role: 'user',
+      role,
       availability: false,
       takenOrder: null,
     });
