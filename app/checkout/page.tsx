@@ -1,66 +1,23 @@
 'use client';
 
-import { Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useCart } from '@/contexts/CartContext';
-import Link from 'next/link';
 
-const CheckoutContent = () => {
+export default function CheckoutStatusPage() {
   const searchParams = useSearchParams();
   const status = searchParams.get('status');
-  const { clearCart } = useCart();
-
-  useEffect(() => {
-    if (status === 'success') {
-      clearCart();
-    }
-  }, [clearCart, status]);
-
-  const isSuccess = status === 'success';
-  const isCancelled = status === 'cancelled';
 
   return (
-    <div className='max-w-2xl mx-auto text-center py-12 space-y-6'>
-      <h1 className='text-3xl font-bold text-gray-800 dark:text-gray-100'>
-        {isSuccess && 'Payment successful!'}
-        {isCancelled && 'Payment cancelled'}
-        {!isSuccess && !isCancelled && 'Checkout status'}
-      </h1>
-
-      <p className='text-gray-600 dark:text-gray-300'>
-        {isSuccess && 'Thanks for your order. We are preparing your food.'}
-        {isCancelled && 'Your payment was cancelled. You can return to the cart and try again.'}
-        {!isSuccess && !isCancelled && 'We are processing your request. If you just paid, you will receive a confirmation shortly.'}
-      </p>
-
-      <div className='flex gap-4 justify-center'>
-        <Link
-          href='/menu'
-          className='bg-primary text-white px-5 py-3 rounded-full font-semibold hover:bg-orange-700 transition'
-        >
-          Browse menu
-        </Link>
-        <Link
-          href='/cart'
-          className='border border-primary text-primary px-5 py-3 rounded-full font-semibold hover:bg-orange-50 transition'
-        >
-          Go to cart
-        </Link>
-      </div>
+    <div className='flex flex-col items-center justify-center min-h-screen'>
+      <h1 className='text-2xl font-bold mb-4'>Payment Status</h1>
+      {status === 'success' ? (
+        <div className='text-green-600 text-lg font-semibold'>
+          Payment successful! Thank you for your order.
+        </div>
+      ) : (
+        <div className='text-red-600 text-lg font-semibold'>
+          Payment failed or cancelled. Please try again.
+        </div>
+      )}
     </div>
   );
-};
-
-const CheckoutPage = () => {
-  return (
-    <Suspense fallback={
-      <div className='py-12 text-center text-gray-600'>
-        Loading checkout...
-      </div>
-    }>
-      <CheckoutContent />
-    </Suspense>
-  );
-};
-
-export default CheckoutPage;
+}

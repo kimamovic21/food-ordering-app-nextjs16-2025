@@ -1,3 +1,5 @@
+'use client';
+
 import { FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
 import { toast } from 'sonner';
 import Image from 'next/image';

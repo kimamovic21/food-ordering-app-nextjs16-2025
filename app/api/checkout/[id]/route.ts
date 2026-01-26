@@ -38,12 +38,12 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { 
-    phone, 
-    streetAddress, 
-    postalCode, 
-    city, 
-    country, 
+  const {
+    phone,
+    streetAddress,
+    postalCode,
+    city,
+    country,
     cartItems,
     deliveryFee,
     deliveryFeeBreakdown,
@@ -105,10 +105,7 @@ export async function POST(req: Request) {
 
   // Security check: ensure discount doesn't exceed what user should have
   if (verifiedLoyaltyPercentage > loyaltyStatus.discountPercentage) {
-    return Response.json(
-      { error: 'Invalid loyalty discount' },
-      { status: 400 }
-    );
+    return Response.json({ error: 'Invalid loyalty discount' }, { status: 400 });
   }
 
   const subtotal = sanitizedItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -178,10 +175,11 @@ export async function POST(req: Request) {
       price_data: {
         currency: 'usd',
         unit_amount: Math.round(discountedDeliveryFee * 100),
-        product_data: { 
-          name: verifiedLoyaltyDiscount > 0 
-            ? `Delivery Fee (${verifiedLoyaltyPercentage}% loyalty discount applied)` 
-            : 'Delivery Fee'
+        product_data: {
+          name:
+            verifiedLoyaltyDiscount > 0
+              ? `Delivery Fee (${verifiedLoyaltyPercentage}% loyalty discount applied)`
+              : 'Delivery Fee',
         },
       },
     }

@@ -955,3 +955,12 @@ Refactor my-delivery page with modular components
 
 -in folder my-delivery create four tsx component
 -in component my-delivery/page.tsx import created components
+
+
+Implement Stripe PaymentIntent checkout flow
+
+-open link: https://www.npmjs.com/package/@stripe/stripe-js
+-type command: npm i @stripe/stripe-js
+-in folder checkout/[id] create components page.tsx, loading.tsx and StripeCheckoutForm.tsx
+-in folder api/checkout create folders [id], intent and route.ts files
+-update UI in Stripe components

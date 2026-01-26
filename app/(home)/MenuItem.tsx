@@ -66,7 +66,12 @@ const MenuItem = ({ item }: MenuItemProps) => {
       size: selectedSize,
       price: getPrice(),
     });
-    toast.success(`${displayItem.name} (${selectedSize}) added to cart!`);
+    toast.success(`${displayItem.name} (${selectedSize}) added to cart!`, {
+      style: {
+        background: '#22c55e', // Tailwind green-500
+        color: 'white',
+      },
+    });
   };
 
   return (
