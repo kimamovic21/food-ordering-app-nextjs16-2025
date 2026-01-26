@@ -107,9 +107,7 @@ const OrderDetailPage = () => {
   const [order, setOrder] = useState<OrderDetailsType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<'placed' | 'processing' | 'ready'>(
-    'placed'
-  );
+  const [selectedStatus, setSelectedStatus] = useState<'placed' | 'processing' | 'ready'>('placed');
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusError, setStatusError] = useState('');
   const [couriers, setCouriers] = useState<CourierType[]>([]);
@@ -123,7 +121,8 @@ const OrderDetailPage = () => {
   const orderId = params?.id as string;
 
   useEffect(() => {
-    if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager')) return;
+    if (profileLoading || (profileData?.role !== 'admin' && profileData?.role !== 'manager'))
+      return;
 
     const fetchOrder = async (showLoading = true) => {
       try {
@@ -137,8 +136,9 @@ const OrderDetailPage = () => {
         const json = await res.json();
         setOrder(json.order);
         setSelectedStatus(
-          (json.order.orderStatus === 'completed' || json.order.orderStatus === 'transportation' ? 'ready' : json.order.orderStatus) ||
-            'placed'
+          (json.order.orderStatus === 'completed' || json.order.orderStatus === 'transportation'
+            ? 'ready'
+            : json.order.orderStatus) || 'placed'
         );
         setStatusError('');
       } catch (err) {
@@ -169,7 +169,7 @@ const OrderDetailPage = () => {
     if (order?.orderStatus === 'ready') {
       const fetchCouriers = async () => {
         try {
-          const res = await fetch('/api/couriers?availableOnly=true');
+          const res = await fetch('/api/my-delivery?availableOnly=true');
           if (!res.ok) throw new Error('Failed to fetch couriers');
           const data = await res.json();
           setCouriers(data.couriers);
@@ -216,7 +216,9 @@ const OrderDetailPage = () => {
       }
 
       // Update local order state immediately so UI reflects change
-      setOrder((prevOrder) => prevOrder ? { ...prevOrder, orderStatus: data.order.orderStatus } : data.order);
+      setOrder((prevOrder) =>
+        prevOrder ? { ...prevOrder, orderStatus: data.order.orderStatus } : data.order
+      );
       setSelectedStatus(data.order.orderStatus);
       toast.success('Order status updated successfully', {
         style: {
@@ -236,7 +238,7 @@ const OrderDetailPage = () => {
     if (!order || !selectedCourier) return;
 
     // Check if selected courier is still available
-    const selectedCourierData = couriers.find(c => c._id === selectedCourier);
+    const selectedCourierData = couriers.find((c) => c._id === selectedCourier);
     if (!selectedCourierData || !selectedCourierData.availability) {
       toast.error('Selected courier is no longer available. Please choose another courier.', {
         style: {
@@ -246,7 +248,7 @@ const OrderDetailPage = () => {
       });
       // Refresh courier list
       try {
-        const res = await fetch('/api/couriers?availableOnly=true');
+        const res = await fetch('/api/my-delivery?availableOnly=true');
         if (res.ok) {
           const data = await res.json();
           setCouriers(data.couriers);
@@ -259,7 +261,7 @@ const OrderDetailPage = () => {
 
     try {
       setAssigningCourier(true);
-      const res = await fetch('/api/couriers', {
+      const res = await fetch('/api/my-delivery', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ courierId: selectedCourier, orderId: order._id }),
@@ -434,7 +436,8 @@ const OrderDetailPage = () => {
     );
   }
 
-  if (!profileData?.role || (profileData.role !== 'admin' && profileData.role !== 'manager')) return 'Not an admin or manager';
+  if (!profileData?.role || (profileData.role !== 'admin' && profileData.role !== 'manager'))
+    return 'Not an admin or manager';
 
   if (error) return <div className='mt-8 text-red-600'>{error}</div>;
 
@@ -469,9 +472,9 @@ const OrderDetailPage = () => {
             deliveryFee={order.deliveryFee}
             deliveryFeeBreakdown={order.deliveryFeeBreakdown}
           />
-          
-          <OrderItemsCard 
-            cartProducts={order.cartProducts} 
+
+          <OrderItemsCard
+            cartProducts={order.cartProducts}
             total={order.total}
             deliveryFee={order.deliveryFee}
             deliveryFeeBreakdown={order.deliveryFeeBreakdown}
@@ -499,10 +502,10 @@ const OrderDetailPage = () => {
                 {order.orderStatus === 'completed'
                   ? 'Order delivered successfully. You are not able to update order delivery status.'
                   : order.orderStatus === 'transportation'
-                  ? 'Order is being delivered. Status cannot be changed.'
-                  : order.orderStatus === 'ready'
-                  ? 'Order is ready. Please assign a courier to start delivery.'
-                  : 'Move the order forward through stages: placed → processing → ready.'}
+                    ? 'Order is being delivered. Status cannot be changed.'
+                    : order.orderStatus === 'ready'
+                      ? 'Order is ready. Please assign a courier to start delivery.'
+                      : 'Move the order forward through stages: placed → processing → ready.'}
               </CardDescription>
             </CardHeader>
             <CardContent className='flex flex-col h-full'>
@@ -523,22 +526,13 @@ const OrderDetailPage = () => {
                     <SelectValue placeholder='Select status' />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem
-                      value='placed'
-                      disabled={order.orderStatus !== 'placed'}
-                    >
+                    <SelectItem value='placed' disabled={order.orderStatus !== 'placed'}>
                       placed
                     </SelectItem>
-                    <SelectItem
-                      value='processing'
-                      disabled={order.orderStatus === 'ready'}
-                    >
+                    <SelectItem value='processing' disabled={order.orderStatus === 'ready'}>
                       processing
                     </SelectItem>
-                    <SelectItem
-                      value='ready'
-                      disabled={order.orderStatus === 'placed'}
-                    >
+                    <SelectItem value='ready' disabled={order.orderStatus === 'placed'}>
                       ready
                     </SelectItem>
                   </SelectContent>
@@ -547,7 +541,9 @@ const OrderDetailPage = () => {
                   <p className='text-xs text-amber-600'>Payment required before changing status.</p>
                 )}
                 {order.orderStatus === 'ready' && (
-                  <p className='text-xs text-green-600'>Order is ready! Assign a courier below to start delivery.</p>
+                  <p className='text-xs text-green-600'>
+                    Order is ready! Assign a courier below to start delivery.
+                  </p>
                 )}
                 {statusError && <p className='text-sm text-red-600'>{statusError}</p>}
               </div>
@@ -604,11 +600,10 @@ const OrderDetailPage = () => {
         {order.orderStatus === 'ready' && (
           <Card>
             <CardHeader>
-              <CardTitle className='flex items-center gap-2'>
-                📦 Order Ready for Pickup
-              </CardTitle>
+              <CardTitle className='flex items-center gap-2'>📦 Order Ready for Pickup</CardTitle>
               <CardDescription>
-                The order is prepared and ready. Please assign an available courier to start delivery.
+                The order is prepared and ready. Please assign an available courier to start
+                delivery.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -623,7 +618,8 @@ const OrderDetailPage = () => {
                       <label className='text-sm font-medium'>Select Available Courier</label>
                       {couriers.length === 0 ? (
                         <p className='text-sm text-amber-600'>
-                          No available couriers at the moment. All couriers are currently delivering orders.
+                          No available couriers at the moment. All couriers are currently delivering
+                          orders.
                         </p>
                       ) : (
                         <>
@@ -634,8 +630,8 @@ const OrderDetailPage = () => {
                           >
                             <option value=''>Choose a courier...</option>
                             {couriers.map((courier) => (
-                              <option 
-                                key={courier._id} 
+                              <option
+                                key={courier._id}
                                 value={courier._id}
                                 disabled={!!courier.takenOrder}
                               >
@@ -645,7 +641,8 @@ const OrderDetailPage = () => {
                             ))}
                           </select>
                           <p className='text-xs text-muted-foreground'>
-                            Only couriers who are not currently delivering an order are available for assignment.
+                            Only couriers who are not currently delivering an order are available
+                            for assignment.
                           </p>
                         </>
                       )}
@@ -740,13 +737,13 @@ const OrderDetailPage = () => {
         </AlertDialog>
 
         {/* Order Map - Show customer location for placed, processing, ready statuses */}
-        {(order.orderStatus === 'placed' || order.orderStatus === 'processing' || order.orderStatus === 'ready') && (
+        {(order.orderStatus === 'placed' ||
+          order.orderStatus === 'processing' ||
+          order.orderStatus === 'ready') && (
           <Card>
             <CardHeader>
               <CardTitle>Delivery Location</CardTitle>
-              <CardDescription>
-                Customer's delivery address location.
-              </CardDescription>
+              <CardDescription>Customer&apos;s delivery address location.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className='h-[400px] rounded-lg overflow-hidden'>
@@ -769,9 +766,7 @@ const OrderDetailPage = () => {
           <Card>
             <CardHeader>
               <CardTitle>Delivery Tracking</CardTitle>
-              <CardDescription>
-                Track the real-time location of the delivery.
-              </CardDescription>
+              <CardDescription>Track the real-time location of the delivery.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className='h-[400px] rounded-lg overflow-hidden'>

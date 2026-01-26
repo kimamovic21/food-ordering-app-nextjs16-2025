@@ -32,7 +32,7 @@ export function CouriersLinkSkeleton() {
   return <Skeleton className='h-4 w-18' />;
 }
 
-export function CourierLinkSkeleton() {
+export function MyDeliveryLinkSkeleton() {
   return <Skeleton className='h-4 w-16' />;
 }
 

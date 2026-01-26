@@ -32,7 +32,7 @@ const CouriersPage = () => {
     const fetchCouriers = async () => {
       try {
         setLoading(true);
-        const res = await fetch('/api/couriers');
+        const res = await fetch('/api/my-delivery');
         if (!res.ok) {
           throw new Error('Failed to fetch couriers');
         }
@@ -52,12 +52,14 @@ const CouriersPage = () => {
   if (profileLoading) {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-4'>
-          <Skeleton className='h-10 w-48' />
-          <Skeleton className='h-5 w-32' />
+        <div className='space-y-6'>
+          <div>
+            <Skeleton className='h-10 w-96' />
+            <Skeleton className='h-5 w-80 mt-2' />
+          </div>
           <div className='space-y-4'>
             {[...Array(4)].map((_, idx) => (
-              <Skeleton key={idx} className='h-20 w-full' />
+              <Skeleton key={idx} className='h-24 w-full rounded-xl' />
             ))}
           </div>
         </div>
@@ -78,12 +80,14 @@ const CouriersPage = () => {
   if (loading) {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-4'>
-          <Skeleton className='h-10 w-48' />
-          <Skeleton className='h-5 w-32' />
+        <div className='space-y-6'>
+          <div>
+            <Skeleton className='h-10 w-96' />
+            <Skeleton className='h-5 w-80 mt-2' />
+          </div>
           <div className='space-y-4'>
             {[...Array(4)].map((_, idx) => (
-              <Skeleton key={idx} className='h-20 w-full' />
+              <Skeleton key={idx} className='h-24 w-full rounded-xl' />
             ))}
           </div>
         </div>

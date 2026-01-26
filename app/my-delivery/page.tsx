@@ -83,7 +83,7 @@ const CourierPage = () => {
         if (showLoading) {
           setLoading(true);
         }
-        const res = await fetch('/api/courier/orders');
+        const res = await fetch('/api/my-delivery/orders');
         if (!res.ok) {
           throw new Error('Failed to fetch orders');
         }
@@ -114,7 +114,7 @@ const CourierPage = () => {
   const handleCompleteOrder = async (orderId: string) => {
     try {
       setCompleting(orderId);
-      const res = await fetch('/api/courier/orders', {
+      const res = await fetch('/api/my-delivery/orders', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
@@ -155,7 +155,7 @@ const CourierPage = () => {
   const handleToggleAvailability = async () => {
     try {
       setTogglingAvailability(true);
-      const res = await fetch('/api/courier/availability', {
+      const res = await fetch('/api/my-delivery/availability', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -210,7 +210,7 @@ const CourierPage = () => {
           const { latitude, longitude } = position.coords;
 
           try {
-            const res = await fetch('/api/courier/location', {
+            const res = await fetch('/api/my-delivery/location', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ latitude, longitude }),
@@ -357,7 +357,7 @@ const CourierPage = () => {
   return (
     <div className='max-w-7xl mx-auto px-4 py-6'>
       <div className='mb-6'>
-        <Title>Current Delivery</Title>
+        <Title>My Delivery</Title>
         <p className='text-muted-foreground mt-2'>
           Active orders ready for delivery: {orders.length}
         </p>
@@ -464,8 +464,8 @@ const CourierPage = () => {
                       {new Date(order.createdAt).toLocaleTimeString()}
                     </CardDescription>
                   </div>
-                  <Badge 
-                    variant='secondary' 
+                  <Badge
+                    variant='secondary'
                     className='bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
                   >
                     Transportation
@@ -520,8 +520,8 @@ const CourierPage = () => {
                   {/* Map - Show delivery location with courier tracking */}
                   <div>
                     <h3 className='font-semibold text-foreground mb-3'>
-                      {order.orderStatus === 'transportation' 
-                        ? 'Delivery Tracking' 
+                      {order.orderStatus === 'transportation'
+                        ? 'Delivery Tracking'
                         : 'Delivery Location'}
                     </h3>
                     <OrderMap

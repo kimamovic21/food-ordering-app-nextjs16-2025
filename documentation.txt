@@ -941,4 +941,11 @@ Refactor cart page and switch to Sonner for toasts
 Assign admin role to first registered user
 
 -update authOptions.ts file and register/route.ts file
--update ui in folders courier and couriers
+-update ui in folders courier and 
+
+
+Refactor courier API and UI to my-delivery namespace
+
+-in folder api rename folder courier with my-delivery
+-in folder app rename folder courier with my-delivery
+-update component Header.tsx

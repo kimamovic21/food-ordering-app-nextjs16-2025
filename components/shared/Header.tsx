@@ -16,7 +16,7 @@ import {
   MenuItemsLinkSkeleton,
   UsersLinkSkeleton,
   CouriersLinkSkeleton,
-  CourierLinkSkeleton,
+  MyDeliveryLinkSkeleton,
   OrdersLinkSkeleton,
   StatisticsLinkSkeleton,
   ModeToggleSkeleton,
@@ -123,7 +123,7 @@ const Header = () => {
                 <AboutLinkSkeleton />
                 <ContactLinkSkeleton />
                 <MyOrdersLinkSkeleton />
-                <CourierLinkSkeleton />
+                <MyDeliveryLinkSkeleton />
                 <CategoriesLinkSkeleton />
                 <MenuItemsLinkSkeleton />
                 <UsersLinkSkeleton />
@@ -168,10 +168,10 @@ const Header = () => {
                     {isCourier && (
                       <>
                         <Link
-                          className={`${pathname === '/courier' ? 'text-primary font-semibold' : ''}`}
-                          href={'/courier'}
+                          className={`${pathname === '/my-delivery' ? 'text-primary font-semibold' : ''}`}
+                          href={'/my-delivery'}
                         >
-                          Courier
+                          My Delivery
                         </Link>
                         <Link
                           className={`${pathname === '/my-deliveries' ? 'text-primary font-semibold' : ''}`}

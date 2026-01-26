@@ -4,7 +4,14 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import useProfile from '@/contexts/UseProfile';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator, BreadcrumbPage } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbList,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbSeparator,
+  BreadcrumbPage,
+} from '@/components/ui/breadcrumb';
 import { Package, Calendar, MapPin, DollarSign, Phone, CreditCard, Mail } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -70,7 +77,7 @@ const DeliveryDetailsPage = () => {
     return (
       <div className='container mx-auto px-4 py-8 max-w-7xl'>
         <Skeleton className='h-6 w-64 mb-6' />
-        
+
         <div className='mb-6'>
           <Skeleton className='h-10 w-48 mb-2' />
           <Skeleton className='h-5 w-32' />
@@ -214,7 +221,13 @@ const DeliveryDetailsPage = () => {
               <CreditCard className='h-4 w-4 text-muted-foreground' />
               <div className='flex items-center gap-2'>
                 <p className='text-sm text-muted-foreground'>Payment Status:</p>
-                <Badge className={order.orderPaid ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}>
+                <Badge
+                  className={
+                    order.orderPaid
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-red-600 hover:bg-red-700'
+                  }
+                >
                   {order.orderPaid ? 'Paid' : 'Unpaid'}
                 </Badge>
               </div>
@@ -266,15 +279,11 @@ const DeliveryDetailsPage = () => {
               <MapPin className='h-4 w-4 mt-1 text-muted-foreground shrink-0' />
               <div className='flex-1'>
                 <p className='text-sm text-muted-foreground'>Delivery Address</p>
-                <p className='font-medium'>
-                  {order.streetAddress}
-                </p>
+                <p className='font-medium'>{order.streetAddress}</p>
                 <p className='font-medium text-muted-foreground text-sm'>
                   {order.postalCode} {order.city}
                 </p>
-                <p className='font-medium text-muted-foreground text-sm'>
-                  {order.country}
-                </p>
+                <p className='font-medium text-muted-foreground text-sm'>{order.country}</p>
               </div>
             </div>
           </CardContent>

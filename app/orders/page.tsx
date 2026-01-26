@@ -136,7 +136,8 @@ const OrdersPage = () => {
     );
   }
 
-  if (!data?.role || (data.role !== 'admin' && data.role !== 'manager')) return 'Not an admin or manager';
+  if (!data?.role || (data.role !== 'admin' && data.role !== 'manager'))
+    return 'Not an admin or manager';
 
   return (
     <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>

@@ -92,8 +92,8 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
                     order.orderStatus === 'completed'
                       ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
                       : order.orderStatus === 'processing'
-                      ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
-                      : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                        : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
                   }
                 >
                   {order.orderStatus}

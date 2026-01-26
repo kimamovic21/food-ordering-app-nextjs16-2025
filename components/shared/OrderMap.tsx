@@ -100,7 +100,7 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
         // Use different endpoint based on whether orderId is provided (admin view) or not (courier view)
         const endpoint = orderId 
           ? `/api/orders/courier-location?orderId=${orderId}`
-          : '/api/courier/location';
+          : '/api/my-delivery/location';
         
         const res = await fetch(endpoint);
         if (res.ok) {

@@ -63,8 +63,8 @@ const OrderInfoCard = ({
                   orderStatus === 'completed'
                     ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
                     : orderStatus === 'processing'
-                    ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
-                    : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                      ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                      : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
                 }
               >
                 {orderStatus}
@@ -104,22 +104,30 @@ const OrderInfoCard = ({
           {/* Row 5: Delivery Fee (if available) */}
           {deliveryFee !== undefined && (
             <div className='border-t pt-4'>
-              <p className='text-sm text-muted-foreground mb-2 font-semibold'>Delivery Fee Details</p>
+              <p className='text-sm text-muted-foreground mb-2 font-semibold'>
+                Delivery Fee Details
+              </p>
               <div className='space-y-1 text-sm'>
                 <div className='flex justify-between'>
                   <span className='text-muted-foreground'>Base Fee:</span>
-                  <span className='font-semibold text-foreground'>${(deliveryFeeBreakdown?.baseFee || 5).toFixed(2)}</span>
+                  <span className='font-semibold text-foreground'>
+                    ${(deliveryFeeBreakdown?.baseFee || 5).toFixed(2)}
+                  </span>
                 </div>
                 {deliveryFeeBreakdown?.altitudeAdjustment ? (
                   <div className='flex justify-between text-xs pl-2'>
                     <span className='text-muted-foreground'>+ Altitude:</span>
-                    <span className='text-foreground'>${deliveryFeeBreakdown.altitudeAdjustment.toFixed(2)}</span>
+                    <span className='text-foreground'>
+                      ${deliveryFeeBreakdown.altitudeAdjustment.toFixed(2)}
+                    </span>
                   </div>
                 ) : null}
                 {deliveryFeeBreakdown?.weatherAdjustment ? (
                   <div className='flex justify-between text-xs pl-2'>
                     <span className='text-muted-foreground'>+ Weather:</span>
-                    <span className='text-foreground'>${deliveryFeeBreakdown.weatherAdjustment.toFixed(2)}</span>
+                    <span className='text-foreground'>
+                      ${deliveryFeeBreakdown.weatherAdjustment.toFixed(2)}
+                    </span>
                   </div>
                 ) : null}
                 <div className='flex justify-between border-t pt-1 font-semibold'>
