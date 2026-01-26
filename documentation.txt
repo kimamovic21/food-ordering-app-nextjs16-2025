@@ -949,3 +949,9 @@ Refactor courier API and UI to my-delivery namespace
 -in folder api rename folder courier with my-delivery
 -in folder app rename folder courier with my-delivery
 -update component Header.tsx
+
+
+Refactor my-delivery page with modular components
+
+-in folder my-delivery create four tsx component
+-in component my-delivery/page.tsx import created components

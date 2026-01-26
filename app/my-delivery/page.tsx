@@ -1,25 +1,16 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import type { OrderMapHandle } from '@/components/shared/OrderMap';
 import { toast } from 'sonner';
+import type { OrderMapHandle } from '@/components/shared/OrderMap';
 import dynamic from 'next/dynamic';
 import useProfile from '@/contexts/UseProfile';
 import Title from '@/components/shared/Title';
+import AvailabilityToggle from './AvailabilityToggle';
+import LocationShareButton from './LocationShareButton';
+import DeliveryOrderCard from './DeliveryOrderCard';
+import MyDeliveryLoading from './loading';
 
 // Dynamic import to prevent SSR issues with Leaflet
 const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
@@ -309,22 +300,7 @@ const CourierPage = () => {
   };
 
   if (profileLoading) {
-    return (
-      <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-6'>
-          <div>
-            <Skeleton className='h-10 w-96' />
-            <Skeleton className='h-5 w-80 mt-2' />
-          </div>
-          <Skeleton className='h-24 w-full' />
-          <div className='space-y-4'>
-            {[...Array(2)].map((_, idx) => (
-              <Skeleton key={idx} className='h-64 w-full' />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <MyDeliveryLoading />;
   }
 
   if (profileData?.role !== 'courier') {
@@ -336,22 +312,7 @@ const CourierPage = () => {
   }
 
   if (loading) {
-    return (
-      <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-6'>
-          <div>
-            <Skeleton className='h-10 w-96' />
-            <Skeleton className='h-5 w-80 mt-2' />
-          </div>
-          <Skeleton className='h-24 w-full' />
-          <div className='space-y-4'>
-            {[...Array(2)].map((_, idx) => (
-              <Skeleton key={idx} className='h-64 w-full' />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
+    return <MyDeliveryLoading />;
   }
 
   return (
@@ -363,62 +324,18 @@ const CourierPage = () => {
         </p>
       </div>
 
-      {/* Availability Toggle */}
-      <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-6 gap-8 min-w-[600px]'>
-        <div className='flex items-center gap-4 flex-1'>
-          <div
-            className={`w-3 h-3 rounded-full shrink-0 ${
-              availability ? 'bg-green-500' : 'bg-red-500'
-            }`}
-          ></div>
-          <div>
-            <p className='font-semibold text-foreground'>
-              Status: {availability ? 'Online' : 'Offline'}
-            </p>
-            <p className='text-sm text-muted-foreground'>
-              {availability ? 'You are available for orders' : 'You are not available for orders'}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={handleToggleAvailability}
-          disabled={togglingAvailability}
-          variant={availability ? 'destructive' : 'default'}
-          className={`whitespace-nowrap w-[130px] shrink-0 ${
-            availability ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'
-          }`}
-        >
-          {togglingAvailability ? 'Updating...' : availability ? 'Go Offline' : 'Go Online'}
-        </Button>
-      </div>
+      <AvailabilityToggle
+        availability={availability}
+        togglingAvailability={togglingAvailability}
+        onToggle={handleToggleAvailability}
+      />
 
-      {/* Location Sharing Button */}
-      <div className='mb-6 flex items-center justify-between bg-slate-50 dark:bg-slate-900 border rounded-lg p-6 gap-8'>
-        <div className='flex items-center gap-4 flex-1'>
-          <div className='w-3 h-3 rounded-full shrink-0 bg-primary'></div>
-          <div>
-            <p className='font-semibold text-foreground'>
-              {locationShared ? '✓ Location Shared' : 'Share Your Location'}
-            </p>
-            <p className='text-sm text-muted-foreground'>
-              {locationShared
-                ? 'Your location is being tracked by the customer'
-                : 'Enable real-time location tracking for this delivery'}
-            </p>
-          </div>
-        </div>
-        <Button
-          onClick={handleShareLocation}
-          disabled={sharingLocation || !availability}
-          className='whitespace-nowrap w-[140px] shrink-0 bg-primary hover:bg-primary/90'
-        >
-          {sharingLocation
-            ? 'Getting Location...'
-            : locationShared
-              ? 'Location Shared'
-              : 'Share Location'}
-        </Button>
-      </div>
+      <LocationShareButton
+        locationShared={locationShared}
+        sharingLocation={sharingLocation}
+        availability={availability}
+        onShare={handleShareLocation}
+      />
 
       {error && (
         <div className='bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg mb-6'>
@@ -452,133 +369,13 @@ const CourierPage = () => {
       ) : (
         <div className='space-y-4'>
           {orders.map((order) => (
-            <Card key={order._id} className='hover:shadow-lg transition-shadow'>
-              <CardHeader>
-                <div className='flex items-start justify-between'>
-                  <div>
-                    <CardTitle className='text-lg'>
-                      Order #{order._id.slice(-8).toUpperCase()}
-                    </CardTitle>
-                    <CardDescription>
-                      Placed on {new Date(order.createdAt).toLocaleDateString()} at{' '}
-                      {new Date(order.createdAt).toLocaleTimeString()}
-                    </CardDescription>
-                  </div>
-                  <Badge
-                    variant='secondary'
-                    className='bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
-                  >
-                    Transportation
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className='space-y-4'>
-                  {/* Customer Info */}
-                  <div className='border rounded-lg p-4'>
-                    <h3 className='font-semibold text-foreground mb-3'>Customer Details</h3>
-                    <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
-                      <div>
-                        <span className='text-muted-foreground'>Email:</span>
-                        <p className='text-foreground'>{order.email}</p>
-                      </div>
-                      <div>
-                        <span className='text-muted-foreground'>Phone:</span>
-                        <p className='text-foreground'>{order.phone}</p>
-                      </div>
-                      <div>
-                        <span className='text-muted-foreground'>Address:</span>
-                        <p className='text-foreground'>
-                          {order.streetAddress}, {order.postalCode} {order.city}, {order.country}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Items */}
-                  <div className='border rounded-lg p-4'>
-                    <h3 className='font-semibold text-foreground mb-3'>Items</h3>
-                    <div className='space-y-2'>
-                      {order.cartProducts.map((product, idx) => (
-                        <div key={idx} className='flex justify-between items-center text-sm'>
-                          <div>
-                            <p className='font-medium text-foreground'>{product.name}</p>
-                            <p className='text-muted-foreground'>
-                              Size: {product.size} x {product.quantity}
-                            </p>
-                          </div>
-                          <p className='font-medium text-foreground'>${product.price.toFixed(2)}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className='border-t mt-4 pt-4 flex justify-between font-semibold'>
-                      <span>Total:</span>
-                      <span>${order.total.toFixed(2)}</span>
-                    </div>
-                  </div>
-
-                  {/* Map - Show delivery location with courier tracking */}
-                  <div>
-                    <h3 className='font-semibold text-foreground mb-3'>
-                      {order.orderStatus === 'transportation'
-                        ? 'Delivery Tracking'
-                        : 'Delivery Location'}
-                    </h3>
-                    <OrderMap
-                      ref={(el) => {
-                        if (el) mapRefs.current.set(order._id, el);
-                        else mapRefs.current.delete(order._id);
-                      }}
-                      address={order.streetAddress}
-                      city={order.city}
-                      postalCode={order.postalCode}
-                      country={order.country}
-                      customerEmail={order.email}
-                    />
-                  </div>
-
-                  {/* Delivery Status */}
-                  <div className='bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm'>
-                    <p className='text-blue-900 dark:text-blue-100 font-semibold'>
-                      📍 This order is currently being transported
-                    </p>
-                    <p className='text-blue-800 dark:text-blue-200 mt-2'>
-                      Please complete delivery and mark as delivered when done.
-                    </p>
-                  </div>
-
-                  {/* Complete Order Button */}
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        disabled={completing === order._id}
-                        className='w-full bg-primary hover:bg-primary/90'
-                      >
-                        {completing === order._id ? 'Marking as Delivered...' : 'Mark as Delivered'}
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Complete Delivery</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to complete your delivery for order #
-                          {order._id.slice(-8).toUpperCase()}?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <div className='flex gap-3 justify-end'>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => handleCompleteOrder(order._id)}
-                          className='bg-primary hover:bg-primary/90'
-                        >
-                          Confirm
-                        </AlertDialogAction>
-                      </div>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardContent>
-            </Card>
+            <DeliveryOrderCard
+              key={order._id}
+              order={order}
+              completing={completing}
+              onComplete={handleCompleteOrder}
+              mapRefs={mapRefs}
+            />
           ))}
         </div>
       )}
