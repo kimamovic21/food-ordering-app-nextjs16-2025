@@ -964,3 +964,10 @@ Implement Stripe PaymentIntent checkout flow
 -in folder checkout/[id] create components page.tsx, loading.tsx and StripeCheckoutForm.tsx
 -in folder api/checkout create folders [id], intent and route.ts files
 -update UI in Stripe components
+
+
+Refactor tables to use icon buttons and update UI
+
+-deployment errors fix
+-update ui in existing components
+-update UseProfile.tsx file

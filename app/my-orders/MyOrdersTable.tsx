@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { Eye, CreditCard } from 'lucide-react';
 
 type OrderType = {
   _id: string;
@@ -30,7 +31,7 @@ type MyOrdersTableProps = {
 };
 
 const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
-  const [processingPayment, setProcessingPayment] = useState<string | null>(null);
+  const [processingPayment] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -40,30 +41,6 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
-
-  const handleFinishPayment = async (orderId: string) => {
-    try {
-      setProcessingPayment(orderId);
-      const res = await fetch(`/api/payment-link?orderId=${orderId}`);
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.error || 'Failed to get payment link');
-        return;
-      }
-
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert('Payment link not available');
-      }
-    } catch (error) {
-      console.error('Error fetching payment link:', error);
-      alert('Failed to get payment link');
-    } finally {
-      setProcessingPayment(null);
-    }
   };
 
   if (loading) {
@@ -125,7 +102,7 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
               <TableHead className='p-3 w-32'>Total</TableHead>
               <TableHead className='p-3 w-32'>Payment</TableHead>
               <TableHead className='p-3 w-36'>Order Status</TableHead>
-              <TableHead className='p-3 w-40'>Action</TableHead>
+              <TableHead className='p-3 w-40'>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody className='divide-y divide-border'>
@@ -158,8 +135,8 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                       order.orderStatus === 'completed'
                         ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100 capitalize'
                         : order.orderStatus === 'processing'
-                        ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
-                        : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
+                          ? 'bg-blue-100 text-blue-800 hover:bg-blue-100 capitalize'
+                          : 'bg-amber-100 text-amber-800 hover:bg-amber-100 capitalize'
                     }
                   >
                     {order.orderStatus}
@@ -168,20 +145,27 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                 <TableCell className='p-3'>
                   <div className='flex gap-2'>
                     <Link href={`/my-orders/${order._id}`}>
-                      <Button size='sm' variant='default'>
-                        View
+                      <Button size='icon' variant='outline' asChild aria-label='View Order'>
+                        <a>
+                          <Eye className='size-4' />
+                        </a>
                       </Button>
                     </Link>
                     {!order.paymentStatus && (
-                      <Button
-                        size='sm'
-                        variant='default'
-                        onClick={() => handleFinishPayment(order._id)}
-                        disabled={processingPayment === order._id}
-                        className='bg-primary hover:bg-orange-700 whitespace-nowrap'
-                      >
-                        {processingPayment === order._id ? 'Loading...' : 'Finish Payment'}
-                      </Button>
+                      <Link href={`/checkout/${order._id}`}>
+                        <Button
+                          size='icon'
+                          variant='default'
+                          asChild
+                          aria-label='Finish Payment'
+                          className='bg-primary hover:bg-orange-700'
+                          disabled={processingPayment === order._id}
+                        >
+                          <a>
+                            <CreditCard className='size-4' />
+                          </a>
+                        </Button>
+                      </Link>
                     )}
                   </div>
                 </TableCell>

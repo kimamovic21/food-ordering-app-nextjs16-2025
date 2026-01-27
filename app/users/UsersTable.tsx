@@ -9,7 +9,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+
 import Link from 'next/link';
+import { Pencil } from 'lucide-react';
 
 type UserRow = {
   _id: string;
@@ -43,13 +45,13 @@ const UsersTable = ({ users }: UsersTableProps) => {
             <TableHead className='p-3 w-36'>Phone</TableHead>
             <TableHead className='p-3 w-52'>Street address</TableHead>
             <TableHead className='p-3 w-44'>City / Postal</TableHead>
-            <TableHead className='p-3 w-36'>Country</TableHead>
-            <TableHead className='p-3 w-24'>Actions</TableHead>
+            <TableHead className='p-3 w-44'>Country</TableHead>
+            <TableHead className='p-3 w-28'>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className='divide-y divide-gray-100 dark:divide-gray-700'>
           {users.map((user) => (
-            <TableRow key={user._id} className='hover:bg-gray-50 dark:hover:bg-slate-900'>
+            <TableRow key={user._id} className='bg-white hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800'>
               <TableCell className='p-3 text-gray-600 dark:text-gray-400 text-sm font-mono'>
                 {user._id.slice(-8)}
               </TableCell>
@@ -103,11 +105,15 @@ const UsersTable = ({ users }: UsersTableProps) => {
                 {[user.city, user.postalCode].filter(Boolean).join(' ') || '—'}
               </TableCell>
               <TableCell className='p-3 text-gray-700 dark:text-gray-300'>
-                {user.country || '—'}
+                <span className='pr-4'>{user.country || '—'}</span>
               </TableCell>
               <TableCell className='p-3'>
-                <Link href={`/users/${user._id}`}>
-                  <Button size='sm'>View</Button>
+                <Link href={`/users/${user._id}`} passHref legacyBehavior>
+                  <Button size='icon' variant='outline' asChild aria-label='Edit User'>
+                    <a>
+                      <Pencil className='size-4' />
+                    </a>
+                  </Button>
                 </Link>
               </TableCell>
             </TableRow>

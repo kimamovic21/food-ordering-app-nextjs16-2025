@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 interface ProfileData {
+  _id?: string;
   role?: string;
   name?: string;
   email?: string;
@@ -11,6 +12,7 @@ interface ProfileData {
   city?: string;
   country?: string;
   availability?: boolean;
+  loyaltyTier?: string;
 }
 
 const useProfile = () => {

@@ -1,24 +1,56 @@
 'use client';
 
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements } from '@stripe/react-stripe-js';
-import { useTheme } from 'next-themes';
 import { useMemo, useState, useEffect } from 'react';
-import { useCart } from '@/contexts/CartContext';
-import StripeCheckoutForm from './StripeCheckoutForm';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useParams, useSearchParams } from 'next/navigation';
+import { loadStripe } from '@stripe/stripe-js';
+import { useTheme } from 'next-themes';
+import { Elements } from '@stripe/react-stripe-js';
+import { useCart } from '@/contexts/CartContext';
+import { Skeleton } from '@/components/ui/skeleton';
+import StripeCheckoutForm from './StripeCheckoutForm';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PK!);
 
+type CartProduct = {
+  productId: string;
+  name: string;
+  size: string;
+  quantity: number;
+  price: number;
+};
+
+type OrderType = {
+  _id: string;
+  userId: string;
+  email: string;
+  phone: string;
+  streetAddress: string;
+  postalCode: string;
+  city: string;
+  country: string;
+  cartProducts: CartProduct[];
+  total: number;
+  orderPaid: boolean;
+  orderStatus: string;
+  courierId?: string;
+  createdAt: string;
+  updatedAt: string;
+  stripeSessionId?: string;
+  deliveryFee?: number;
+  deliveryFeeBreakdown?: any;
+  loyaltyDiscount?: number;
+  loyaltyDiscountPercentage?: number;
+  loyaltyTier?: string;
+};
+
 const CheckoutPage = () => {
   const { resolvedTheme } = useTheme();
-  const { clearCart, getTotalPrice } = useCart();
+  const { clearCart } = useCart();
   const params = useParams();
   const searchParams = useSearchParams();
   const orderId = params?.id;
   const [loading, setLoading] = useState(true);
-  const [order, setOrder] = useState(null);
+  const [order, setOrder] = useState<OrderType | null>(null);
   const [cartCleared, setCartCleared] = useState(false);
   // Clear cart if payment was successful and not already cleared
   useEffect(() => {
@@ -42,11 +74,6 @@ const CheckoutPage = () => {
     }
     fetchOrder();
   }, [orderId]);
-
-  const subtotal = getTotalPrice();
-  const tax = subtotal * 0.1;
-  const deliveryFee = 5;
-  const total = subtotal + tax + deliveryFee;
 
   const appearance = useMemo(
     () => ({
@@ -86,14 +113,12 @@ const CheckoutPage = () => {
     [resolvedTheme]
   );
 
+  // Stripe Elements options: only appearance is supported unless using Payment Intents (clientSecret)
   const options = useMemo(
     () => ({
-      mode: 'payment',
-      amount: Math.round(total * 100),
-      currency: 'usd',
       appearance,
     }),
-    [total, appearance]
+    [appearance]
   );
 
   // Wait for order to load before rendering anything
@@ -121,17 +146,21 @@ const CheckoutPage = () => {
     // If just paid, show a special success message
     if (searchParams.get('status') === 'success') {
       return (
-        <div className="w-full max-w-2xl mx-auto py-8 px-4 text-center">
-          <h1 className="text-2xl font-bold mb-4">Payment Status</h1>
-          <div className="text-green-600 text-lg font-semibold mb-2">Payment successful! Thank you for your order.</div>
+        <div className='w-full max-w-2xl mx-auto py-8 px-4 text-center'>
+          <h1 className='text-2xl font-bold mb-4'>Payment Status</h1>
+          <div className='text-green-600 text-lg font-semibold mb-2'>
+            Payment successful! Thank you for your order.
+          </div>
         </div>
       );
     }
     // Otherwise, show the default paid message
     return (
-      <div className="w-full max-w-2xl mx-auto py-8 px-4 text-center">
-        <h1 className="text-2xl font-bold mb-4">Order Status</h1>
-        <div className="text-green-600 text-lg font-semibold mb-2">This order has already been paid.</div>
+      <div className='w-full max-w-2xl mx-auto py-8 px-4 text-center'>
+        <h1 className='text-2xl font-bold mb-4'>Order Status</h1>
+        <div className='text-green-600 text-lg font-semibold mb-2'>
+          This order has already been paid.
+        </div>
       </div>
     );
   }
@@ -139,7 +168,8 @@ const CheckoutPage = () => {
   // Only show payment form if order is loaded and not paid
   if (order && !order.orderPaid) {
     // Calculate subtotal, tax, total from order
-    const orderSubtotal = order.cartProducts?.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 0;
+    const orderSubtotal =
+      order.cartProducts?.reduce((sum, item) => sum + item.price * item.quantity, 0) || 0;
     const orderTax = orderSubtotal * 0.1;
     const orderDeliveryFee = order.deliveryFee || 5;
     const orderTotal = orderSubtotal + orderTax + orderDeliveryFee;
@@ -177,9 +207,9 @@ const CheckoutPage = () => {
 
   // If order is not found, show error
   return (
-    <div className="w-full max-w-2xl mx-auto py-8 px-4 text-center">
-      <h1 className="text-2xl font-bold mb-4">Order Status</h1>
-      <div className="text-red-600 text-lg font-semibold mb-2">Order not found.</div>
+    <div className='w-full max-w-2xl mx-auto py-8 px-4 text-center'>
+      <h1 className='text-2xl font-bold mb-4'>Order Status</h1>
+      <div className='text-red-600 text-lg font-semibold mb-2'>Order not found.</div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { Eye } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type OrderType = {
   _id: string;
@@ -100,8 +101,12 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
                 </Badge>
               </TableCell>
               <TableCell className='p-3'>
-                <Link href={`/orders/${order._id}`}>
-                  <Button size='sm'>View</Button>
+                <Link href={`/orders/${order._id}`} passHref legacyBehavior>
+                  <Button size='icon' variant='outline' asChild aria-label='View Order'>
+                    <a>
+                      <Eye className='size-4' />
+                    </a>
+                  </Button>
                 </Link>
               </TableCell>
             </TableRow>

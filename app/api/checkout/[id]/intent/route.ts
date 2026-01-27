@@ -8,14 +8,14 @@ const stripe = stripeSecretKey
   ? new Stripe(stripeSecretKey, { apiVersion: '2025-12-15.clover' })
   : null;
 
-export async function POST(req: NextRequest, context: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   if (!stripe) {
     return Response.json({ error: 'Stripe is not configured' }, { status: 500 });
   }
-  let params = context.params;
-  if (typeof params.then === 'function') {
-    params = await params;
-  }
+  const params = await context.params;
   const orderId = params.id;
   if (!orderId) {
     return Response.json({ error: 'Order ID is required' }, { status: 400 });
