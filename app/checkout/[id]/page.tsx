@@ -52,6 +52,7 @@ const CheckoutPage = () => {
   const [loading, setLoading] = useState(true);
   const [order, setOrder] = useState<OrderType | null>(null);
   const [cartCleared, setCartCleared] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
   // Clear cart if payment was successful and not already cleared
   useEffect(() => {
     if (searchParams.get('status') === 'success' && !cartCleared) {
@@ -61,18 +62,30 @@ const CheckoutPage = () => {
   }, [searchParams, cartCleared, clearCart]);
 
   useEffect(() => {
-    async function fetchOrder() {
+    async function fetchOrderAndClientSecret() {
       if (!orderId) return;
       try {
         const res = await fetch(`/api/orders?id=${orderId}`);
         if (res.ok) {
           const data = await res.json();
           setOrder(data.order);
+          // Only fetch clientSecret if order is not paid
+          if (!data.order.orderPaid) {
+            const intentRes = await fetch(`/api/checkout/${orderId}/intent`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({}),
+            });
+            if (intentRes.ok) {
+              const intentData = await intentRes.json();
+              setClientSecret(intentData.client_secret);
+            }
+          }
         }
       } catch {}
       setLoading(false);
     }
-    fetchOrder();
+    fetchOrderAndClientSecret();
   }, [orderId]);
 
   const appearance = useMemo(
@@ -113,12 +126,13 @@ const CheckoutPage = () => {
     [resolvedTheme]
   );
 
-  // Stripe Elements options: only appearance is supported unless using Payment Intents (clientSecret)
+  // Stripe Elements options: include clientSecret if available
   const options = useMemo(
     () => ({
       appearance,
+      ...(clientSecret ? { clientSecret } : {}),
     }),
-    [appearance]
+    [appearance, clientSecret]
   );
 
   // Wait for order to load before rendering anything
@@ -198,9 +212,14 @@ const CheckoutPage = () => {
             <span>${orderTotal.toFixed(2)}</span>
           </div>
         </div>
-        <Elements stripe={stripePromise} options={options}>
-          <StripeCheckoutForm />
-        </Elements>
+        {/* Only render Elements when clientSecret is available */}
+        {clientSecret ? (
+          <Elements stripe={stripePromise} options={options}>
+            <StripeCheckoutForm />
+          </Elements>
+        ) : (
+          <div className='text-center py-8'>Loading payment form...</div>
+        )}
       </div>
     );
   }

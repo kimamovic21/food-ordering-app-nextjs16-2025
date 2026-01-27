@@ -154,7 +154,7 @@ const Header = () => {
                 {session.status === 'authenticated' && (
                   <>
                     <Link
-                      className={`${pathname === '/my-orders' ? 'text-primary font-semibold' : ''}`}
+                      className={`${pathname?.startsWith('/my-orders') ? 'text-primary font-semibold' : ''}`}
                       href={'/my-orders'}
                     >
                       My Orders
@@ -193,14 +193,14 @@ const Header = () => {
                         </Link>
                         <Link
                           className={`${
-                            pathname === '/menu-items' ? 'text-primary font-semibold' : ''
+                            pathname?.startsWith('/menu-items') ? 'text-primary font-semibold' : ''
                           }`}
                           href={'/menu-items'}
                         >
                           Menu Items
                         </Link>
                         <Link
-                          className={`${pathname === '/users' ? 'text-primary font-semibold' : ''}`}
+                          className={`${pathname?.startsWith('/users') ? 'text-primary font-semibold' : ''}`}
                           href={'/users'}
                         >
                           Users

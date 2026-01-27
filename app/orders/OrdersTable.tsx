@@ -8,7 +8,6 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
 type OrderType = {
@@ -101,12 +100,8 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
                 </Badge>
               </TableCell>
               <TableCell className='p-3'>
-                <Link href={`/orders/${order._id}`} passHref legacyBehavior>
-                  <Button size='icon' variant='outline' asChild aria-label='View Order'>
-                    <a>
-                      <Eye className='size-4' />
-                    </a>
-                  </Button>
+                <Link href={`/orders/${order._id}`}>
+                  <Eye className='size-5' />
                 </Link>
               </TableCell>
             </TableRow>

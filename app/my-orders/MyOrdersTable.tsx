@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Eye, CreditCard } from 'lucide-react';
 import {
   Table,
   TableHeader,
@@ -10,11 +10,10 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import Link from 'next/link';
-import { Eye, CreditCard } from 'lucide-react';
 
 type OrderType = {
   _id: string;
@@ -31,8 +30,6 @@ type MyOrdersTableProps = {
 };
 
 const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
-  const [processingPayment] = useState<string | null>(null);
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -144,28 +141,27 @@ const MyOrdersTable = ({ orders, loading }: MyOrdersTableProps) => {
                 </TableCell>
                 <TableCell className='p-3'>
                   <div className='flex gap-2'>
-                    <Link href={`/my-orders/${order._id}`}>
-                      <Button size='icon' variant='outline' asChild aria-label='View Order'>
-                        <a>
-                          <Eye className='size-4' />
-                        </a>
-                      </Button>
-                    </Link>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Link href={`/my-orders/${order._id}`} aria-label='View Order'>
+                          <Eye className='size-5' />
+                        </Link>
+                      </TooltipTrigger>
+                      <TooltipContent>View order details</TooltipContent>
+                    </Tooltip>
                     {!order.paymentStatus && (
-                      <Link href={`/checkout/${order._id}`}>
-                        <Button
-                          size='icon'
-                          variant='default'
-                          asChild
-                          aria-label='Finish Payment'
-                          className='bg-primary hover:bg-orange-700'
-                          disabled={processingPayment === order._id}
-                        >
-                          <a>
-                            <CreditCard className='size-4' />
-                          </a>
-                        </Button>
-                      </Link>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Link
+                            href={`/checkout/${order._id}`}
+                            aria-label='Finish Payment'
+                            className='cursor-pointer text-primary'
+                          >
+                            <CreditCard className='size-5' />
+                          </Link>
+                        </TooltipTrigger>
+                        <TooltipContent>Finish payment</TooltipContent>
+                      </Tooltip>
                     )}
                   </div>
                 </TableCell>

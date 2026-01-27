@@ -8,10 +8,8 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-
-import Link from 'next/link';
 import { Pencil } from 'lucide-react';
+import Link from 'next/link';
 
 type UserRow = {
   _id: string;
@@ -51,7 +49,10 @@ const UsersTable = ({ users }: UsersTableProps) => {
         </TableHeader>
         <TableBody className='divide-y divide-gray-100 dark:divide-gray-700'>
           {users.map((user) => (
-            <TableRow key={user._id} className='bg-white hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800'>
+            <TableRow
+              key={user._id}
+              className='bg-white hover:bg-gray-50 dark:bg-neutral-900 dark:hover:bg-neutral-800'
+            >
               <TableCell className='p-3 text-gray-600 dark:text-gray-400 text-sm font-mono'>
                 {user._id.slice(-8)}
               </TableCell>
@@ -108,12 +109,8 @@ const UsersTable = ({ users }: UsersTableProps) => {
                 <span className='pr-4'>{user.country || '—'}</span>
               </TableCell>
               <TableCell className='p-3'>
-                <Link href={`/users/${user._id}`} passHref legacyBehavior>
-                  <Button size='icon' variant='outline' asChild aria-label='Edit User'>
-                    <a>
-                      <Pencil className='size-4' />
-                    </a>
-                  </Button>
+                <Link href={`/users/${user._id}`}>
+                  <Pencil className='size-4' />
                 </Link>
               </TableCell>
             </TableRow>

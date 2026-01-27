@@ -15,7 +15,6 @@ const CheckoutForm = () => {
     if (!stripe || !elements) return;
     setLoading(true);
     setErrorMessage(null);
-    // Show toast loading
     import('sonner').then(({ toast }) => toast.loading('Processing your order, please wait...'));
     const { error: submitError } = await elements.submit();
     if (submitError) {
@@ -23,26 +22,14 @@ const CheckoutForm = () => {
       setLoading(false);
       return;
     }
-    // Fetch client secret from the correct API endpoint for this order
     if (!orderId) {
       setErrorMessage('Order ID not found in URL.');
       setLoading(false);
       return;
     }
-    const res = await fetch(`/api/checkout/${orderId}/intent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    if (!res.ok) {
-      setErrorMessage('Failed to create payment intent.');
-      setLoading(false);
-      return;
-    }
-    const { client_secret: clientSecret } = await res.json();
+    // clientSecret is provided by Elements context, no need to check or pass it
     const { error } = await stripe.confirmPayment({
       elements,
-      clientSecret,
       confirmParams: {
         return_url: `${window.location.origin}/checkout/${orderId}?status=success`,
       },
@@ -53,7 +40,6 @@ const CheckoutForm = () => {
       setLoading(false);
       return;
     }
-    // Cart will be cleared after redirect in /checkout/[id] if needed
     setLoading(false);
   };
 
