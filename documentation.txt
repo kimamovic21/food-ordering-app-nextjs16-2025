@@ -977,3 +977,12 @@ Improve Stripe payment flow and refactor order links
 
 -update components StripeCheckoutForm.tsx and page.tsx 
 -update ui in existing tsx components
+
+
+Move Stripe webhook to API route and update Mongo connection
+
+-create folders pages, api and webhook.ts file
+-open link: https://www.npmjs.com/package/micro
+-update files authOptions.ts and mongoConnect.ts
+-type command: npm i micro
+-fix type errors in tsx components

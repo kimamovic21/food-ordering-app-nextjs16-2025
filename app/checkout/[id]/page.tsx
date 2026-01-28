@@ -55,7 +55,7 @@ const CheckoutPage = () => {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   // Clear cart if payment was successful and not already cleared
   useEffect(() => {
-    if (searchParams.get('status') === 'success' && !cartCleared) {
+    if (searchParams!.get('status') === 'success' && !cartCleared) {
       clearCart();
       setCartCleared(true);
     }
@@ -158,7 +158,7 @@ const CheckoutPage = () => {
   // Show paid message if orderPaid and stripeSessionId are set
   if (order && order.orderPaid && order.stripeSessionId) {
     // If just paid, show a special success message
-    if (searchParams.get('status') === 'success') {
+    if (searchParams!.get('status') === 'success') {
       return (
         <div className='w-full max-w-2xl mx-auto py-8 px-4 text-center'>
           <h1 className='text-2xl font-bold mb-4'>Payment Status</h1>

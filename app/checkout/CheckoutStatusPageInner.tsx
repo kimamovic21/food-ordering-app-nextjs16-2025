@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 
 const CheckoutStatusPageInner = () => {
   const searchParams = useSearchParams();
-  const status = searchParams.get('status');
+  const status = searchParams!.get('status');
 
   return (
     <div className='flex flex-col items-center justify-center min-h-screen'>
