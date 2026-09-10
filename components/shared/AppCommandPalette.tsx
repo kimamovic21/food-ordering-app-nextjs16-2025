@@ -19,6 +19,7 @@ import {
   Radar,
   ReceiptText,
   Search,
+  ServerCog,
   ShoppingCart,
   Star,
   TicketPercent,
@@ -204,6 +205,14 @@ const adminCommands: AppCommand[] = [
     group: 'Admin',
     keywords: ['support', 'reports', 'issues'],
     icon: LifeBuoy,
+  },
+  {
+    href: '/admin-dashboard/system-health',
+    label: 'System health',
+    description: 'Review app integrations and environment configuration',
+    group: 'Admin',
+    keywords: ['health', 'env', 'vercel', 'stripe', 'qstash', 'sentry'],
+    icon: ServerCog,
   },
   {
     href: '/admin-dashboard/coupons',

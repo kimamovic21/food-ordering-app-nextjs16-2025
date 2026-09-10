@@ -21,6 +21,7 @@ It includes:
 - TanStack Table-powered searchable, sortable, paginated data tables for high-traffic admin and order lists
 - Vercel Web Analytics for production traffic insights and Vercel Speed Insights for Web Vitals/performance monitoring
 - admin dashboard for users, menu items, categories, restaurants, operations overview, restaurant reports, couriers, orders, support tickets, and statistics
+- admin system health dashboard for checking production-critical integrations and missing environment variables without exposing secret values
 - courier dashboard with active delivery, delivery history, earnings, courier ratings, and assignment reliability views
 - courier workflow with assignment, response-time tracking, availability toggle, live location sharing on maps, delivery PIN handoff, failed-delivery review, and delivery history
 - order timeline with visual phase icons, readable activity history, preparation/delivery estimates, delay warnings, ETA-style notifications, delivery confirmation, reorder, and report-problem support tickets
