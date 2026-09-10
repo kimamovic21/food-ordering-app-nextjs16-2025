@@ -79,6 +79,7 @@ They can:
 - Manage restaurant support tickets.
 - Message approved users and couriers.
 - Receive notifications for orders, cancellations, paid orders, delivery updates, and support tickets.
+- Review system health at `/admin-dashboard/system-health`, including database connectivity, Stripe, Cloudinary, Resend, Redis, QStash, Sentry, runtime metadata, and missing environment-variable checks without exposing secret values.
 
 Important admin rules:
 

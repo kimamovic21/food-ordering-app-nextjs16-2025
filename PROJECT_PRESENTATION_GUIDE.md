@@ -527,6 +527,7 @@ Main admin routes:
 - `/admin-dashboard/couriers/[id]`
 - `/admin-dashboard/support-tickets`
 - `/admin-dashboard/audit-logs`
+- `/admin-dashboard/system-health`
 - `/admin-dashboard/statistics`
 - `/admin-dashboard/statistics/users`
 - `/admin-dashboard/statistics/orders`
@@ -545,6 +546,7 @@ Admin dashboard capabilities:
 - View support tickets.
 - View restaurant reports.
 - View operations overview.
+- Review system health and production-critical integration configuration without exposing secret values.
 - View courier stats.
 - View audit logs.
 
