@@ -87,6 +87,7 @@ It includes:
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md): technical architecture, diagrams, data model map, and major workflow diagrams.
 - [DESCRIPTION.md](./DESCRIPTION.md): role-by-role feature description and business logic overview.
+- [PROJECT_PRESENTATION_GUIDE.md](./PROJECT_PRESENTATION_GUIDE.md): detailed presentation guide covering product flows, roles, routes, integrations, and edge cases.
 - [TESTING.md](./TESTING.md): unit, integration, and e2e testing strategy and commands.
 
 ## Documentation Maintenance
