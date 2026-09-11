@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import {
@@ -10,54 +11,131 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from '@/components/ui/pagination';
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import Title from '@/components/shared/Title';
+import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import useProfile from '@/hooks/useProfile';
+import { queryKeys } from '@/libs/queryKeys';
 import UsersTable from './UsersTable';
 import UsersLoading from './loading';
 import type { AdminUserListItem } from '@/types/user';
 
+type AdminUsersListResponse = {
+  users: AdminUserListItem[];
+  page: number;
+  totalPages: number;
+  totalUsers: number;
+};
+
+const USERS_REFETCH_INTERVAL_MS = 10_000;
+
+const fetchAdminUsers = async (page: number): Promise<AdminUsersListResponse> => {
+  const response = await fetch(`/api/users?page=${page}`, {
+    cache: 'no-store',
+  });
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(payload?.error || 'Failed to load users.');
+  }
+
+  return {
+    users: Array.isArray(payload.users) ? payload.users : [],
+    page: Number(payload.page || page),
+    totalPages: Number(payload.totalPages || 1),
+    totalUsers: Number(payload.totalUsers || 0),
+  };
+};
+
 const UsersPage = () => {
-  const [users, setUsers] = useState<AdminUserListItem[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
   const [pageQuery, setPageQuery] = useQueryState('page', parseAsInteger.withDefault(1));
   const page = Math.max(1, pageQuery);
   const { data, loading } = useProfile();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const isSuperAdmin =
     data?.role === 'admin' && data?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+  const usersQuery = useQuery({
+    queryKey: queryKeys.users.list(page),
+    queryFn: () => fetchAdminUsers(page),
+    enabled: !loading && isSuperAdmin,
+    refetchInterval: USERS_REFETCH_INTERVAL_MS,
+    refetchOnWindowFocus: true,
+  });
+  const usersData = usersQuery.data;
+  const users = usersData?.users || [];
+  const totalPages = usersData?.totalPages || 1;
 
   useEffect(() => {
     if (loading) return;
 
     if (!isSuperAdmin) {
       router.push('/');
-      return;
     }
+  }, [loading, isSuperAdmin, router]);
 
-    const fetchUsers = async () => {
-      try {
-        setLoadingUsers(true);
-        const res = await fetch(`/api/users?page=${page}`);
-        const json = await res.json();
+  const handleDeleteUser = async (user: AdminUserListItem) => {
+    const usersListQueryKey = queryKeys.users.list(page);
+    const previousUsersData = queryClient.getQueryData<AdminUsersListResponse>(usersListQueryKey);
+    let deletionToastId: string | number | undefined;
 
-        // Add 500ms delay before showing users
-        await new Promise((resolve) => setTimeout(resolve, 500));
-
-        setUsers(json.users || []);
-        setTotalPages(json.totalPages || 1);
-      } catch (error) {
-        console.error('Failed to load users', error);
-      } finally {
-        setLoadingUsers(false);
+    setDeletingUserId(user._id);
+    queryClient.setQueryData<AdminUsersListResponse>(usersListQueryKey, (currentData) => {
+      if (!currentData) {
+        return currentData;
       }
-    };
 
-    fetchUsers();
-  }, [loading, isSuperAdmin, page, router]);
+      return {
+        ...currentData,
+        totalUsers: Math.max(0, currentData.totalUsers - 1),
+        users: currentData.users.filter((currentUser) => currentUser._id !== user._id),
+      };
+    });
 
-  if (loading || loadingUsers) {
+    try {
+      deletionToastId = sonnerToast.loading(`Deleting ${user.name || user.email}...`);
+
+      const response = await fetch(`/api/users?id=${user._id}`, {
+        method: 'DELETE',
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const activeOrderId = payload?.details?.activeOrderId
+          ? ` Active order: ${payload.details.activeOrderId}.`
+          : '';
+        throw new Error(`${payload?.error || 'Failed to delete user.'}${activeOrderId}`);
+      }
+
+      const cloudinaryFailuresCount = payload?.summary?.cloudinaryFailures?.length || 0;
+      const successMessage = cloudinaryFailuresCount
+        ? `User deleted, but ${cloudinaryFailuresCount} Cloudinary image cleanup task needs manual review.`
+        : 'User deleted successfully.';
+
+      sonnerToast.success(successMessage, { id: deletionToastId });
+
+      if ((previousUsersData?.users.length || 0) === 1 && page > 1) {
+        void setPageQuery(Math.max(1, page - 1));
+      }
+
+      await queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+    } catch (error) {
+      if (previousUsersData) {
+        queryClient.setQueryData(usersListQueryKey, previousUsersData);
+      }
+
+      sonnerToast.error(
+        error instanceof Error ? error.message : 'Something went wrong while deleting this user.',
+        { id: deletionToastId }
+      );
+    } finally {
+      setDeletingUserId(null);
+    }
+  };
+
+  if (loading || (isSuperAdmin && usersQuery.isLoading)) {
     return <UsersLoading />;
   }
 
@@ -67,11 +145,35 @@ const UsersPage = () => {
 
       <div className='mt-8 flex-1 w-full flex flex-col'>
         <div className='flex-1'>
-          {users.length === 0 && <p>No users found.</p>}
+          {usersQuery.isError && (
+            <div className='rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive'>
+              <p>
+                {usersQuery.error instanceof Error
+                  ? usersQuery.error.message
+                  : 'Failed to load users.'}
+              </p>
+              <Button
+                type='button'
+                variant='outline'
+                size='sm'
+                className='mt-3'
+                onClick={() => void usersQuery.refetch()}
+              >
+                Try again
+              </Button>
+            </div>
+          )}
 
-          {users.length > 0 && (
+          {!usersQuery.isError && users.length === 0 && <p>No users found.</p>}
+
+          {!usersQuery.isError && users.length > 0 && (
             <Card className='border border-border bg-card text-card-foreground shadow-sm'>
-              <UsersTable users={users} />
+              <UsersTable
+                users={users}
+                currentUserEmail={data?.email}
+                deletingUserId={deletingUserId}
+                onDeleteUser={handleDeleteUser}
+              />
             </Card>
           )}
         </div>

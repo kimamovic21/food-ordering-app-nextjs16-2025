@@ -23,7 +23,24 @@ export interface DeliveryAddress {
   updatedAt?: string;
 }
 
+type UserCourierWorkingHour = {
+  day: string;
+  startTime: string;
+  endTime: string;
+  isUnavailable?: boolean;
+};
+
 export type DeliveryAddressInput = Omit<DeliveryAddress, '_id' | 'createdAt' | 'updatedAt'>;
+
+export type UserActivitySummary = {
+  totalOrders: number;
+  completedOrders: number;
+  canceledOrders: number;
+  activeOrders: number;
+  unpaidOrders: number;
+  totalSpent: number;
+  lastOrderAt: string | null;
+};
 
 export interface ExtendedUser {
   _id?: string;
@@ -47,12 +64,28 @@ export type ProfileData = ExtendedUser;
 
 export type AdminUserListItem = UserSummary & {
   image?: string | null;
+  provider?: string | null;
   city?: string;
   country?: string;
   phone?: string;
   postalCode?: string;
   streetAddress?: string;
   emailVerified?: string | null;
+  emailVerifiedAt?: string | null;
+  availability?: boolean;
+  takenOrder?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  lastLocationUpdate?: string | null;
+  restaurantId?: string | { _id?: string; name?: string } | null;
+  favoriteMenuItems?: string[];
+  favoriteRestaurants?: string[];
+  deliveryAddresses?: DeliveryAddress[];
+  courierWorkingHours?: UserCourierWorkingHour[];
+  notificationSoundEnabled?: boolean;
+  messageSoundEnabled?: boolean;
+  activitySummary?: UserActivitySummary;
+  createdAt?: string;
   updatedAt?: string;
   admin?: boolean;
 };

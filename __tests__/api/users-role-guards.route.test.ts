@@ -7,9 +7,22 @@ vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
   isAdmin: vi.fn(),
 }));
 
+vi.mock('next-auth/next', () => ({
+  getServerSession: vi.fn(),
+}));
+
+vi.mock('@/libs/authOptions', () => ({
+  authOptions: {},
+}));
+
+vi.mock('@/libs/auditLog', () => ({
+  createAuditLog: vi.fn(),
+}));
+
 vi.mock('@/models/user', () => ({
   User: {
     findById: vi.fn(),
+    findOne: vi.fn(),
   },
 }));
 
@@ -84,10 +97,19 @@ describe('User role mutation route guards', () => {
 
   it('promotes to courier when admin requests make-courier', async () => {
     const auth = await import('@/app/api/auth/[...nextauth]/route');
+    const { createAuditLog } = await import('@/libs/auditLog');
+    const { getServerSession } = await import('next-auth/next');
+    const { User } = await import('@/models/user');
+
     vi.mocked(auth.isAdmin).mockResolvedValueOnce(true as never);
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'admin@example.com' },
+    } as never);
 
     const userDoc: any = {
       _id: '507f1f77bcf86cd799439013',
+      email: 'target@example.com',
+      name: 'Target User',
       role: 'user',
       availability: false,
       takenOrder: null,
@@ -96,9 +118,16 @@ describe('User role mutation route guards', () => {
       }),
     };
 
-    vi.mocked((await import('@/models/user')).User.findById).mockResolvedValueOnce(
-      userDoc as never
-    );
+    vi.mocked(User.findById).mockResolvedValueOnce(userDoc as never);
+    vi.mocked(User.findOne).mockReturnValueOnce({
+      select: vi.fn(() => ({
+        lean: vi.fn().mockResolvedValueOnce({
+          _id: 'admin-1',
+          email: 'admin@example.com',
+          role: 'admin',
+        }),
+      })),
+    } as never);
 
     const PATCH = await loadMakeCourier();
     const req = new Request('http://localhost/api/users/make-courier', {
@@ -113,5 +142,16 @@ describe('User role mutation route guards', () => {
     expect(res.status).toBe(200);
     expect(body.user.role).toBe('courier');
     expect(userDoc.save).toHaveBeenCalled();
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'user.role_promoted_to_courier',
+        entityType: 'user',
+        entityId: userDoc._id,
+        metadata: expect.objectContaining({
+          previousRole: 'user',
+          nextRole: 'courier',
+        }),
+      })
+    );
   });
 });

@@ -8,6 +8,7 @@ import { signOut } from 'next-auth/react';
 import SonnerToastComponent, { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import type { ExtendedUser } from '@/types/user';
 import type { ProfileData } from '@/hooks/useProfile';
+import { isValidAppPhoneNumber } from '@/libs/phone';
 import { queryKeys } from '@/libs/queryKeys';
 import Title from '@/components/shared/Title';
 import UserProfileForm from './UserProfileForm';
@@ -22,6 +23,25 @@ type ProfileToastState = {
   pending?: string;
   success?: string;
   error?: string;
+};
+
+const INVALID_PHONE_MESSAGE =
+  'Please enter a valid phone number. Use 061234567 for Bosnia and Herzegovina, or include country code like +447911123456.';
+
+const readResponseErrorMessage = async (response: Response, fallback: string) => {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      const json = await response.json();
+      return typeof json?.error === 'string' ? json.error : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+
+  const text = await response.text();
+  return text || fallback;
 };
 
 const ProfilePage = () => {
@@ -101,6 +121,15 @@ const ProfilePage = () => {
 
   const handleProfileSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (phone.trim() && !isValidAppPhoneNumber(phone)) {
+      setProfileToast({
+        key: Date.now(),
+        error: INVALID_PHONE_MESSAGE,
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     const savePromise = (async () => {
@@ -114,8 +143,8 @@ const ProfilePage = () => {
         });
 
         if (!deleteRes.ok) {
-          const message = await deleteRes.text();
-          throw new Error(message || 'Image deletion failed.');
+          const message = await readResponseErrorMessage(deleteRes, 'Image deletion failed.');
+          throw new Error(message);
         }
 
         nextImageUrl = '';
@@ -129,8 +158,8 @@ const ProfilePage = () => {
         });
 
         if (!uploadRes.ok) {
-          const message = await uploadRes.text();
-          throw new Error(message || 'Image upload failed.');
+          const message = await readResponseErrorMessage(uploadRes, 'Image upload failed.');
+          throw new Error(message);
         }
 
         const uploadJson = await uploadRes.json();
@@ -154,8 +183,8 @@ const ProfilePage = () => {
       });
 
       if (!profileRes.ok) {
-        const message = await profileRes.text();
-        throw new Error(message || 'Failed to update profile.');
+        const message = await readResponseErrorMessage(profileRes, 'Failed to update profile.');
+        throw new Error(message);
       }
 
       const updatedUser = await profileRes.json();
@@ -218,8 +247,8 @@ const ProfilePage = () => {
       });
 
       if (!deleteRes.ok) {
-        const message = await deleteRes.text();
-        throw new Error(message || 'Failed to delete account.');
+        const message = await readResponseErrorMessage(deleteRes, 'Failed to delete account.');
+        throw new Error(message);
       }
 
       queryClient.removeQueries({ queryKey: queryKeys.profile.all });

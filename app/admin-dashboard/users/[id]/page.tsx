@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -29,6 +29,7 @@ import Link from 'next/link';
 import UserLoading from './loading';
 import useProfile from '@/hooks/useProfile';
 import { formatAppDateTime } from '@/libs/dateFormat';
+import { formatMoney } from '@/libs/money';
 import type { AdminUserListItem } from '@/types/user';
 
 const UserLocationMap = dynamic(() => import('./UserLocationMap'), {
@@ -38,14 +39,63 @@ const UserLocationMap = dynamic(() => import('./UserLocationMap'), {
   ),
 });
 
+type InfoItemProps = {
+  label: string;
+  value?: ReactNode;
+  mono?: boolean;
+  wide?: boolean;
+};
+
+const getRoleBadgeVariant = (role?: string | null): 'default' | 'outline' | 'secondary' => {
+  if (role === 'admin') return 'default';
+  if (role === 'courier') return 'outline';
+  return 'secondary';
+};
+
+const formatBoolean = (value?: boolean) => (value ? 'Yes' : 'No');
+
+const formatOptionalDate = (value?: string | null) => (value ? formatAppDateTime(value) : '-');
+
+const getRestaurantLabel = (restaurantId: AdminUserListItem['restaurantId']) => {
+  if (!restaurantId) return '-';
+  if (typeof restaurantId === 'string') return restaurantId;
+  return restaurantId.name || restaurantId._id || '-';
+};
+
+const getRestaurantId = (restaurantId: AdminUserListItem['restaurantId']) => {
+  if (!restaurantId) return '';
+  if (typeof restaurantId === 'string') return restaurantId;
+  return restaurantId._id || '';
+};
+
+const InfoItem = ({ label, value, mono = false, wide = false }: InfoItemProps) => (
+  <div className={wide ? 'md:col-span-2' : ''}>
+    <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>{label}</span>
+    <p className={`mt-1 text-base wrap-break-word ${mono ? 'font-mono text-sm' : ''}`}>
+      {value || '-'}
+    </p>
+  </div>
+);
+
 const UserDetailsPage = () => {
   const params = useParams()!;
+  const router = useRouter();
   const [user, setUser] = useState<AdminUserListItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [makingCourier, setMakingCourier] = useState(false);
   const [makingAdmin, setMakingAdmin] = useState(false);
   const { data: profileData, loading: profileLoading } = useProfile();
+  const superAdminEmail = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+  const isCurrentUserSuperAdmin =
+    profileData?.role === 'admin' &&
+    Boolean(superAdminEmail && profileData.email === superAdminEmail);
+  const isViewedUserSuperAdmin = Boolean(
+    user?.email && superAdminEmail && user.email === superAdminEmail
+  );
+  const defaultDeliveryAddress = user?.deliveryAddresses?.find((address) => address.isDefault);
+  const restaurantId = getRestaurantId(user?.restaurantId);
+  const activitySummary = user?.activitySummary;
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -65,10 +115,16 @@ const UserDetailsPage = () => {
       }
     };
 
-    if (params.id) {
+    if (params.id && !profileLoading && isCurrentUserSuperAdmin) {
       fetchUser();
     }
-  }, [params.id]);
+  }, [isCurrentUserSuperAdmin, params.id, profileLoading]);
+
+  useEffect(() => {
+    if (profileLoading || isCurrentUserSuperAdmin) return;
+
+    router.push(profileData?.role === 'admin' ? '/admin-dashboard' : '/');
+  }, [isCurrentUserSuperAdmin, profileData?.role, profileLoading, router]);
 
   const handleMakeCourier = async () => {
     if (!user) return;
@@ -242,7 +298,7 @@ const UserDetailsPage = () => {
     }
   };
 
-  if (loading || profileLoading) {
+  if (loading || profileLoading || !isCurrentUserSuperAdmin) {
     return <UserLoading />;
   }
 
@@ -279,7 +335,7 @@ const UserDetailsPage = () => {
       </Breadcrumb>
 
       <div className='flex flex-col gap-6'>
-        <div className='max-w-4xl mx-auto w-full space-y-6'>
+        <div className='max-w-6xl mx-auto w-full space-y-6'>
           <Card>
             <CardHeader>
               <CardTitle>User Details</CardTitle>
@@ -298,73 +354,195 @@ const UserDetailsPage = () => {
                 </Avatar>
                 <div>
                   <h2 className='text-2xl font-bold'>{user.name}</h2>
-                  <Badge variant={user.role === 'admin' ? 'default' : 'secondary'} className='mt-1'>
-                    {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
-                  </Badge>
+                  <div className='mt-2 flex flex-wrap items-center gap-2'>
+                    <Badge variant={getRoleBadgeVariant(user.role)}>
+                      {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : 'User'}
+                    </Badge>
+                    {isViewedUserSuperAdmin && <Badge variant='outline'>Super admin</Badge>}
+                    <Badge variant={user.emailVerifiedAt ? 'default' : 'secondary'}>
+                      {user.emailVerifiedAt ? 'Verified email' : 'Unverified email'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
+
+              <div className='grid gap-4 md:grid-cols-4'>
+                <div className='rounded-lg border border-border bg-muted/30 p-4'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>Provider</p>
+                  <p className='mt-2 text-lg font-semibold capitalize'>{user.provider || '-'}</p>
+                </div>
+                <div className='rounded-lg border border-border bg-muted/30 p-4'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>
+                    Delivery addresses
+                  </p>
+                  <p className='mt-2 text-lg font-semibold'>
+                    {user.deliveryAddresses?.length || 0}
+                  </p>
+                </div>
+                <div className='rounded-lg border border-border bg-muted/30 p-4'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>
+                    Favorite meals
+                  </p>
+                  <p className='mt-2 text-lg font-semibold'>
+                    {user.favoriteMenuItems?.length || 0}
+                  </p>
+                </div>
+                <div className='rounded-lg border border-border bg-muted/30 p-4'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>
+                    Favorite restaurants
+                  </p>
+                  <p className='mt-2 text-lg font-semibold'>
+                    {user.favoriteRestaurants?.length || 0}
+                  </p>
+                </div>
+              </div>
+
+              {activitySummary && (
+                <div className='space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700'>
+                  <div>
+                    <h3 className='text-lg font-semibold'>Order Activity</h3>
+                    <p className='text-sm text-muted-foreground'>
+                      High-level order history linked to this user account.
+                    </p>
+                  </div>
+                  <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                    <InfoItem label='Total orders:' value={activitySummary.totalOrders} />
+                    <InfoItem label='Completed orders:' value={activitySummary.completedOrders} />
+                    <InfoItem label='Active orders:' value={activitySummary.activeOrders} />
+                    <InfoItem label='Canceled orders:' value={activitySummary.canceledOrders} />
+                    <InfoItem label='Unpaid orders:' value={activitySummary.unpaidOrders} />
+                    <InfoItem
+                      label='Total spent:'
+                      value={formatMoney(activitySummary.totalSpent)}
+                    />
+                    <InfoItem
+                      label='Last order date:'
+                      value={formatOptionalDate(activitySummary.lastOrderAt)}
+                      wide
+                    />
+                  </div>
+                </div>
+              )}
 
               <div className='grid gap-4 md:grid-cols-2'>
-                <div className='md:col-span-2'>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    Email:
-                  </span>
-                  <p className='text-base mt-1 break-all'>{user.email}</p>
-                </div>
-
-                <div>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    Phone:
-                  </span>
-                  <p className='text-base mt-1'>{user.phone || '-'}</p>
-                </div>
-
-                <div>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    Street Address:
-                  </span>
-                  <p className='text-base mt-1'>{user.streetAddress || '-'}</p>
-                </div>
-
-                <div>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    City:
-                  </span>
-                  <p className='text-base mt-1'>{user.city || '-'}</p>
-                </div>
-
-                <div>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    Country:
-                  </span>
-                  <p className='text-base mt-1'>{user.country || '-'}</p>
-                </div>
-
-                <div className='md:col-span-2 pt-4 border-t border-gray-200 dark:border-gray-700'>
-                  <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                    User ID:
-                  </span>
-                  <p className='font-mono text-sm mt-1 break-all'>{user._id}</p>
-                </div>
-
-                {user.emailVerified !== undefined && (
-                  <div>
-                    <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                      Email Verified:
-                    </span>
-                    <p className='text-base mt-1'>{user.emailVerified ? 'Yes' : 'No'}</p>
-                  </div>
-                )}
-
-                {user.updatedAt && (
-                  <div>
-                    <span className='text-sm font-medium text-gray-500 dark:text-gray-400'>
-                      Last Updated:
-                    </span>
-                    <p className='text-base mt-1'>{formatAppDateTime(user.updatedAt)}</p>
-                  </div>
-                )}
+                <InfoItem label='Email:' value={user.email} wide />
+                <InfoItem label='Phone:' value={user.phone} />
+                <InfoItem label='Provider:' value={user.provider || 'credentials'} />
+                <InfoItem label='Street Address:' value={user.streetAddress} />
+                <InfoItem label='Postal Code:' value={user.postalCode} />
+                <InfoItem label='City:' value={user.city} />
+                <InfoItem label='Country:' value={user.country} />
+                <InfoItem label='User ID:' value={user._id} mono wide />
+                <InfoItem
+                  label='Email Verified At:'
+                  value={formatOptionalDate(user.emailVerifiedAt)}
+                />
+                <InfoItem label='Created At:' value={formatOptionalDate(user.createdAt)} />
+                <InfoItem label='Last Updated:' value={formatOptionalDate(user.updatedAt)} />
+                <InfoItem
+                  label='Restaurant:'
+                  value={
+                    restaurantId ? (
+                      <Link
+                        href={`/admin-dashboard/restaurant/edit/${restaurantId}`}
+                        className='text-primary hover:underline'
+                      >
+                        {getRestaurantLabel(user.restaurantId)}
+                      </Link>
+                    ) : (
+                      '-'
+                    )
+                  }
+                />
               </div>
+
+              <div className='grid gap-4 border-t border-gray-200 pt-6 dark:border-gray-700 md:grid-cols-2'>
+                <InfoItem
+                  label='Notification sound enabled:'
+                  value={formatBoolean(user.notificationSoundEnabled)}
+                />
+                <InfoItem
+                  label='Message sound enabled:'
+                  value={formatBoolean(user.messageSoundEnabled)}
+                />
+                <InfoItem
+                  label='Default delivery address:'
+                  value={
+                    defaultDeliveryAddress
+                      ? `${defaultDeliveryAddress.streetAddress}, ${defaultDeliveryAddress.city}`
+                      : '-'
+                  }
+                  wide
+                />
+              </div>
+
+              {user.role === 'courier' && (
+                <div className='space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700'>
+                  <div>
+                    <h3 className='text-lg font-semibold'>Courier Details</h3>
+                    <p className='text-sm text-muted-foreground'>
+                      Live courier fields stored on the user account.
+                    </p>
+                  </div>
+                  <div className='grid gap-4 md:grid-cols-2'>
+                    <InfoItem label='Available:' value={formatBoolean(user.availability)} />
+                    <InfoItem label='Taken order:' value={user.takenOrder || '-'} mono />
+                    <InfoItem label='Latitude:' value={user.latitude ?? '-'} />
+                    <InfoItem label='Longitude:' value={user.longitude ?? '-'} />
+                    <InfoItem
+                      label='Last location update:'
+                      value={formatOptionalDate(user.lastLocationUpdate)}
+                      wide
+                    />
+                  </div>
+                  {user.courierWorkingHours?.length ? (
+                    <div className='grid gap-2 sm:grid-cols-2'>
+                      {user.courierWorkingHours.map((hours) => (
+                        <div
+                          key={hours.day}
+                          className='rounded-lg border border-border bg-muted/20 px-3 py-2 text-sm'
+                        >
+                          <div className='font-medium capitalize'>{hours.day}</div>
+                          <div className='text-muted-foreground'>
+                            {hours.isUnavailable
+                              ? 'Unavailable'
+                              : `${hours.startTime} - ${hours.endTime}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+
+              {user.deliveryAddresses?.length ? (
+                <div className='space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700'>
+                  <div>
+                    <h3 className='text-lg font-semibold'>Saved Delivery Addresses</h3>
+                    <p className='text-sm text-muted-foreground'>
+                      Addresses this customer can reuse at checkout.
+                    </p>
+                  </div>
+                  <div className='grid gap-3'>
+                    {user.deliveryAddresses.map((address) => (
+                      <div key={address._id} className='rounded-lg border border-border p-4'>
+                        <div className='flex flex-wrap items-center gap-2'>
+                          <span className='font-medium'>{address.label}</span>
+                          {address.isDefault && <Badge variant='secondary'>Default</Badge>}
+                        </div>
+                        <p className='mt-2 text-sm text-muted-foreground'>
+                          {address.streetAddress}, {address.postalCode} {address.city},{' '}
+                          {address.country}
+                        </p>
+                        <p className='mt-1 text-sm text-muted-foreground'>{address.phone}</p>
+                        <p className='mt-1 font-mono text-xs text-muted-foreground'>
+                          {address.deliveryLatitude}, {address.deliveryLongitude}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {profileData?.role === 'admin' &&
                 user.role !== 'courier' &&
@@ -398,7 +576,7 @@ const UserDetailsPage = () => {
                       </AlertDialogContent>
                     </AlertDialog>
 
-                    {profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+                    {isCurrentUserSuperAdmin && (
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button
@@ -461,7 +639,8 @@ const UserDetailsPage = () => {
 
               {profileData?.role === 'admin' &&
                 user.role === 'admin' &&
-                profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL && (
+                isCurrentUserSuperAdmin &&
+                !isViewedUserSuperAdmin && (
                   <div className='mt-6 pt-6 border-t border-gray-200 dark:border-gray-700'>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>

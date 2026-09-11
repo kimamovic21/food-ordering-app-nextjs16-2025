@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -18,6 +19,7 @@ import {
   type DataTableColumnDef,
 } from '@/components/shared/TanStackDataTable';
 import Title from '@/components/shared/Title';
+import useProfile from '@/hooks/useProfile';
 import { formatAppDateTime } from '@/libs/dateFormat';
 import type { AuditLogItem } from '@/types/audit-log';
 
@@ -81,13 +83,36 @@ const auditLogColumnLabels = {
 };
 
 const AuditLogsPage = () => {
+  const router = useRouter();
+  const { data: profileData, loading: profileLoading } = useProfile();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isAdmin = profileData?.role === 'admin';
+  const isSuperAdmin = isAdmin && profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
 
   useEffect(() => {
+    if (profileLoading) {
+      return;
+    }
+
+    if (!isAdmin) {
+      router.push('/');
+      return;
+    }
+
+    if (!isSuperAdmin) {
+      router.push('/admin-dashboard');
+    }
+  }, [isAdmin, isSuperAdmin, profileLoading, router]);
+
+  useEffect(() => {
+    if (profileLoading || !isSuperAdmin) {
+      return;
+    }
+
     const fetchLogs = async () => {
       try {
         setLoading(true);
@@ -109,7 +134,29 @@ const AuditLogsPage = () => {
     };
 
     fetchLogs();
-  }, [page]);
+  }, [isSuperAdmin, page, profileLoading]);
+
+  if (profileLoading || (isSuperAdmin && loading)) {
+    return (
+      <div className='space-y-6'>
+        <Skeleton className='h-8 w-40' />
+        <Card>
+          <CardHeader>
+            <Skeleton className='h-6 w-36' />
+          </CardHeader>
+          <CardContent className='space-y-3'>
+            {[...Array(6)].map((_, index) => (
+              <Skeleton key={index} className='h-10 w-full' />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return <p className='text-sm text-muted-foreground'>Redirecting...</p>;
+  }
 
   return (
     <div className='space-y-6'>

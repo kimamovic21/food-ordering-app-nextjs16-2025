@@ -52,7 +52,7 @@ const AuditLogSchema = new Schema(
       default: {},
     },
   },
-  { timestamps: true }
+  { collection: 'audit_logs', timestamps: true }
 );
 
 AuditLogSchema.index({ createdAt: -1 });
@@ -63,4 +63,4 @@ try {
   }
 } catch {}
 
-export const AuditLog = models?.AuditLog || model('AuditLog', AuditLogSchema);
+export const AuditLog = models?.AuditLog || model('AuditLog', AuditLogSchema, 'audit_logs');

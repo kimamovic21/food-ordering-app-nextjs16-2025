@@ -21,6 +21,10 @@ export const queryKeys = {
     detail: () => [...queryKeys.profile.all, 'detail'] as const,
     deliveryAddresses: () => [...queryKeys.profile.all, 'delivery-addresses'] as const,
   },
+  users: {
+    all: ['users'] as const,
+    list: (page: number) => [...queryKeys.users.all, 'list', page] as const,
+  },
   favorites: {
     all: ['favorites'] as const,
     ids: () => [...queryKeys.favorites.all, 'ids'] as const,

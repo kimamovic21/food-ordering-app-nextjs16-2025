@@ -34,6 +34,8 @@
     "test:e2e:reports": "vitest run --config vitest.e2e.config.ts e2e/admin/restaurant-reports.e2e.test.ts",
     "test:e2e:support": "vitest run --config vitest.e2e.config.ts e2e/support",
     "test:all": "npm run test && npm run test:e2e",
+    "cloudinary:menu-items:audit": "node scripts/cleanup-menu-item-cloudinary-images.mjs",
+    "cloudinary:menu-items:cleanup": "node scripts/cleanup-menu-item-cloudinary-images.mjs --apply",
     "commitlint": "commitlint",
     "stripe:listen": "cd .. && stripe listen --forward-to localhost:3000/api/webhook",
     "stripe:trigger": "stripe trigger checkout.session.completed"

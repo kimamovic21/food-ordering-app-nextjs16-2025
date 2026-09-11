@@ -12,6 +12,7 @@ import { MapPin, Plus, Minus, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import dynamic from 'next/dynamic';
 import RestaurantImagesUpload, { ImageItem } from './RestaurantImagesUpload';
+import DevRestaurantLocationDialog from './DevRestaurantLocationDialog';
 import { formatAppDate } from '@/libs/dateFormat';
 import type { RestaurantFormData, RestaurantWorkingHour } from '@/types/restaurant';
 
@@ -62,6 +63,15 @@ const formatRestaurantDataForForm = (restaurant: RestaurantFormData | undefined)
   };
 };
 
+const formatCoordinateInputValue = (value?: number) =>
+  typeof value === 'number' && Number.isFinite(value) && value !== 0 ? String(value) : '';
+
+const normalizeCoordinateInputValue = (value: string) =>
+  value
+    .trim()
+    .replace(',', '.')
+    .replace(/^(-?)0+(?=\d{2,}\.)/, '$1');
+
 const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -95,6 +105,10 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
     totalEmployees: 1,
     images: [],
     ...formattedRestaurant,
+  });
+  const [coordinateInputs, setCoordinateInputs] = useState({
+    latitude: formatCoordinateInputValue(formattedRestaurant?.latitude),
+    longitude: formatCoordinateInputValue(formattedRestaurant?.longitude),
   });
 
   // Track image items (both existing URLs and new files with previews)
@@ -211,6 +225,53 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
     }));
   };
 
+  const updateCoordinateInput = (field: 'latitude' | 'longitude', rawValue: string) => {
+    const value = normalizeCoordinateInputValue(rawValue);
+
+    setCoordinateInputs((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+
+    if (!value.trim()) {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: 0,
+      }));
+      return;
+    }
+
+    const parsedValue = Number(value);
+
+    if (Number.isFinite(parsedValue)) {
+      setFormData((prev) => ({
+        ...prev,
+        [field]: parsedValue,
+      }));
+    }
+  };
+
+  const handleCoordinateInputChange = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'latitude' | 'longitude'
+  ) => {
+    updateCoordinateInput(field, e.target.value);
+  };
+
+  const handleCoordinateInputFocus = (field: 'latitude' | 'longitude') => {
+    if (coordinateInputs[field] === '0') {
+      updateCoordinateInput(field, '');
+    }
+  };
+
+  const handleCoordinateInputPaste = (
+    e: React.ClipboardEvent<HTMLInputElement>,
+    field: 'latitude' | 'longitude'
+  ) => {
+    e.preventDefault();
+    updateCoordinateInput(field, e.clipboardData.getData('text'));
+  };
+
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       sonnerToast.error('Geolocation is not supported by your browser');
@@ -221,11 +282,18 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
+        const nextLatitude = position.coords.latitude;
+        const nextLongitude = position.coords.longitude;
+
         setFormData((prev) => ({
           ...prev,
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
+          latitude: nextLatitude,
+          longitude: nextLongitude,
         }));
+        setCoordinateInputs({
+          latitude: String(nextLatitude),
+          longitude: String(nextLongitude),
+        });
         sonnerToast.dismiss();
         sonnerToast.success('Location updated successfully', {
           style: {
@@ -240,6 +308,18 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
         sonnerToast.error('Failed to get location: ' + error.message);
       }
     );
+  };
+
+  const handleManualRestaurantLocationUpdate = (latitude: number, longitude: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude,
+      longitude,
+    }));
+    setCoordinateInputs({
+      latitude: String(latitude),
+      longitude: String(longitude),
+    });
   };
 
   const handleCourierFeeChange = (increment: boolean) => {
@@ -324,7 +404,15 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
       sonnerToast.error('Country is required');
       return false;
     }
-    if (!formData.latitude || !formData.longitude) {
+    const latitude = Number(coordinateInputs.latitude);
+    const longitude = Number(coordinateInputs.longitude);
+
+    if (
+      !coordinateInputs.latitude.trim() ||
+      !coordinateInputs.longitude.trim() ||
+      !Number.isFinite(latitude) ||
+      !Number.isFinite(longitude)
+    ) {
       sonnerToast.error(
         'Location coordinates are required. Please use "Get Current Location" button'
       );
@@ -685,31 +773,45 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
 
               <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
                 <div>
-                  <Label htmlFor='latitude' className='mb-2'>
+                  <Label htmlFor='restaurant-latitude-coordinate' className='mb-2'>
                     Latitude *
                   </Label>
-                  <Input
-                    id='latitude'
-                    name='latitude'
-                    type='number'
-                    step='any'
-                    value={formData.latitude}
-                    onChange={(e) => handleNumberChange(e, 'latitude')}
+                  <input
+                    key='restaurant-latitude-coordinate-input'
+                    id='restaurant-latitude-coordinate'
+                    name='restaurantLatitudeCoordinate'
+                    type='text'
+                    inputMode='decimal'
+                    autoComplete='off'
+                    data-1p-ignore='true'
+                    data-lpignore='true'
+                    className='file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground bg-gray-100 dark:bg-gray-800 border-input h-9 w-full min-w-0 rounded-md border dark:border-gray-600 px-3 py-1 text-base shadow-xs outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-foreground dark:text-white focus:outline-none focus:ring-0 focus:border-input focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input'
+                    value={coordinateInputs.latitude}
+                    onFocus={() => handleCoordinateInputFocus('latitude')}
+                    onChange={(e) => handleCoordinateInputChange(e, 'latitude')}
+                    onPaste={(e) => handleCoordinateInputPaste(e, 'latitude')}
                     placeholder='Latitude'
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor='longitude' className='mb-2'>
+                  <Label htmlFor='restaurant-longitude-coordinate' className='mb-2'>
                     Longitude *
                   </Label>
-                  <Input
-                    id='longitude'
-                    name='longitude'
-                    type='number'
-                    step='any'
-                    value={formData.longitude}
-                    onChange={(e) => handleNumberChange(e, 'longitude')}
+                  <input
+                    key='restaurant-longitude-coordinate-input'
+                    id='restaurant-longitude-coordinate'
+                    name='restaurantLongitudeCoordinate'
+                    type='text'
+                    inputMode='decimal'
+                    autoComplete='off'
+                    data-1p-ignore='true'
+                    data-lpignore='true'
+                    className='file:text-foreground placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground bg-gray-100 dark:bg-gray-800 border-input h-9 w-full min-w-0 rounded-md border dark:border-gray-600 px-3 py-1 text-base shadow-xs outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm text-foreground dark:text-white focus:outline-none focus:ring-0 focus:border-input focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-input'
+                    value={coordinateInputs.longitude}
+                    onFocus={() => handleCoordinateInputFocus('longitude')}
+                    onChange={(e) => handleCoordinateInputChange(e, 'longitude')}
+                    onPaste={(e) => handleCoordinateInputPaste(e, 'longitude')}
                     placeholder='Longitude'
                     required
                   />
@@ -725,6 +827,12 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
                 <MapPin className='h-4 w-4 mr-2' />
                 Get Current Location
               </Button>
+
+              <DevRestaurantLocationDialog
+                currentLatitude={formData.latitude}
+                currentLongitude={formData.longitude}
+                onManualLocationUpdate={handleManualRestaurantLocationUpdate}
+              />
             </div>
 
             {/* Location Map - Right Side */}

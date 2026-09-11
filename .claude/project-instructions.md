@@ -51,6 +51,7 @@
 - Restaurant operations overview should use `/api/restaurant/operations` and `/admin-dashboard/operations` for active stage counts, kitchen capacity, restaurant status, courier availability, today revenue, unpaid/canceled counts, quick actions, and urgent order attention items.
 - Order delay warnings should use `libs/orderDelay.ts` and compare elapsed active time against the saved estimated total plus the grace window; development time offsets can affect the warning without changing MongoDB timestamps.
 - Do not delete restaurants, restaurant-owner accounts, or menu items while active orders still depend on them; use `libs/orderDeletionGuards.ts` and return `409` with clear guidance.
+- Super-admin user deletion must use the guarded cascade helper, keep historical orders, block active customer/courier/restaurant orders, clean related Cloudinary media and restaurant/menu/coupon/review/availability/favorite data, and anonymize support-ticket reporter identity rather than deleting ticket history.
 - Preserve stale unpaid auto-cancel protection: system cancellation should try to expire the open Stripe Checkout session and audit the result without blocking local order cancellation; customer order screens should show the same 30-minute payment-expiry window.
 - Preserve customer manual cancel protection: unpaid `placed` order cancellation should use the same Stripe Checkout expiration helper and audit metadata.
 - Treat best coupon suggestions as UI help only; checkout must revalidate coupons server-side.

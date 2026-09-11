@@ -25,59 +25,66 @@ const UserLoading = () => {
       </Breadcrumb>
 
       <div className='flex flex-col gap-6'>
-        <div className='max-w-4xl mx-auto w-full space-y-6'>
+        <div className='max-w-6xl mx-auto w-full space-y-6'>
           <Card>
             <CardHeader>
               <Skeleton className='h-6 w-32' />
             </CardHeader>
             <CardContent className='space-y-6'>
-              {/* User Profile Skeleton */}
               <div className='flex items-center gap-4 pb-6 border-b border-gray-200 dark:border-gray-700'>
                 <Skeleton className='size-20 rounded-full' />
                 <div className='space-y-2'>
                   <Skeleton className='h-8 w-40' />
-                  <Skeleton className='h-6 w-20' />
+                  <div className='flex gap-2'>
+                    <Skeleton className='h-6 w-20 rounded-full' />
+                    <Skeleton className='h-6 w-28 rounded-full' />
+                  </div>
                 </div>
               </div>
 
-              {/* User Information Grid Skeleton */}
+              <div className='grid gap-4 md:grid-cols-4'>
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className='rounded-lg border border-border bg-muted/30 p-4 space-y-3'
+                  >
+                    <Skeleton className='h-3 w-24' />
+                    <Skeleton className='h-6 w-16' />
+                  </div>
+                ))}
+              </div>
+
+              <div className='space-y-4 border-t border-gray-200 pt-6 dark:border-gray-700'>
+                <div className='space-y-2'>
+                  <Skeleton className='h-6 w-36' />
+                  <Skeleton className='h-4 w-72 max-w-full' />
+                </div>
+                <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                  {Array.from({ length: 7 }).map((_, index) => (
+                    <div key={index} className='space-y-2'>
+                      <Skeleton className='h-4 w-28' />
+                      <Skeleton className='h-5 w-24' />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className='grid gap-4 md:grid-cols-2'>
-                <div>
-                  <Skeleton className='h-4 w-16 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-16 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-28 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-16 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-24 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-20 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div className='md:col-span-2 pt-4 border-t border-gray-200 dark:border-gray-700'>
-                  <Skeleton className='h-4 w-20 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-28 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
-                <div>
-                  <Skeleton className='h-4 w-24 mb-1' />
-                  <Skeleton className='h-5 w-full' />
-                </div>
+                {Array.from({ length: 12 }).map((_, index) => (
+                  <div key={index} className={index === 0 || index === 7 ? 'md:col-span-2' : ''}>
+                    <Skeleton className='h-4 w-28 mb-2' />
+                    <Skeleton className='h-5 w-full' />
+                  </div>
+                ))}
+              </div>
+
+              <div className='grid gap-4 border-t border-gray-200 pt-6 dark:border-gray-700 md:grid-cols-2'>
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className={index === 2 ? 'md:col-span-2' : ''}>
+                    <Skeleton className='h-4 w-36 mb-2' />
+                    <Skeleton className='h-5 w-full' />
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

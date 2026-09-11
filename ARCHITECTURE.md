@@ -168,6 +168,8 @@ Roles:
 
 Super admin is identified by `NEXT_PUBLIC_SUPER_ADMIN_EMAIL` in the UI and optionally `SUPER_ADMIN_EMAIL` server-side.
 
+Super-admin user deletion is handled as a guarded cleanup workflow instead of a blind document delete. The workflow blocks deletion while the target account is still involved in active customer orders, courier deliveries, or owned restaurant orders. When deletion is safe, historical `Order` documents remain as immutable snapshots, while owned restaurant data, menu items, coupons, availability requests, Cloudinary media, authored reviews, courier reviews for the deleted courier, user notifications, and favorite references are cleaned up. Support tickets are retained for operational history, but reporter identity fields are anonymized.
+
 ```mermaid
 flowchart LR
   Visitor[Visitor] --> Login[Login/Register]

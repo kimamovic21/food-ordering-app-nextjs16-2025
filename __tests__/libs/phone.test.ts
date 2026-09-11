@@ -24,8 +24,14 @@ describe('phone helpers', () => {
     );
   });
 
+  it('accepts valid international customer numbers outside Bosnia and Herzegovina', () => {
+    expect(normalizePhoneNumberForStorage('+447911123456')).toBe('+447911123456');
+    expect(normalizePhoneNumberForStorage('+905551234567')).toBe('+905551234567');
+  });
+
   it('rejects short or malformed numbers', () => {
     expect(isValidAppPhoneNumber('123')).toBe(false);
+    expect(isValidAppPhoneNumber('061234586456')).toBe(false);
     expect(normalizePhoneNumberForStorage('not-a-phone')).toBeNull();
   });
 });

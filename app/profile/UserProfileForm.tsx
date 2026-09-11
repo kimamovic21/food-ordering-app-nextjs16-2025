@@ -82,11 +82,15 @@ const UserProfileForm = ({
         <Input
           id='phone'
           type='tel'
-          placeholder='Phone number'
+          placeholder='061234567 or +447911123456'
           value={phone}
           onChange={(e) => onPhoneChange(e.target.value)}
           disabled={isSaving}
         />
+        <p className='text-xs text-muted-foreground'>
+          Local Bosnia and Herzegovina numbers can use 061234567. International numbers should
+          include country code, for example +44 or +90.
+        </p>
       </div>
 
       <div className='space-y-2'>
