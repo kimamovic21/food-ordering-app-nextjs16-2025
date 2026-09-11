@@ -95,6 +95,7 @@ See `example.env`. Variables currently used in the project include:
 - Active customer order quick access should use `/api/my-orders/active`, apply stale-order maintenance before returning data, and stay customer-only.
 - Order delay warnings should use `libs/orderDelay.ts` and compare elapsed active time against the saved estimated total plus the grace window; development time offsets can affect the warning without changing MongoDB timestamps.
 - Do not delete restaurants, restaurant-owner accounts, or menu items while active orders still depend on them; use `libs/orderDeletionGuards.ts` and return `409` with clear guidance.
+- Super-admin user deletion must use the guarded cascade helper, keep historical orders, block active customer/courier/restaurant orders, clean related Cloudinary media and restaurant/menu/coupon/review/availability/favorite data, and anonymize support-ticket reporter identity rather than deleting ticket history.
 - System auto-cancellation of stale unpaid orders should attempt to expire the open Stripe Checkout session and record the result in audit metadata without blocking local cancellation.
 - Customer manual cancellation of unpaid `placed` orders should use the same Stripe Checkout session expiration helper and audit the result.
 - Best coupon suggestions are user-facing help only; checkout must revalidate coupons server-side.

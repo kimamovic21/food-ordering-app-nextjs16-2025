@@ -204,19 +204,19 @@ const AdminDashboardClientLayout = ({ children }: { children: React.ReactNode })
     {
       href: '/admin-dashboard/support-tickets',
       label: 'Support Tickets',
-      superAdminOnly: false,
+      superAdminOnly: true,
       icon: LifeBuoy,
     },
     {
       href: '/admin-dashboard/audit-logs',
       label: 'Audit Logs',
-      superAdminOnly: false,
+      superAdminOnly: true,
       icon: ClipboardList,
     },
     {
       href: '/admin-dashboard/system-health',
       label: 'System Health',
-      superAdminOnly: false,
+      superAdminOnly: true,
       icon: ServerCog,
     },
     { href: '/admin-dashboard/categories', label: 'Categories', superAdminOnly: true, icon: List },

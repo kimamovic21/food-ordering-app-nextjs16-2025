@@ -1,4 +1,5 @@
 import { isSuperAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { createUserRoleAuditLog } from '@/libs/userRoleAudit';
 import { User } from '@/models/user';
 import mongoose from 'mongoose';
 
@@ -25,9 +26,17 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'User is already an admin' }, { status: 400 });
   }
 
+  const previousRole = user.role;
   user.role = 'admin';
 
   const updatedUser = await user.save();
+
+  await createUserRoleAuditLog({
+    targetUser: updatedUser,
+    previousRole,
+    nextRole: 'admin',
+    action: 'user.role_promoted_to_admin',
+  });
 
   return Response.json({ user: updatedUser });
 }

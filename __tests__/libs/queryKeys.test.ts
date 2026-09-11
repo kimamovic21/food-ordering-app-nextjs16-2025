@@ -53,6 +53,11 @@ describe('queryKeys', () => {
     expect(queryKeys.profile.detail()).toEqual(['profile', 'detail']);
   });
 
+  it('keeps admin user keys grouped for broad invalidation', () => {
+    expect(queryKeys.users.all).toEqual(['users']);
+    expect(queryKeys.users.list(2)).toEqual(['users', 'list', 2]);
+  });
+
   it('keeps favorite keys grouped for broad invalidation', () => {
     expect(queryKeys.favorites.all).toEqual(['favorites']);
     expect(queryKeys.favorites.ids()).toEqual(['favorites', 'ids']);

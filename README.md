@@ -60,6 +60,7 @@ It includes:
 - Role-based access (user, admin, courier)
 - Super-admin protected management actions
 - CRUD for categories, menu items, restaurants, and users
+- Super-admin user deletion with confirmation, active-order guards, Cloudinary cleanup, restaurant/menu/coupon cascade cleanup, review cleanup, and preserved historical orders
 - Menu item availability controls for temporarily unavailable or sold-out items, with delete protection while active orders still reference an item
 - Restaurant preparation/delivery estimate settings, working-hours checkout protection, and active order limit controls
 - Courier management and order assignment with optional courier-only assignment notes
@@ -293,6 +294,7 @@ This project uses many dependencies; below are the main packages actively used i
 - `/admin-dashboard/orders` surfaces late active-order alerts and links to `/admin-dashboard/order-queue` for the full operational view.
 - `/admin-dashboard/restaurant-reports` generates daily, weekly, and monthly restaurant performance summaries from order data and can download the same report as a PDF when the selected period has traffic.
 - Restaurants, restaurant-owner account deletion, and menu item deletion are blocked while active orders still depend on that data; menu items should be marked unavailable first and deleted after active orders finish.
+- Super-admin user deletion is intentionally guarded: block deletion when the target user, courier, or owned restaurant has active orders; delete owned restaurant/menu/coupon/availability data and Cloudinary media; remove authored reviews and courier reviews tied to the deleted courier; anonymize support-ticket reporter details; keep historical orders for reporting/audit snapshots.
 
 ### Background Jobs With QStash
 
@@ -305,6 +307,15 @@ This project uses many dependencies; below are the main packages actively used i
 - `POST /api/qstash/order-maintenance` receives QStash jobs, verifies the QStash signature, reloads the order from MongoDB, and runs the existing courier-assignment timeout or order auto-cancellation logic.
 - QStash publishing is fail-open: if the QStash env vars are missing, the app URL is local, or QStash is temporarily unavailable, checkout and order status updates still continue.
 - For production, `NEXT_PUBLIC_APP_URL` or `NEXTAUTH_URL` must point to a public HTTPS app URL so QStash can call the API route. Local `localhost` URLs are intentionally skipped unless you test through a public tunnel.
+
+### Cloudinary Menu Item Maintenance
+
+- Menu item uploads use the `menu-items` folder in development and `menu-items-production` in production.
+- `npm run cloudinary:menu-items:audit` compares MongoDB `menu_items.image` public IDs with the selected Cloudinary folder and reports orphan images without deleting anything.
+- `npm run cloudinary:menu-items:cleanup` runs the same audit and deletes only Cloudinary images that are in the selected folder but no longer referenced by MongoDB.
+- The cleanup script also reports menu item images that are referenced in MongoDB but missing on Cloudinary, which helps catch broken image URLs.
+- Dry-run is the default behavior. Use the cleanup command only after reviewing the audit output.
+- To inspect production assets locally, run `node scripts/cleanup-menu-item-cloudinary-images.mjs --env=production`; add `--apply` only when you intentionally want to delete production orphans.
 
 ## Auth: Email Verification & Password Reset
 
@@ -398,6 +409,8 @@ npm run start              # Run production server
 npm run lint               # Run ESLint
 npm run test:qstash        # Run QStash helper and endpoint tests
 npm run commitlint         # Lint commit message
+npm run cloudinary:menu-items:audit   # Dry-run menu item image orphan audit
+npm run cloudinary:menu-items:cleanup # Delete orphan Cloudinary menu item images
 npm run favorites:backfill # Backfill favorites fields in database
 npm run stripe:listen      # Start Stripe webhook forwarding
 npm run stripe:trigger     # Trigger Stripe test event

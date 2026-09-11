@@ -100,6 +100,7 @@ Super admin can:
 
 - Manage global categories.
 - Manage users.
+- Delete users with a confirmation flow when no active order depends on that user, courier, or owned restaurant.
 - Grant and remove admin roles.
 - Grant and remove courier roles.
 - View global statistics.
@@ -111,6 +112,8 @@ Super admin can:
 Important super admin rules:
 
 - Super admin actions must stay role-protected.
+- Super admin user deletion must keep historical orders, but should remove the deleted user's profile image, owned restaurant data, restaurant/menu item Cloudinary images, menu items, coupons, restaurant availability requests, authored reviews, courier reviews tied to that courier, and notifications for the deleted user. Support-ticket reporter identity should be anonymized instead of removing ticket history.
+- Super admin cannot delete the configured super admin account.
 - App-support tickets should route to super admin rather than a restaurant owner.
 - Server-side checks should use `SUPER_ADMIN_EMAIL` where available, with `NEXT_PUBLIC_SUPER_ADMIN_EMAIL` for UI checks.
 

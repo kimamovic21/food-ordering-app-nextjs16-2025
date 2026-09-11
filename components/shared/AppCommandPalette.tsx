@@ -199,6 +199,17 @@ const adminCommands: AppCommand[] = [
     icon: PieChart,
   },
   {
+    href: '/admin-dashboard/coupons',
+    label: 'Coupons',
+    description: 'Manage restaurant coupons',
+    group: 'Admin',
+    keywords: ['discounts', 'promo'],
+    icon: TicketPercent,
+  },
+];
+
+const superAdminCommands: AppCommand[] = [
+  {
     href: '/admin-dashboard/support-tickets',
     label: 'Support tickets',
     description: 'Review reported problems',
@@ -207,20 +218,20 @@ const adminCommands: AppCommand[] = [
     icon: LifeBuoy,
   },
   {
+    href: '/admin-dashboard/audit-logs',
+    label: 'Audit logs',
+    description: 'Review admin and system activity',
+    group: 'Admin',
+    keywords: ['audit', 'activity', 'logs'],
+    icon: ClipboardList,
+  },
+  {
     href: '/admin-dashboard/system-health',
     label: 'System health',
     description: 'Review app integrations and environment configuration',
     group: 'Admin',
     keywords: ['health', 'env', 'vercel', 'stripe', 'qstash', 'sentry'],
     icon: ServerCog,
-  },
-  {
-    href: '/admin-dashboard/coupons',
-    label: 'Coupons',
-    description: 'Manage restaurant coupons',
-    group: 'Admin',
-    keywords: ['discounts', 'promo'],
-    icon: TicketPercent,
   },
   {
     href: '/admin-dashboard/statistics',
@@ -296,7 +307,15 @@ const AppCommandPalette = () => {
 
   const commands = useMemo(() => {
     const isAuthenticated = session.status === 'authenticated';
-    const isAdmin = profileData?.role === 'admin' || (session.data?.user as any)?.role === 'admin';
+    const sessionUser = session.data?.user as any;
+    const isAdmin = profileData?.role === 'admin' || sessionUser?.role === 'admin';
+    const isSuperAdmin =
+      isAdmin &&
+      Boolean(
+        process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL &&
+        (profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL ||
+          sessionUser?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL)
+      );
     const isCourier =
       profileData?.role === 'courier' || (session.data?.user as any)?.role === 'courier';
 
@@ -304,9 +323,10 @@ const AppCommandPalette = () => {
       ...baseCommands,
       ...(isAuthenticated ? signedInCommands : guestCommands),
       ...(isAdmin ? adminCommands : []),
+      ...(isSuperAdmin ? superAdminCommands : []),
       ...(isCourier ? courierCommands : []),
     ];
-  }, [profileData?.role, session.data?.user, session.status]);
+  }, [profileData?.email, profileData?.role, session.data?.user, session.status]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

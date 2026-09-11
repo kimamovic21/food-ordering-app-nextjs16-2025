@@ -222,6 +222,13 @@ const SystemHealthPage = async () => {
     redirect('/');
   }
 
+  const superAdminEmail =
+    process.env.SUPER_ADMIN_EMAIL || process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+
+  if (!superAdminEmail || session.user.email !== superAdminEmail) {
+    redirect('/admin-dashboard');
+  }
+
   const snapshot = buildSystemHealthSnapshot({
     databaseCheck: await getDatabaseHealthCheck(),
   });

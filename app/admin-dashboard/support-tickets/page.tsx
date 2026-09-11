@@ -2,6 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
 import { CheckCircle2, ExternalLink, RefreshCw } from 'lucide-react';
 import Title from '@/components/shared/Title';
@@ -60,6 +61,7 @@ const getId = (value: string | { _id: string } | null | undefined) =>
   typeof value === 'string' ? value : value?._id || '';
 
 const SupportTicketsPage = () => {
+  const router = useRouter();
   const { data: profileData, loading: profileLoading } = useProfile();
   const [{ status: statusFilter, ticketId }, setTicketQuery] = useQueryStates({
     status: parseAsStringLiteral(statusFilterOptions).withDefault('all'),
@@ -72,9 +74,25 @@ const SupportTicketsPage = () => {
   const [responseNotes, setResponseNotes] = useState<Record<string, string>>({});
 
   const isAdmin = profileData?.role === 'admin';
+  const isSuperAdmin = isAdmin && profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+
+  useEffect(() => {
+    if (profileLoading) {
+      return;
+    }
+
+    if (!isAdmin) {
+      router.push('/');
+      return;
+    }
+
+    if (!isSuperAdmin) {
+      router.push('/admin-dashboard');
+    }
+  }, [isAdmin, isSuperAdmin, profileLoading, router]);
 
   const fetchTickets = useCallback(async () => {
-    if (!isAdmin) return;
+    if (!isSuperAdmin) return;
 
     setLoading(true);
 
@@ -108,13 +126,13 @@ const SupportTicketsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [highlightedTicketId, isAdmin, statusFilter]);
+  }, [highlightedTicketId, isSuperAdmin, statusFilter]);
 
   useEffect(() => {
-    if (!profileLoading && isAdmin) {
+    if (!profileLoading && isSuperAdmin) {
       void fetchTickets();
     }
-  }, [fetchTickets, isAdmin, profileLoading]);
+  }, [fetchTickets, isSuperAdmin, profileLoading]);
 
   const ticketStats = useMemo(
     () => ({
@@ -155,7 +173,7 @@ const SupportTicketsPage = () => {
     }
   };
 
-  if (profileLoading || loading) {
+  if (profileLoading || (isSuperAdmin && loading)) {
     return (
       <section className='space-y-6'>
         <Skeleton className='h-10 w-64' />
@@ -171,8 +189,8 @@ const SupportTicketsPage = () => {
     );
   }
 
-  if (!isAdmin) {
-    return <p className='text-sm text-muted-foreground'>Only admins can view support tickets.</p>;
+  if (!isSuperAdmin) {
+    return <p className='text-sm text-muted-foreground'>Redirecting...</p>;
   }
 
   return (
