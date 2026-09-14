@@ -254,13 +254,13 @@ export function TanStackDataTable<TData extends RowData>({
     >
       {shouldShowToolbar ? (
         <div className='flex flex-col gap-3 border-b border-white/10 p-4 md:flex-row md:items-center md:justify-between'>
-          <div className='flex min-w-0 flex-1 items-center gap-2'>
+          <div className='flex min-w-0 items-center gap-2 md:flex-none'>
             {showSearch ? (
               <>
                 <label className='sr-only' htmlFor={searchInputId}>
                   Search
                 </label>
-                <div className='flex h-11 w-full max-w-md items-center rounded-full border border-white/15 bg-background/80 px-4 transition focus-within:border-primary/45 dark:bg-background/80'>
+                <div className='flex h-11 w-full max-w-lg items-center rounded-full border border-white/15 bg-background/80 px-4 transition focus-within:border-primary/45 md:w-[28rem] dark:bg-background/80'>
                   <Search
                     className='pointer-events-none size-4 shrink-0 text-muted-foreground'
                     aria-hidden='true'
@@ -293,7 +293,7 @@ export function TanStackDataTable<TData extends RowData>({
             ) : null}
           </div>
 
-          <div className='flex flex-wrap items-center gap-2'>
+          <div className='flex min-w-0 flex-1 flex-wrap items-center gap-2 md:justify-end'>
             {toolbarContent}
 
             {shouldShowColumnVisibility ? (

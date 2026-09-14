@@ -50,6 +50,7 @@ export const NotificationsProvider = ({ children }: NotificationsProviderProps) 
   const { status } = useSession();
   const queryClient = useQueryClient();
   const { playNotificationSound } = useSoundSettings();
+  const eventSourceRef = useRef<EventSource | null>(null);
   const previousUnreadCountRef = useRef(0);
   const hasLoadedNotificationsRef = useRef(false);
   const isAuthenticated = status === 'authenticated';
@@ -102,17 +103,20 @@ export const NotificationsProvider = ({ children }: NotificationsProviderProps) 
 
   useEffect(() => {
     if (!isAuthenticated) {
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
       return;
     }
-
-    let eventSource: EventSource | null = null;
 
     const refreshQuery = async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     };
 
+    eventSourceRef.current?.close();
+
     try {
-      eventSource = new EventSource(getEventSourceUrl());
+      const eventSource = new EventSource(getEventSourceUrl());
+      eventSourceRef.current = eventSource;
       eventSource.onmessage = async (event) => {
         try {
           const payload = JSON.parse(event.data) as AppNotificationRealtimePayload;
@@ -131,11 +135,12 @@ export const NotificationsProvider = ({ children }: NotificationsProviderProps) 
         // TanStack Query polling remains active as a fallback if the SSE connection drops.
       };
     } catch {
-      eventSource = null;
+      eventSourceRef.current = null;
     }
 
     return () => {
-      eventSource?.close();
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
     };
   }, [isAuthenticated, queryClient]);
 

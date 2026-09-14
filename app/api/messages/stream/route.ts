@@ -15,7 +15,9 @@ const getCurrentUser = async () => {
   return User.findOne({ email }).select('_id').lean();
 };
 
-export async function GET() {
+const HEARTBEAT_INTERVAL_MS = 25000;
+
+export async function GET(request: Request = new Request('http://localhost')) {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
   const currentUser = await getCurrentUser();
@@ -26,13 +28,49 @@ export async function GET() {
   const encoder = new TextEncoder();
   let heartbeatTimer: NodeJS.Timeout | null = null;
   let unsubscribe: (() => void) | null = null;
+  let isClosed = false;
+
+  const cleanup = () => {
+    if (isClosed) {
+      return;
+    }
+
+    isClosed = true;
+    unsubscribe?.();
+    unsubscribe = null;
+
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+
+    request.signal.removeEventListener('abort', cleanup);
+  };
 
   const stream = new ReadableStream({
     start(controller) {
-      const send = (payload: unknown) => {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      const enqueue = (chunk: string) => {
+        if (isClosed) {
+          return;
+        }
+
+        try {
+          controller.enqueue(encoder.encode(chunk));
+        } catch {
+          cleanup();
+        }
       };
 
+      const send = (payload: unknown) => {
+        enqueue(`data: ${JSON.stringify(payload)}\n\n`);
+      };
+
+      if (request.signal.aborted) {
+        cleanup();
+        return;
+      }
+
+      request.signal.addEventListener('abort', cleanup, { once: true });
       send({ type: 'ready' });
 
       unsubscribe = subscribeToMessageEvents((event) => {
@@ -46,23 +84,11 @@ export async function GET() {
       });
 
       heartbeatTimer = setInterval(() => {
-        controller.enqueue(encoder.encode(`: ping\n\n`));
-      }, 25000);
-
-      const close = () => {
-        unsubscribe?.();
-        if (heartbeatTimer) {
-          clearInterval(heartbeatTimer);
-        }
-      };
-
-      (controller as any).__cleanup = close;
+        enqueue(`: ping\n\n`);
+      }, HEARTBEAT_INTERVAL_MS);
     },
     cancel() {
-      unsubscribe?.();
-      if (heartbeatTimer) {
-        clearInterval(heartbeatTimer);
-      }
+      cleanup();
     },
   });
 
