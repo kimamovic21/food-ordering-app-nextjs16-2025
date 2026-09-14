@@ -48,6 +48,7 @@ export const MessagesProvider = ({ children }: MessagesProviderProps) => {
   const queryClient = useQueryClient();
   const { playMessageSound } = useSoundSettings();
   const currentPathRef = useRef(pathname);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const previousUnreadCountRef = useRef(0);
   const hasLoadedMessagesRef = useRef(false);
   const isAuthenticated = status === 'authenticated';
@@ -104,17 +105,20 @@ export const MessagesProvider = ({ children }: MessagesProviderProps) => {
 
   useEffect(() => {
     if (!isAuthenticated) {
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
       return;
     }
-
-    let eventSource: EventSource | null = null;
 
     const refreshQuery = async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.messages.all });
     };
 
+    eventSourceRef.current?.close();
+
     try {
-      eventSource = new EventSource(getEventSourceUrl());
+      const eventSource = new EventSource(getEventSourceUrl());
+      eventSourceRef.current = eventSource;
       eventSource.onmessage = async (event) => {
         try {
           const payload = JSON.parse(event.data) as {
@@ -138,11 +142,12 @@ export const MessagesProvider = ({ children }: MessagesProviderProps) => {
         }
       };
     } catch {
-      eventSource = null;
+      eventSourceRef.current = null;
     }
 
     return () => {
-      eventSource?.close();
+      eventSourceRef.current?.close();
+      eventSourceRef.current = null;
     };
   }, [isAuthenticated, queryClient]);
 

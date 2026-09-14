@@ -23,6 +23,8 @@ export type AuditLogItem = {
   action: string;
   entityType: string;
   entityId: string;
+  restaurantId?: EntityId | null;
+  orderId?: EntityId | null;
   metadata: Record<string, unknown>;
   createdAt: ISODateString | null;
 };
