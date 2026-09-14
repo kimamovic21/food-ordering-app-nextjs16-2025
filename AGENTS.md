@@ -124,6 +124,7 @@ See `example.env`. Variables currently used in the project include:
 - Update documentation in the same branch/PR when a change adds or changes routes, role behavior, environment variables, database fields/models, third-party integrations, background jobs, order/payment/email/courier/auth logic, realtime behavior, observability, test commands, or user-facing workflows.
 - Use the smallest useful docs change. Avoid repeating implementation details everywhere; put product behavior in `DESCRIPTION.md`, system/data-flow details in `ARCHITECTURE.md`, setup and package/env guidance in `README.md`, and test workflow changes in `TESTING.md`, `__tests__/README.md`, or `e2e/README.md`.
 - Keep AI guidance synchronized across `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/project-instructions.md`, `.gemini/project-instructions.md`, `.cursor/rules/project-conventions.mdc`, and `.windsurf/rules/project-conventions.md` when changing workflow-critical rules.
+- For every meaningful code/docs change that will become a commit, add the commit title/name to `documentation.txt` so the project work log stays aligned with the git history.
 - Use `.github/pull_request_template.md` as the final merge checklist for validation and documentation ownership.
 - Do not add new AI-tool config folders unless the team actually uses that tool. Prefer maintaining the existing small set of AI instruction files.
 - In the final response for non-trivial changes, mention whether docs were updated or why no docs change was needed.

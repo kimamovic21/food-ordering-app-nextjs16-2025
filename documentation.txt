@@ -1165,3 +1165,7 @@ Strengthen cart preflight and order activity context
 Add admin system health dashboard
 
 Enhance super admin user management
+
+Improve audit logs filters and realtime stream cleanup
+
+Add documentation commit-name tracking rule

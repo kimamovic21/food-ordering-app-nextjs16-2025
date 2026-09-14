@@ -109,6 +109,7 @@ This file provides guidance for AI assistance in this repository.
 - Treat docs updates as part of done-state for non-trivial feature, integration, route, env, schema/model, background-job, order/courier/auth/payment/email, realtime, observability, or test workflow changes.
 - Keep docs scoped: `README.md` for setup/package/env and high-level capabilities, `DESCRIPTION.md` for role behavior and business rules, `ARCHITECTURE.md` for system/data-flow changes, and `TESTING.md`, `__tests__/README.md`, or `e2e/README.md` for test strategy changes.
 - Keep AI guidance aligned across `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/project-instructions.md`, `.gemini/project-instructions.md`, `.cursor/rules/project-conventions.mdc`, and `.windsurf/rules/project-conventions.md` when workflow-critical rules change.
+- For every meaningful code/docs change that will become a commit, add the commit title/name to `documentation.txt` so the project work log stays aligned with the git history.
 - Use `.github/pull_request_template.md` as the final merge checklist for validation and docs ownership.
 - Avoid adding new AI-tool config folders unless the tool is actively used in this project.
 - In final summaries for meaningful changes, say whether docs were updated or why no docs update was needed.

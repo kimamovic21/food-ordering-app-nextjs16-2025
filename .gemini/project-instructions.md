@@ -82,6 +82,7 @@
 - Update `ARCHITECTURE.md` for system design, model, integration, background job, realtime, data-flow, or lifecycle changes.
 - Update `TESTING.md`, `__tests__/README.md`, or `e2e/README.md` when commands, coverage strategy, fixtures, or test layers change.
 - Keep `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/project-instructions.md`, `.gemini/project-instructions.md`, `.cursor/rules/project-conventions.mdc`, and `.windsurf/rules/project-conventions.md` aligned when workflow-critical guidance changes.
+- For every meaningful code/docs change that will become a commit, add the commit title/name to `documentation.txt` so the project work log stays aligned with the git history.
 - Use `.github/pull_request_template.md` as the final merge checklist for validation and docs ownership.
 - Do not create config folders for AI tools that are not actively used in this repository.
 - Mention docs updates, or explain why none were needed, in the final response.
