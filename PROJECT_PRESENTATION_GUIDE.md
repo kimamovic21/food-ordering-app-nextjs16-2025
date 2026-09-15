@@ -218,7 +218,7 @@ Cart:
 
 - Cart keeps selected menu item snapshots in client state.
 - Cart validates the latest server state before checkout.
-- It checks deleted items, unavailable items, price changes, restaurant status, delivery radius, minimum order amount, and busy capacity.
+- It checks deleted items, unavailable items, price changes, restaurant status, delivery radius, minimum order amount, busy capacity, and courier-safe order quantity limits.
 - Price changes are shown clearly and can be refreshed.
 - Deleted, unavailable, invalid, cross-restaurant, or blocked restaurant states prevent checkout.
 - The cart can show a "checking restaurant status" state so closed/open messages do not flicker during loading.
@@ -232,6 +232,7 @@ Checkout:
 - The customer cannot checkout from their own restaurant.
 - The customer cannot checkout while they already have a paid active order that is not completed or canceled.
 - The customer cannot checkout if the restaurant is closed, paused, on a blocked date, closing soon, outside delivery radius, below minimum order amount, or at active kitchen capacity.
+- The customer cannot checkout with an oversized cart: restaurants can cap total items per order up to 20, and menu items can cap their own quantity per order up to 20.
 - The server creates an unpaid `placed` order before redirecting to Stripe Checkout.
 - The order stores snapshots of cart items, tax, delivery fee, estimates, coupon, loyalty, delivery address, and Stripe session id.
 - If a matching unpaid order already exists recently, checkout can reuse or recover the existing Stripe Checkout session instead of creating duplicate orders.
@@ -296,6 +297,7 @@ Restaurant data:
 - Average preparation minutes
 - Average delivery minutes
 - Active order limit
+- Max items per order
 - Delivery radius
 - Pause state and pause reason
 - Total employees
@@ -307,6 +309,7 @@ Restaurant availability:
 - Admins can pause the restaurant manually when the kitchen is overwhelmed.
 - A pause reason can be shown to users.
 - Active kitchen order limit prevents checkout when too many paid active orders are in `placed`, `processing`, or `ready`.
+- Max items per order prevents a customer from assigning one courier an unrealistic amount of food or drinks.
 - Delivery radius prevents checkout when the customer address is too far from the restaurant.
 - Customers can request a notification when a restaurant becomes available again.
 
@@ -315,6 +318,7 @@ Menu items:
 - Menu items belong to one restaurant.
 - Menu item fields include name, description, category, image, price type, size prices, food type, availability, admin id, and restaurant id.
 - Price type controls whether the item uses one, two, or three size prices.
+- Max quantity per order prevents a single item, such as pizza or burgers, from being ordered in unrealistic bulk from normal checkout.
 - Admins can create/edit items and upload images to Cloudinary.
 - Admins can use the AI assistant to generate a polished menu item description.
 - Admins can mark menu items unavailable without deleting them.

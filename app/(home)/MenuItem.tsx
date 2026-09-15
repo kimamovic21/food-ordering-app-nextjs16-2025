@@ -85,20 +85,33 @@ const MenuItem = ({ item }: MenuItemProps) => {
       return;
     }
 
-    const canOrderFromRestaurant = await assertRestaurantCanAcceptOrders(itemRestaurantId);
-    if (!canOrderFromRestaurant) {
+    const orderingStatus = await assertRestaurantCanAcceptOrders(itemRestaurantId);
+    if (!orderingStatus) {
       return;
     }
 
-    addToCart({
-      _id: displayItem._id,
-      name: displayItem.name,
-      description: displayItem.description,
-      image: displayItem.image,
-      size: selectedSize,
-      price: getPrice(),
-      restaurantId: itemRestaurantId,
-    });
+    const addResult = addToCart(
+      {
+        _id: displayItem._id,
+        name: displayItem.name,
+        description: displayItem.description,
+        image: displayItem.image,
+        size: selectedSize,
+        price: getPrice(),
+        restaurantId: itemRestaurantId,
+        maxQuantityPerOrder: displayItem.maxQuantityPerOrder,
+      },
+      { maxItemsPerOrder: orderingStatus.maxItemsPerOrder }
+    );
+
+    if (!addResult.added) {
+      sonnerToast.info('Cart limit reached', {
+        description: addResult.message,
+        duration: 5000,
+      });
+      return;
+    }
+
     sonnerToast.success(`${displayItem.name} (${selectedSize}) added to cart!`, {
       style: {
         background: '#22c55e', // Tailwind green-500

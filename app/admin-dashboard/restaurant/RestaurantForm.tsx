@@ -14,6 +14,10 @@ import dynamic from 'next/dynamic';
 import RestaurantImagesUpload, { ImageItem } from './RestaurantImagesUpload';
 import DevRestaurantLocationDialog from './DevRestaurantLocationDialog';
 import { formatAppDate } from '@/libs/dateFormat';
+import {
+  MAX_ITEMS_PER_ORDER_LIMIT,
+  MIN_ITEMS_PER_ORDER_LIMIT,
+} from '@/libs/orderQuantityLimits';
 import type { RestaurantFormData, RestaurantWorkingHour } from '@/types/restaurant';
 
 const RestaurantLocation = dynamic(() => import('@/components/shared/RestaurantLocation'), {
@@ -47,6 +51,7 @@ const formatRestaurantDataForForm = (restaurant: RestaurantFormData | undefined)
     averagePreparationMinutes: restaurant.averagePreparationMinutes ?? 25,
     averageDeliveryMinutes: restaurant.averageDeliveryMinutes ?? 20,
     activeOrderLimit: restaurant.activeOrderLimit ?? 10,
+    maxItemsPerOrder: restaurant.maxItemsPerOrder ?? 20,
     deliveryRadiusKm: restaurant.deliveryRadiusKm ?? 10,
     isPaused: restaurant.isPaused ?? false,
     pauseReason: restaurant.pauseReason ?? '',
@@ -97,6 +102,7 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
     averagePreparationMinutes: 25,
     averageDeliveryMinutes: 20,
     activeOrderLimit: 10,
+    maxItemsPerOrder: 20,
     deliveryRadiusKm: 10,
     isPaused: false,
     pauseReason: '',
@@ -179,6 +185,7 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
       averagePreparationMinutes: data.averagePreparationMinutes,
       averageDeliveryMinutes: data.averageDeliveryMinutes,
       activeOrderLimit: data.activeOrderLimit,
+      maxItemsPerOrder: data.maxItemsPerOrder,
       deliveryRadiusKm: data.deliveryRadiusKm,
       isPaused: data.isPaused,
       pauseReason: data.pauseReason,
@@ -448,6 +455,15 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
     }
     if (formData.activeOrderLimit < 1 || formData.activeOrderLimit > 100) {
       sonnerToast.error('Active order limit must be between 1 and 100 orders');
+      return false;
+    }
+    if (
+      formData.maxItemsPerOrder < MIN_ITEMS_PER_ORDER_LIMIT ||
+      formData.maxItemsPerOrder > MAX_ITEMS_PER_ORDER_LIMIT
+    ) {
+      sonnerToast.error(
+        `Max items per order must be between ${MIN_ITEMS_PER_ORDER_LIMIT} and ${MAX_ITEMS_PER_ORDER_LIMIT}`
+      );
       return false;
     }
     if (formData.deliveryRadiusKm < 1 || formData.deliveryRadiusKm > 15) {
@@ -1021,6 +1037,32 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
                 </p>
               </div>
 
+              <div>
+                <Label htmlFor='maxItemsPerOrder' className='mb-2'>
+                  Max Items Per Order *
+                </Label>
+                <div className='flex items-center gap-2'>
+                  <Input
+                    id='maxItemsPerOrder'
+                    type='number'
+                    min={MIN_ITEMS_PER_ORDER_LIMIT}
+                    max={MAX_ITEMS_PER_ORDER_LIMIT}
+                    step='1'
+                    value={formData.maxItemsPerOrder}
+                    onChange={(e) => handleNumberChange(e, 'maxItemsPerOrder')}
+                    required
+                  />
+                  <span className='text-sm text-muted-foreground'>items</span>
+                </div>
+                <p className='mt-1 text-xs text-muted-foreground'>
+                  Checkout blocks oversized carts so one courier is not assigned an unrealistic
+                  order.
+                </p>
+              </div>
+
+            </div>
+
+            <div className='grid gap-4 sm:grid-cols-2'>
               <div>
                 <Label htmlFor='deliveryRadiusKm' className='mb-2'>
                   Delivery Radius *

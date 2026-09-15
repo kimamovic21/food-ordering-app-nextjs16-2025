@@ -15,6 +15,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { AI_MENU_DESCRIPTION_MAX_CHARS } from '@/libs/menuItemDescription';
+import {
+  MAX_MENU_ITEM_QUANTITY_LIMIT,
+  MIN_MENU_ITEM_QUANTITY_LIMIT,
+} from '@/libs/orderQuantityLimits';
 import { Loader2, Sparkles } from 'lucide-react';
 import type { MenuItemCategory } from '@/types/menu';
 
@@ -27,6 +31,7 @@ interface MenuItemFormProps {
   priceSmall: string;
   priceMedium: string;
   priceLarge: string;
+  maxQuantityPerOrder: string;
   isAvailable: boolean;
   editingItem: string | null;
   isSaving: boolean;
@@ -39,6 +44,7 @@ interface MenuItemFormProps {
   onPriceSmallChange: (value: string) => void;
   onPriceMediumChange: (value: string) => void;
   onPriceLargeChange: (value: string) => void;
+  onMaxQuantityPerOrderChange: (value: string) => void;
   onAvailabilityChange: (value: boolean) => void;
   onCancel: () => void;
 }
@@ -52,6 +58,7 @@ const MenuItemForm = ({
   priceSmall,
   priceMedium,
   priceLarge,
+  maxQuantityPerOrder,
   isAvailable,
   editingItem,
   isSaving,
@@ -64,6 +71,7 @@ const MenuItemForm = ({
   onPriceSmallChange,
   onPriceMediumChange,
   onPriceLargeChange,
+  onMaxQuantityPerOrderChange,
   onAvailabilityChange,
   onCancel,
 }: MenuItemFormProps) => {
@@ -356,6 +364,27 @@ const MenuItemForm = ({
               </>
             )}
           </div>
+        </div>
+
+        <div>
+          <Label htmlFor='maxQuantityPerOrder' className='mb-2 block'>
+            Max quantity per order
+          </Label>
+          <Input
+            id='maxQuantityPerOrder'
+            type='number'
+            min={MIN_MENU_ITEM_QUANTITY_LIMIT}
+            max={MAX_MENU_ITEM_QUANTITY_LIMIT}
+            step='1'
+            value={maxQuantityPerOrder}
+            onChange={(e) => onMaxQuantityPerOrderChange(e.target.value)}
+            placeholder='20'
+            disabled={isSaving}
+          />
+          <p className='mt-1 text-xs text-muted-foreground'>
+            Limit how many times this item can be added to one customer order. Allowed range is{' '}
+            {MIN_MENU_ITEM_QUANTITY_LIMIT}-{MAX_MENU_ITEM_QUANTITY_LIMIT}.
+          </p>
         </div>
 
         <label className='flex items-start gap-3 rounded-lg border bg-muted/30 p-3'>

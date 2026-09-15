@@ -17,6 +17,11 @@ import Title from '@/components/shared/Title';
 import MenuItemImage from '../../MenuItemImage';
 import MenuItemForm from '../../MenuItemForm';
 import { AI_MENU_DESCRIPTION_MAX_CHARS } from '@/libs/menuItemDescription';
+import {
+  DEFAULT_MENU_ITEM_QUANTITY_LIMIT,
+  MAX_MENU_ITEM_QUANTITY_LIMIT,
+  MIN_MENU_ITEM_QUANTITY_LIMIT,
+} from '@/libs/orderQuantityLimits';
 import type { MenuItemCategory } from '@/types/menu';
 
 const EditMenuItemPage = () => {
@@ -33,6 +38,9 @@ const EditMenuItemPage = () => {
   const [priceSmall, setPriceSmall] = useState('');
   const [priceMedium, setPriceMedium] = useState('');
   const [priceLarge, setPriceLarge] = useState('');
+  const [maxQuantityPerOrder, setMaxQuantityPerOrder] = useState(
+    String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT)
+  );
   const [isAvailable, setIsAvailable] = useState(true);
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -86,6 +94,11 @@ const EditMenuItemPage = () => {
         setPriceSmall(item.priceSmall ? item.priceSmall.toString() : '');
         setPriceMedium(item.priceMedium ? item.priceMedium.toString() : '');
         setPriceLarge(item.priceLarge ? item.priceLarge.toString() : '');
+        setMaxQuantityPerOrder(
+          item.maxQuantityPerOrder
+            ? item.maxQuantityPerOrder.toString()
+            : String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT)
+        );
         setIsAvailable(item.isAvailable !== false);
         setImage(item.image || '');
         setImagePreview(item.image || '');
@@ -220,6 +233,7 @@ const EditMenuItemPage = () => {
       const s = priceSmall.trim() ? Number(priceSmall) : null;
       const m = priceMedium.trim() ? Number(priceMedium) : null;
       const l = priceLarge.trim() ? Number(priceLarge) : null;
+      const maxQuantity = Number(maxQuantityPerOrder);
 
       // Validate that all prices (if provided) are valid numbers
       if (
@@ -233,6 +247,24 @@ const EditMenuItemPage = () => {
             color: 'white',
           },
         });
+        setIsSaving(false);
+        return;
+      }
+
+      if (
+        !Number.isFinite(maxQuantity) ||
+        maxQuantity < MIN_MENU_ITEM_QUANTITY_LIMIT ||
+        maxQuantity > MAX_MENU_ITEM_QUANTITY_LIMIT
+      ) {
+        sonnerToast.error(
+          `Max quantity per order must be between ${MIN_MENU_ITEM_QUANTITY_LIMIT} and ${MAX_MENU_ITEM_QUANTITY_LIMIT}`,
+          {
+            style: {
+              background: '#ef4444',
+              color: 'white',
+            },
+          }
+        );
         setIsSaving(false);
         return;
       }
@@ -256,6 +288,7 @@ const EditMenuItemPage = () => {
         priceSmall: s,
         priceMedium: priceType === 'single' ? null : m,
         priceLarge: priceType === 'triple' ? l : null,
+        maxQuantityPerOrder: Math.floor(maxQuantity),
         isAvailable,
         image: imageUrl || '',
       };
@@ -385,6 +418,7 @@ const EditMenuItemPage = () => {
                   priceSmall={priceSmall}
                   priceMedium={priceMedium}
                   priceLarge={priceLarge}
+                  maxQuantityPerOrder={maxQuantityPerOrder}
                   isAvailable={isAvailable}
                   editingItem={id}
                   isSaving={isSaving}
@@ -397,6 +431,7 @@ const EditMenuItemPage = () => {
                   onPriceSmallChange={setPriceSmall}
                   onPriceMediumChange={setPriceMedium}
                   onPriceLargeChange={setPriceLarge}
+                  onMaxQuantityPerOrderChange={setMaxQuantityPerOrder}
                   onAvailabilityChange={setIsAvailable}
                   onCancel={() => router.push('/admin-dashboard/menu-items')}
                 />

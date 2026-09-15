@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
+import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import { getRestaurantRatingSummaries } from '@/libs/reviewSummary';
 import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
@@ -67,6 +68,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
           averagePreparationMinutes: restaurant.averagePreparationMinutes,
           averageDeliveryMinutes: restaurant.averageDeliveryMinutes,
           activeOrderLimit,
+          maxItemsPerOrder: normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder),
           deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
           activeKitchenOrders,
           isBusy,

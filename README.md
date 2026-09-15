@@ -27,6 +27,7 @@ It includes:
 - order timeline with visual phase icons, readable activity history, preparation/delivery estimates, delay warnings, ETA-style notifications, delivery confirmation, reorder, and report-problem support tickets
 - order safety automation for stale unpaid orders, unanswered courier assignments, ready orders that cannot get a courier, and expired Stripe Checkout sessions
 - restaurant busy checkout protection based on each restaurant's active kitchen order limit
+- courier-safe cart quantity protection with restaurant-level max items per order and per-menu-item quantity limits
 - Stripe checkout/webhook flow
 - Cloudinary media uploads
 - email purchase receipts with Resend + React Email
@@ -62,7 +63,7 @@ It includes:
 - CRUD for categories, menu items, restaurants, and users
 - Super-admin user deletion with confirmation, active-order guards, Cloudinary cleanup, restaurant/menu/coupon cascade cleanup, review cleanup, and preserved historical orders
 - Menu item availability controls for temporarily unavailable or sold-out items, with delete protection while active orders still reference an item
-- Restaurant preparation/delivery estimate settings, working-hours checkout protection, and active order limit controls
+- Restaurant preparation/delivery estimate settings, working-hours checkout protection, active order limit controls, and max-items-per-order controls
 - Courier management and order assignment with optional courier-only assignment notes
 - Order lifecycle management, internal admin order notes, operations overview, late-order operational alerts, order queue, and dashboards/statistics
 - Restaurant operations overview at `/admin-dashboard/operations` with active stage counts, restaurant capacity, open/closing/paused status, courier availability, today revenue, unpaid/canceled counts, and orders that need attention
@@ -266,10 +267,12 @@ This project uses many dependencies; below are the main packages actively used i
 ### Order Flow And Restaurant Capacity
 
 - Restaurants can configure average preparation time, average delivery time, and an active kitchen order limit in the admin restaurant form.
+- Restaurants can configure `maxItemsPerOrder` up to 20 items, and each menu item can configure `maxQuantityPerOrder` up to 20 units per order.
 - Checkout snapshots the restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
 - Public menu item pages check the restaurant ordering status before adding to cart, while checkout remains the final server-side source of truth.
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
+- Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits and total order item limits so oversized courier-unfriendly orders cannot bypass the UI.
 - Checkout deduplicates recent identical unpaid `placed` order attempts by reusing or recovering the existing Stripe Checkout session instead of creating another order.
 - Unpaid `placed` orders show the customer a countdown based on the same 30-minute auto-cancel window used by background maintenance.
 - When a stale unpaid `placed` order is system-canceled, the app also attempts to expire the still-open Stripe Checkout session so old payment tabs cannot complete canceled orders.

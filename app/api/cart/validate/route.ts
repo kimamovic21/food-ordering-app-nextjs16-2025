@@ -3,7 +3,18 @@ import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { MenuItem } from '@/models/menuItem';
 import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
-import type { CartSize, CartValidationRequestItem, CartValidationResponse } from '@/types/cart';
+import {
+  getCartTotalQuantity,
+  normalizeItemsPerOrderLimit,
+  normalizeMenuItemQuantityLimit,
+} from '@/libs/orderQuantityLimits';
+import type {
+  CartSize,
+  CartValidationItem,
+  CartValidationRequestItem,
+  CartValidationResponse,
+  CartValidationRestaurantStatus,
+} from '@/types/cart';
 
 const normalizeCartSize = (value: unknown): CartSize | null => {
   const size = String(value || '')
@@ -52,6 +63,16 @@ const normalizeCoordinate = (value: unknown) => {
   return Number.isFinite(coordinate) ? coordinate : null;
 };
 
+type ValidatedCartItem = CartValidationItem & {
+  _id: string;
+  itemKey: string;
+  requestedSize: CartSize | null;
+  quantity: number;
+  restaurantId: string;
+  cartPrice: number;
+  isAvailable: boolean;
+};
+
 const toRestaurantStatus = (orderingStatus: ReturnType<typeof getRestaurantOrderingStatus>) => {
   if (orderingStatus.isPaused) return 'paused' as const;
   if (!orderingStatus.isOpen) return 'closed' as const;
@@ -80,7 +101,7 @@ export async function POST(req: Request) {
   const normalizedItems = cartItems.map((item) => {
     const id = String(item._id || '');
     const size = normalizeCartSize(item.size);
-    const quantity = Math.max(1, Number(item.quantity) || 1);
+    const quantity = Math.max(1, Math.floor(Number(item.quantity) || 1));
 
     return {
       _id: id,
@@ -100,7 +121,7 @@ export async function POST(req: Request) {
   const menuItems = uniqueIds.length
     ? await MenuItem.find({ _id: { $in: uniqueIds } })
         .select(
-          '_id name description image restaurantId isAvailable priceType priceSmall priceMedium priceLarge'
+          '_id name description image restaurantId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder'
         )
         .lean()
     : [];
@@ -108,7 +129,7 @@ export async function POST(req: Request) {
     menuItems.map((menuItem: any) => [menuItem._id.toString(), menuItem])
   );
 
-  const items = normalizedItems.map((cartItem) => {
+  let items: ValidatedCartItem[] = normalizedItems.map((cartItem): ValidatedCartItem => {
     if (!mongoose.Types.ObjectId.isValid(cartItem._id) || !cartItem.requestedSize) {
       return {
         ...cartItem,
@@ -170,11 +191,45 @@ export async function POST(req: Request) {
       isAvailable: true,
       priceChanged,
       previousPrice: priceChanged ? cartPrice : null,
+      maxQuantityPerOrder: normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder),
       message: priceChanged
         ? `${menuItem.name || 'This item'} price changed from $${cartPrice?.toFixed(
             2
           )} to $${currentPrice.toFixed(2)}.`
         : null,
+    };
+  });
+
+  const validItemQuantityById = new Map<string, number>();
+
+  for (const item of items) {
+    if (item.status !== 'valid') {
+      continue;
+    }
+
+    validItemQuantityById.set(
+      item._id,
+      (validItemQuantityById.get(item._id) || 0) + Math.max(1, Number(item.quantity) || 1)
+    );
+  }
+
+  items = items.map((item) => {
+    if (item.status !== 'valid') {
+      return item;
+    }
+
+    const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(item.maxQuantityPerOrder);
+    const itemQuantity = validItemQuantityById.get(item._id) || 0;
+
+    if (itemQuantity <= maxQuantityPerOrder) {
+      return item;
+    }
+
+    return {
+      ...item,
+      status: 'quantity_limit' as const,
+      isAvailable: false,
+      message: `${item.name || 'This item'} is limited to ${maxQuantityPerOrder} per order. Your cart has ${itemQuantity}.`,
     };
   });
 
@@ -222,7 +277,7 @@ export async function POST(req: Request) {
       } else {
         const restaurant = await Restaurant.findById(currentRestaurantId)
           .select(
-            'name workingHours blockedDates deliveryRadiusKm isPaused pauseReason activeOrderLimit minimumOrderAmount latitude longitude'
+            'name workingHours blockedDates deliveryRadiusKm isPaused pauseReason activeOrderLimit minimumOrderAmount maxItemsPerOrder latitude longitude'
           )
           .lean();
 
@@ -263,23 +318,36 @@ export async function POST(req: Request) {
           const minimumOrderAmount = roundToTwoDecimals(
             Math.min(100, Math.max(1, Number((restaurant as any).minimumOrderAmount) || 10))
           );
+          const maxItemsPerOrder = normalizeItemsPerOrderLimit(
+            (restaurant as any).maxItemsPerOrder
+          );
+          const totalCartQuantity = getCartTotalQuantity(
+            items.filter((item) => item.status === 'valid')
+          );
 
           const baseRestaurantStatus = toRestaurantStatus(orderingStatus);
-          const restaurantStatus = isBusy
-            ? ('busy' as const)
-            : baseRestaurantStatus !== 'valid'
-              ? baseRestaurantStatus
-              : subtotal < minimumOrderAmount
-                ? ('below_minimum' as const)
-                : ('valid' as const);
+          let restaurantStatus: CartValidationRestaurantStatus = 'valid';
+
+          if (isBusy) {
+            restaurantStatus = 'busy';
+          } else if (baseRestaurantStatus !== 'valid') {
+            restaurantStatus = baseRestaurantStatus;
+          } else if (totalCartQuantity > maxItemsPerOrder) {
+            restaurantStatus = 'order_quantity_limit';
+          } else if (subtotal < minimumOrderAmount) {
+            restaurantStatus = 'below_minimum';
+          }
+
           const restaurantMessage =
             restaurantStatus === 'busy'
               ? 'This restaurant is very busy at the moment. Please wait a little bit and try again.'
-              : restaurantStatus === 'below_minimum'
-                ? `Minimum order amount for this restaurant is $${minimumOrderAmount.toFixed(2)}.`
-                : orderingStatus.requiresDeliveryLocation
-                  ? `Please use your current location so we can confirm this restaurant delivers within ${orderingStatus.deliveryRadiusKm} km.`
-                  : orderingStatus.reason;
+              : restaurantStatus === 'order_quantity_limit'
+                ? `This restaurant accepts up to ${maxItemsPerOrder} items in one order. Your cart has ${totalCartQuantity} items.`
+                : restaurantStatus === 'below_minimum'
+                  ? `Minimum order amount for this restaurant is $${minimumOrderAmount.toFixed(2)}.`
+                  : orderingStatus.requiresDeliveryLocation
+                    ? `Please use your current location so we can confirm this restaurant delivers within ${orderingStatus.deliveryRadiusKm} km.`
+                    : orderingStatus.reason;
 
           restaurantValidation = {
             restaurantId: String((restaurant as any)._id),
@@ -289,6 +357,8 @@ export async function POST(req: Request) {
             message: restaurantMessage,
             subtotal,
             minimumOrderAmount,
+            maxItemsPerOrder,
+            totalCartQuantity,
             deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
             distanceKm: orderingStatus.distanceKm,
             isOpen: orderingStatus.isOpen,

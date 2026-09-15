@@ -19,6 +19,11 @@ import { addMoney, multiplyMoney, roundMoney, subtractMoney } from '@/libs/money
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { normalizePhoneNumberForStorage } from '@/libs/phone';
 import {
+  getCartTotalQuantity,
+  normalizeItemsPerOrderLimit,
+  normalizeMenuItemQuantityLimit,
+} from '@/libs/orderQuantityLimits';
+import {
   createRateLimitKey,
   createRateLimitResponse,
   enforceRateLimit,
@@ -412,7 +417,7 @@ export async function POST(req: Request) {
     .map((item) => ({
       _id: String(item._id),
       size: normalizeCartSize(item.size),
-      quantity: Number(item.quantity),
+      quantity: Math.floor(Number(item.quantity)),
       restaurantId: String(item.restaurantId),
     }))
     .filter((item) =>
@@ -530,6 +535,18 @@ export async function POST(req: Request) {
     );
   }
 
+  const maxItemsPerOrder = normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder);
+  const totalCartQuantity = getCartTotalQuantity(sanitizedItems);
+
+  if (totalCartQuantity > maxItemsPerOrder) {
+    return Response.json(
+      {
+        error: `This restaurant accepts up to ${maxItemsPerOrder} items in one order. Your cart has ${totalCartQuantity} items.`,
+      },
+      { status: 400 }
+    );
+  }
+
   const itemIds = sanitizedItems
     .map((item) => item._id)
     .filter((id) => mongoose.Types.ObjectId.isValid(id))
@@ -544,7 +561,9 @@ export async function POST(req: Request) {
   );
 
   const menuItems = await MenuItem.find({ _id: { $in: uniqueItemIds } })
-    .select('_id name restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge')
+    .select(
+      '_id name restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder'
+    )
     .lean();
 
   if (menuItems.length !== uniqueItemIds.length) {
@@ -552,6 +571,16 @@ export async function POST(req: Request) {
   }
 
   const menuItemById = new Map(menuItems.map((menuItem) => [menuItem._id.toString(), menuItem]));
+  const requestedQuantityByItemId = new Map<string, number>();
+
+  for (const cartItem of sanitizedItems) {
+    requestedQuantityByItemId.set(
+      cartItem._id,
+      (requestedQuantityByItemId.get(cartItem._id) || 0) +
+        Math.max(1, Number(cartItem.quantity) || 1)
+    );
+  }
+
   const verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize }> = [];
 
   for (const cartItem of sanitizedItems) {
@@ -590,6 +619,18 @@ export async function POST(req: Request) {
 
     if (menuItem.adminId?.toString() === user._id.toString()) {
       return Response.json({ error: 'You cannot order your own menu items' }, { status: 403 });
+    }
+
+    const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder);
+    const requestedItemQuantity = requestedQuantityByItemId.get(cartItem._id) || 0;
+
+    if (requestedItemQuantity > maxQuantityPerOrder) {
+      return Response.json(
+        {
+          error: `${menuItem.name || 'This menu item'} is limited to ${maxQuantityPerOrder} per order. Your cart has ${requestedItemQuantity}.`,
+        },
+        { status: 400 }
+      );
     }
 
     verifiedItems.push({

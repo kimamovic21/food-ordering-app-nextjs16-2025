@@ -121,8 +121,8 @@ flowchart TD
 The important persistent models are:
 
 - `User`: account, role, profile fields, saved delivery addresses, courier availability/location, restaurant ownership, favorites.
-- `Restaurant`: owner, location, contact, images, working hours, blocked dates, tax, courier fee, preparation/delivery estimates, active order limit.
-- `MenuItem`: restaurant item, category, image, prices, availability.
+- `Restaurant`: owner, location, contact, images, working hours, blocked dates, tax, courier fee, preparation/delivery estimates, active order limit, max items per order.
+- `MenuItem`: restaurant item, category, image, prices, availability, max quantity per order.
 - `Order`: customer delivery details, cart snapshot, payment data, restaurant fee/tax snapshots, coupon/loyalty snapshots, estimate snapshots, status timeline timestamps, courier, delivery PIN, completion state.
 - `Coupon`: restaurant-scoped discounts and validity rules.
 - `RestaurantReview` and `CourierReview`: one review per completed order flow.
@@ -196,6 +196,7 @@ Key checks:
 - Public menu surfaces can call `/api/restaurants/[id]/ordering-status` before adding an item to the cart, so users get early feedback before checkout.
 - Restaurant must currently accept orders based on working hours, the 60-minute-before-closing checkout cutoff, pause state, blocked dates, delivery radius, and active kitchen capacity.
 - Restaurant active kitchen order count must be below `activeOrderLimit`.
+- Total cart quantity must be at or below `Restaurant.maxItemsPerOrder`, and repeated quantities for the same menu item across sizes must stay at or below `MenuItem.maxQuantityPerOrder`.
 - Coupon and loyalty discounts are validated server-side.
 - Best coupon suggestions shown in cart are revalidated at checkout before Stripe is created.
 - Recent identical unpaid `placed` checkout attempts are matched by `checkoutFingerprint`; the app reuses or recovers the existing Stripe Checkout session instead of creating duplicate orders.

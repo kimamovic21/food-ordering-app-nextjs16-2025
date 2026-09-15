@@ -162,6 +162,7 @@ Restaurants store:
 - average preparation minutes
 - average delivery minutes
 - active order limit
+- max items per order
 - total employees
 
 Menu items store:
@@ -170,6 +171,7 @@ Menu items store:
 - name, category, description, image
 - prices by size
 - availability state
+- max quantity per order
 
 Deletion protection:
 
@@ -184,10 +186,12 @@ Availability logic:
 - Unavailable items cannot be added to cart.
 - Public add-to-cart actions prefetch visible restaurant ordering status where possible and check it before changing the cart.
 - Checkout validates availability again on the server.
+- Admins can set a per-menu-item order quantity cap from 1 to 20, and the cart/checkouts add all sizes of the same item together before enforcing that cap.
 
 Busy restaurant logic:
 
 - Each restaurant has `activeOrderLimit`.
+- Each restaurant also has `maxItemsPerOrder`, capped at 20, so a single checkout cannot create a courier-unfriendly oversized order.
 - Checkout counts paid active kitchen orders in `placed`, `processing`, and `ready`.
 - When the count reaches the limit, checkout is blocked before Stripe session creation.
 - Cart shows a warning and disables checkout when the restaurant detail API reports `isBusy`.
@@ -246,6 +250,7 @@ Checkout server rules:
 - Previous delivered orders must be confirmed before starting another checkout.
 - Any paid active order must be completed or canceled before the customer can start another checkout.
 - Menu items must still be available.
+- Cart quantity must stay within courier-safe limits: the restaurant controls total items per order up to 20, and each menu item controls its own max quantity per order up to 20.
 - Coupon must belong to the restaurant and satisfy date/minimum rules.
 - Best coupon suggestions are only UI help until the customer applies them and checkout validates them.
 - Loyalty discount is recalculated server-side.
@@ -253,7 +258,7 @@ Checkout server rules:
 - Recent identical unpaid `placed` checkout attempts reuse or recover the existing Stripe Checkout session instead of creating duplicate orders.
 - Customers see a payment-expiry countdown for unpaid `placed` orders that matches the 30-minute auto-cancel window.
 - Cart validation surfaces item-specific unavailable/deleted-item blockers and non-blocking price-change warnings before checkout.
-- Cart validation also performs a server-side restaurant preflight for closed/paused/closing-soon/busy/minimum-order/delivery-radius blockers, while the cart UI shows matching visible warnings before Stripe Checkout.
+- Cart validation also performs a server-side restaurant preflight for closed/paused/closing-soon/busy/minimum-order/delivery-radius/order-quantity blockers, while the cart UI shows matching visible warnings before Stripe Checkout.
 - Order is created as unpaid before redirecting to Stripe.
 - QStash schedules a delayed unpaid-order maintenance check after a new Stripe Checkout session is created.
 - If that unpaid order expires, the app attempts to expire the original Stripe Checkout session and stores the expiration result in the cancellation audit log.

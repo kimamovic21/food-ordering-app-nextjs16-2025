@@ -72,6 +72,7 @@ const createRestaurant = (overrides: Record<string, unknown> = {}) => ({
   isPaused: false,
   pauseReason: '',
   activeOrderLimit: 10,
+  maxItemsPerOrder: 20,
   minimumOrderAmount: 10,
   latitude: 43,
   longitude: 18,
@@ -203,6 +204,102 @@ describe('POST /api/cart/validate', () => {
     );
     expect(body.message).toBe(
       'This restaurant is very busy at the moment. Please wait a little bit and try again.'
+    );
+  });
+
+  it('blocks checkout when a cart exceeds a menu item quantity limit', async () => {
+    mockMenuItems([
+      {
+        _id: { toString: () => 'menu-item-1' },
+        name: 'Pizza',
+        restaurantId: { toString: () => 'restaurant-1' },
+        isAvailable: true,
+        priceType: 'triple',
+        priceSmall: 8,
+        priceMedium: 11,
+        priceLarge: 14.5,
+        maxQuantityPerOrder: 2,
+      },
+    ]);
+
+    const POST = await loadRoute();
+    const response = await POST(
+      createRequest([
+        {
+          _id: 'menu-item-1',
+          size: 'small',
+          quantity: 1,
+          restaurantId: 'restaurant-1',
+          price: 8,
+        },
+        {
+          _id: 'menu-item-1',
+          size: 'large',
+          quantity: 2,
+          restaurantId: 'restaurant-1',
+          price: 14.5,
+        },
+      ])
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.canCheckout).toBe(false);
+    expect(body.message).toBe('Pizza is limited to 2 per order. Your cart has 3.');
+    expect(body.items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          status: 'quantity_limit',
+          maxQuantityPerOrder: 2,
+          isAvailable: false,
+        }),
+      ])
+    );
+    expect(Restaurant.findById).not.toHaveBeenCalled();
+  });
+
+  it('blocks checkout when a cart exceeds the restaurant item limit', async () => {
+    mockRestaurant(createRestaurant({ maxItemsPerOrder: 2 }));
+    mockMenuItems([
+      {
+        _id: { toString: () => 'menu-item-1' },
+        name: 'Pizza',
+        restaurantId: { toString: () => 'restaurant-1' },
+        isAvailable: true,
+        priceType: 'single',
+        priceSmall: 12,
+        priceMedium: null,
+        priceLarge: null,
+        maxQuantityPerOrder: 20,
+      },
+    ]);
+
+    const POST = await loadRoute();
+    const response = await POST(
+      createRequest([
+        {
+          _id: 'menu-item-1',
+          size: 'single',
+          quantity: 3,
+          restaurantId: 'restaurant-1',
+          price: 12,
+        },
+      ])
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.canCheckout).toBe(false);
+    expect(body.restaurant).toEqual(
+      expect.objectContaining({
+        status: 'order_quantity_limit',
+        canCheckout: false,
+        maxItemsPerOrder: 2,
+        totalCartQuantity: 3,
+      })
+    );
+    expect(body.message).toBe(
+      'This restaurant accepts up to 2 items in one order. Your cart has 3 items.'
     );
   });
 

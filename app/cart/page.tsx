@@ -23,6 +23,7 @@ import {
   normalizeCouponCode,
   type CouponLike,
 } from '@/libs/coupon';
+import { getCartTotalQuantity, normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import useProfile from '@/hooks/useProfile';
 import useDeliveryAddresses from '@/hooks/useDeliveryAddresses';
 import Link from 'next/link';
@@ -594,6 +595,11 @@ const CartPage = () => {
     return Math.min(100, Math.max(1, Number(restaurant?.minimumOrderAmount) || 10));
   };
 
+  const getMaxItemsPerOrder = () => {
+    const restaurant = getCartRestaurant();
+    return normalizeItemsPerOrderLimit(restaurant?.maxItemsPerOrder);
+  };
+
   const isRestaurantPaused = () => {
     const restaurant = getCartRestaurant();
     return Boolean(restaurant?.isPaused);
@@ -1033,6 +1039,13 @@ const CartPage = () => {
         return;
       }
 
+      if (getCartTotalQuantity(cartItems) > getMaxItemsPerOrder()) {
+        sonnerToast.error(
+          `${getRestaurantName()} accepts up to ${getMaxItemsPerOrder()} items in one order.`
+        );
+        return;
+      }
+
       const minimumOrderAmount = getMinimumOrderAmount();
       if (subtotal < minimumOrderAmount) {
         sonnerToast.error(
@@ -1163,6 +1176,10 @@ const CartPage = () => {
   const restaurantBusy = isRestaurantBusy();
   const restaurantName = getRestaurantName();
   const cartRestaurantId = getCartRestaurantId();
+  const maxItemsPerOrder = getMaxItemsPerOrder();
+  const cartTotalQuantity = getCartTotalQuantity(cartItems);
+  const exceedsMaxItemsPerOrder =
+    !multipleRestaurants && cartItems.length > 0 && cartTotalQuantity > maxItemsPerOrder;
   const restaurantStatusDots = RESTAURANT_STATUS_DOT_STEPS[restaurantStatusDotsIndex];
   const checkingRestaurantStatus =
     !multipleRestaurants &&
@@ -1351,6 +1368,23 @@ const CartPage = () => {
         </div>
       )}
 
+      {exceedsMaxItemsPerOrder && (
+        <div className='mb-4 rounded-lg border border-amber-300 bg-amber-100 p-4 dark:border-amber-700 dark:bg-amber-900/20'>
+          <div className='flex gap-3'>
+            <AlertTriangle className='mt-0.5 size-5 shrink-0 text-amber-600 dark:text-amber-300' />
+            <div>
+              <p className='font-semibold text-amber-800 dark:text-amber-200'>
+                This order is too large for one courier run.
+              </p>
+              <p className='mt-1 text-sm text-amber-700 dark:text-amber-200'>
+                {restaurantName} accepts up to {maxItemsPerOrder} items in one order. Your cart has{' '}
+                {cartTotalQuantity} items. Please lower the quantity or place a separate order later.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {missingDeliveryLocation && (
         <div className='mb-4 rounded-lg border border-primary/30 bg-primary/10 p-4'>
           <p className='font-semibold text-primary'>
@@ -1463,6 +1497,7 @@ const CartPage = () => {
             removeFromCart={removeFromCart}
             clearCart={clearCart}
             validationItems={cartValidationItems}
+            maxItemsPerOrder={maxItemsPerOrder}
           />
         </div>
 
@@ -1522,6 +1557,8 @@ const CartPage = () => {
             minimumOrderAmount={minimumOrderAmount}
             missingDeliveryLocation={missingDeliveryLocation}
             outsideDeliveryRadius={outsideDeliveryRadius}
+            exceedsMaxItemsPerOrder={exceedsMaxItemsPerOrder}
+            maxItemsPerOrder={maxItemsPerOrder}
             loadingRestaurants={loadingRestaurants}
             hasUnavailableItems={blockingCartItems.length > 0}
             loadingMenuAvailability={loadingMenuAvailability}

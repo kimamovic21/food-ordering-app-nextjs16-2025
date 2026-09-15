@@ -137,6 +137,8 @@ const openRestaurant = {
   blockedDates: [],
   deliveryRadiusKm: 10,
   isPaused: false,
+  activeOrderLimit: 10,
+  maxItemsPerOrder: 20,
 };
 
 const loadCheckoutRoute = async () => {
@@ -219,6 +221,7 @@ describe('POST /api/checkout', () => {
             priceSmall: 8,
             priceMedium: 11,
             priceLarge: 14.5,
+            maxQuantityPerOrder: 20,
           },
         ]),
       }),
@@ -381,6 +384,88 @@ describe('POST /api/checkout', () => {
     expect(response.status).toBe(409);
     expect(body).toEqual({
       error: 'This restaurant is very busy at the moment. Please wait a little bit and try again.',
+    });
+    expect(stripeCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects checkout when cart quantity exceeds the restaurant item limit', async () => {
+    vi.mocked(Restaurant.findById).mockResolvedValueOnce({
+      ...openRestaurant,
+      maxItemsPerOrder: 2,
+    } as never);
+
+    const POST = await loadCheckoutRoute();
+    const response = await POST(
+      createCheckoutRequest({
+        cartItems: [
+          {
+            _id: 'menu-item-1',
+            name: 'Pizza',
+            size: 'Large',
+            price: 14.5,
+            quantity: 3,
+            restaurantId: 'restaurant-1',
+          },
+        ],
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: 'This restaurant accepts up to 2 items in one order. Your cart has 3 items.',
+    });
+    expect(stripeCreateSession).not.toHaveBeenCalled();
+  });
+
+  it('rejects checkout when cart quantity exceeds a menu item limit', async () => {
+    vi.mocked(MenuItem.find).mockReturnValueOnce({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue([
+          {
+            _id: { toString: () => 'menu-item-1' },
+            name: 'Pizza',
+            restaurantId: { toString: () => 'restaurant-1' },
+            adminId: { toString: () => 'someone-else' },
+            isAvailable: true,
+            priceType: 'triple',
+            priceSmall: 8,
+            priceMedium: 11,
+            priceLarge: 14.5,
+            maxQuantityPerOrder: 2,
+          },
+        ]),
+      }),
+    } as never);
+
+    const POST = await loadCheckoutRoute();
+    const response = await POST(
+      createCheckoutRequest({
+        cartItems: [
+          {
+            _id: 'menu-item-1',
+            name: 'Pizza',
+            size: 'Small',
+            price: 8,
+            quantity: 1,
+            restaurantId: 'restaurant-1',
+          },
+          {
+            _id: 'menu-item-1',
+            name: 'Pizza',
+            size: 'Large',
+            price: 14.5,
+            quantity: 2,
+            restaurantId: 'restaurant-1',
+          },
+        ],
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: 'Pizza is limited to 2 per order. Your cart has 3.',
     });
     expect(stripeCreateSession).not.toHaveBeenCalled();
   });
