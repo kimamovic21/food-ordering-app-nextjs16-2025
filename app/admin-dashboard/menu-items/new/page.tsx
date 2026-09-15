@@ -17,6 +17,11 @@ import useProfile from '@/hooks/useProfile';
 import MenuItemImage from '../MenuItemImage';
 import MenuItemForm from '../MenuItemForm';
 import { AI_MENU_DESCRIPTION_MAX_CHARS } from '@/libs/menuItemDescription';
+import {
+  DEFAULT_MENU_ITEM_QUANTITY_LIMIT,
+  MAX_MENU_ITEM_QUANTITY_LIMIT,
+  MIN_MENU_ITEM_QUANTITY_LIMIT,
+} from '@/libs/orderQuantityLimits';
 import type { MenuItemCategory } from '@/types/menu';
 
 const NewMenuItemPage = () => {
@@ -31,6 +36,9 @@ const NewMenuItemPage = () => {
   const [priceSmall, setPriceSmall] = useState('');
   const [priceMedium, setPriceMedium] = useState('');
   const [priceLarge, setPriceLarge] = useState('');
+  const [maxQuantityPerOrder, setMaxQuantityPerOrder] = useState(
+    String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT)
+  );
   const [isAvailable, setIsAvailable] = useState(true);
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -172,6 +180,7 @@ const NewMenuItemPage = () => {
       const s = priceSmall.trim() ? Number(priceSmall) : null;
       const m = priceMedium.trim() ? Number(priceMedium) : null;
       const l = priceLarge.trim() ? Number(priceLarge) : null;
+      const maxQuantity = Number(maxQuantityPerOrder);
 
       // Validate that all prices (if provided) are valid numbers
       if (
@@ -180,6 +189,18 @@ const NewMenuItemPage = () => {
         (priceLarge.trim() && isNaN(l as number))
       ) {
         sonnerToast.error('All prices must be valid numbers');
+        setIsSaving(false);
+        return;
+      }
+
+      if (
+        !Number.isFinite(maxQuantity) ||
+        maxQuantity < MIN_MENU_ITEM_QUANTITY_LIMIT ||
+        maxQuantity > MAX_MENU_ITEM_QUANTITY_LIMIT
+      ) {
+        sonnerToast.error(
+          `Max quantity per order must be between ${MIN_MENU_ITEM_QUANTITY_LIMIT} and ${MAX_MENU_ITEM_QUANTITY_LIMIT}`
+        );
         setIsSaving(false);
         return;
       }
@@ -203,6 +224,7 @@ const NewMenuItemPage = () => {
         priceSmall: s,
         priceMedium: priceType === 'single' ? null : m,
         priceLarge: priceType === 'triple' ? l : null,
+        maxQuantityPerOrder: Math.floor(maxQuantity),
         isAvailable,
         image: imageUrl || '',
       };
@@ -243,6 +265,7 @@ const NewMenuItemPage = () => {
     setPriceSmall('');
     setPriceMedium('');
     setPriceLarge('');
+    setMaxQuantityPerOrder(String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT));
     setIsAvailable(true);
     setImage('');
     setImageFile(null);
@@ -358,6 +381,7 @@ const NewMenuItemPage = () => {
                   priceSmall={priceSmall}
                   priceMedium={priceMedium}
                   priceLarge={priceLarge}
+                  maxQuantityPerOrder={maxQuantityPerOrder}
                   isAvailable={isAvailable}
                   editingItem={null}
                   isSaving={isSaving}
@@ -370,6 +394,7 @@ const NewMenuItemPage = () => {
                   onPriceSmallChange={setPriceSmall}
                   onPriceMediumChange={setPriceMedium}
                   onPriceLargeChange={setPriceLarge}
+                  onMaxQuantityPerOrderChange={setMaxQuantityPerOrder}
                   onAvailabilityChange={setIsAvailable}
                   onCancel={resetForm}
                 />

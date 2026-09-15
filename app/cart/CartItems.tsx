@@ -4,6 +4,12 @@ import { FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import Image from 'next/image';
 import Pizza from '@/public/pizza.png';
+import {
+  getCartQuantityForMenuItem,
+  getCartTotalQuantity,
+  normalizeItemsPerOrderLimit,
+  normalizeMenuItemQuantityLimit,
+} from '@/libs/orderQuantityLimits';
 import type { CartItem, CartValidationItem } from '@/types/cart';
 
 interface CartItemsProps {
@@ -12,6 +18,7 @@ interface CartItemsProps {
   removeFromCart: (id: string, size: string) => void;
   clearCart: () => void;
   validationItems?: CartValidationItem[];
+  maxItemsPerOrder?: number;
 }
 
 const getCartItemKey = (item: CartItem) => `${item._id}:${item.size}`;
@@ -22,8 +29,10 @@ const CartItems: React.FC<CartItemsProps> = ({
   removeFromCart,
   clearCart,
   validationItems = [],
+  maxItemsPerOrder,
 }) => {
   const validationByKey = new Map(validationItems.map((item) => [item.itemKey, item]));
+  const normalizedMaxItemsPerOrder = normalizeItemsPerOrderLimit(maxItemsPerOrder);
 
   // Helper to show toast
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -183,9 +192,34 @@ const CartItems: React.FC<CartItemsProps> = ({
                 <FaPlus
                   size={20}
                   onClick={() => {
-                    if (!isUnavailable) {
-                      handleUpdateQuantity(item._id, item.size, item.quantity + 1, 'add');
+                    if (isUnavailable) {
+                      return;
                     }
+
+                    const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(
+                      validation?.maxQuantityPerOrder ?? item.maxQuantityPerOrder
+                    );
+                    const nextItemQuantity =
+                      getCartQuantityForMenuItem(cartItems, item._id) + 1;
+
+                    if (nextItemQuantity > maxQuantityPerOrder) {
+                      sonnerToast.info('Cart limit reached', {
+                        description: `${displayName} is limited to ${maxQuantityPerOrder} per order.`,
+                        duration: 5000,
+                      });
+                      return;
+                    }
+
+                    const nextTotalQuantity = getCartTotalQuantity(cartItems) + 1;
+                    if (nextTotalQuantity > normalizedMaxItemsPerOrder) {
+                      sonnerToast.info('Cart limit reached', {
+                        description: `This restaurant accepts up to ${normalizedMaxItemsPerOrder} items in one order.`,
+                        duration: 5000,
+                      });
+                      return;
+                    }
+
+                    handleUpdateQuantity(item._id, item.size, item.quantity + 1, 'add');
                   }}
                   className={`bg-accent rounded-full p-1.5 sm:p-2 lg:p-1.5 transition text-foreground w-8 h-8 sm:w-8 sm:h-8 lg:w-6 lg:h-6 inline-flex items-center justify-center ${
                     isUnavailable

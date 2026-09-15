@@ -110,8 +110,8 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
       return;
     }
 
-    const canOrderFromRestaurant = await assertRestaurantCanAcceptOrders(item.restaurantId);
-    if (!canOrderFromRestaurant) {
+    const orderingStatus = await assertRestaurantCanAcceptOrders(item.restaurantId);
+    if (!orderingStatus) {
       return;
     }
 
@@ -120,15 +120,27 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
 
     const sizeForCart = availableSizes.length === 1 ? 'single' : effectiveSelectedSize;
 
-    addToCart({
-      _id: item._id,
-      name: item.name,
-      description: item.description,
-      image: item.image,
-      size: sizeForCart,
-      price,
-      restaurantId: item.restaurantId,
-    });
+    const addResult = addToCart(
+      {
+        _id: item._id,
+        name: item.name,
+        description: item.description,
+        image: item.image,
+        size: sizeForCart,
+        price,
+        restaurantId: item.restaurantId,
+        maxQuantityPerOrder: item.maxQuantityPerOrder,
+      },
+      { maxItemsPerOrder: orderingStatus.maxItemsPerOrder }
+    );
+
+    if (!addResult.added) {
+      sonnerToast.info('Cart limit reached', {
+        description: addResult.message,
+        duration: 5000,
+      });
+      return;
+    }
 
     sonnerToast.success(
       availableSizes.length === 1

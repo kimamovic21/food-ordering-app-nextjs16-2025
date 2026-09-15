@@ -81,6 +81,7 @@ export type RestaurantFormData = {
   averagePreparationMinutes: number;
   averageDeliveryMinutes: number;
   activeOrderLimit: number;
+  maxItemsPerOrder: number;
   deliveryRadiusKm: number;
   isPaused: boolean;
   pauseReason: string;

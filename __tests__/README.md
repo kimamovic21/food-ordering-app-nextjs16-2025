@@ -15,8 +15,8 @@ This folder contains unit tests grouped by feature area.
 - `api/restaurant-ordering-status.route.test.ts`: validates public restaurant ordering status and active capacity responses.
 - `api/profile-change-password.route.test.ts`: validates password change API behavior.
 - `api/upload-users.route.test.ts`: validates profile image upload/remove behavior.
-- `api/checkout.route.test.ts`: validates checkout guardrails and failure handling.
-- `api/cart-validate.route.test.ts`: validates cart item revalidation plus restaurant minimum, busy, and delivery-radius preflight blockers.
+- `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit blockers, and failure handling.
+- `api/cart-validate.route.test.ts`: validates cart item revalidation plus restaurant minimum, busy, delivery-radius, and quantity-limit preflight blockers.
 - `api/courier-assignment.route.test.ts`: validates courier assignment guardrails and courier-only assignment notes.
 - `api/courier-earnings.route.test.ts`: validates courier earnings access, summaries, and assignment reliability metrics.
 - `api/my-deliveries.route.test.ts`: validates courier delivery history, performance summaries, and assignment reliability metrics.
@@ -29,6 +29,7 @@ This folder contains unit tests grouped by feature area.
 - `libs/courier-assignment-history.test.ts`: validates finalized courier assignment attempt history.
 - `libs/order-auto-cancellation.test.ts`: validates stale unpaid and ready-without-courier auto-cancel rules.
 - `libs/paymentExpiry.test.ts`: validates the customer-facing unpaid payment countdown helper.
+- `libs/orderQuantityLimits.test.ts`: validates shared per-item and per-order quantity-limit helpers used by cart UI and checkout APIs.
 - `libs/deliveryAddresses.test.ts`: validates saved delivery address normalization and duplicate matching.
 - `libs/orderDelay.test.ts`: validates active order delay warning thresholds and development time offsets.
 - `libs/restaurantOperations.test.ts`: validates operations overview stage counts, capacity, courier summary, revenue, and attention-order prioritization.

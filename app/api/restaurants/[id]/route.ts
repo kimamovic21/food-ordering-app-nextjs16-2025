@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
+import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import { getRestaurantRatingSummaries } from '@/libs/reviewSummary';
 import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
@@ -18,7 +19,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
 
     const restaurant = await Restaurant.findById(id)
       .select(
-        'name street city postalCode country latitude longitude contact email webAddress description images workingHours blockedDates tax courierFee minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit deliveryRadiusKm isPaused pauseReason totalEmployees createdAt updatedAt'
+        'name street city postalCode country latitude longitude contact email webAddress description images workingHours blockedDates tax courierFee minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason totalEmployees createdAt updatedAt'
       )
       .lean();
 
@@ -61,6 +62,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
             Math.max(1, Number((restaurant as any).minimumOrderAmount) || 10)
           ),
           activeOrderLimit,
+          maxItemsPerOrder: normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder),
           activeKitchenOrders,
           isBusy,
           averageRating: rating?.averageRating ?? 0,

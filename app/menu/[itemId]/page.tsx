@@ -216,22 +216,34 @@ const MenuItemDetailPage = () => {
       return;
     }
 
-    const canOrderFromRestaurant = await assertRestaurantCanAcceptOrders(itemRestaurantId);
-    if (!canOrderFromRestaurant) {
+    const orderingStatus = await assertRestaurantCanAcceptOrders(itemRestaurantId);
+    if (!orderingStatus) {
       return;
     }
 
     if (selectedPrice == null) return;
 
-    addToCart({
-      _id: item._id,
-      name: item.name,
-      description: item.description,
-      image: item.image,
-      size: availableSizes.length === 1 ? 'single' : effectiveSelectedSize,
-      price: selectedPrice,
-      restaurantId: itemRestaurantId,
-    });
+    const addResult = addToCart(
+      {
+        _id: item._id,
+        name: item.name,
+        description: item.description,
+        image: item.image,
+        size: availableSizes.length === 1 ? 'single' : effectiveSelectedSize,
+        price: selectedPrice,
+        restaurantId: itemRestaurantId,
+        maxQuantityPerOrder: item.maxQuantityPerOrder,
+      },
+      { maxItemsPerOrder: orderingStatus.maxItemsPerOrder }
+    );
+
+    if (!addResult.added) {
+      sonnerToast.info('Cart limit reached', {
+        description: addResult.message,
+        duration: 5000,
+      });
+      return;
+    }
 
     sonnerToast.success(
       availableSizes.length === 1

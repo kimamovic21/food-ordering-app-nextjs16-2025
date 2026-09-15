@@ -11,6 +11,7 @@ const MenuItemSchema = new Schema(
     priceSmall: { type: Number, default: null },
     priceMedium: { type: Number, default: null },
     priceLarge: { type: Number, default: null },
+    maxQuantityPerOrder: { type: Number, required: true, default: 20, min: 1, max: 20 },
     isAvailable: { type: Boolean, default: true, index: true },
     adminId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },

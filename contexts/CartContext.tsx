@@ -1,13 +1,17 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { canAddItemToCart } from '@/libs/orderQuantityLimits';
 import type { CartItem } from '@/types/cart';
 
 export type { CartItem } from '@/types/cart';
 
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity'>) => boolean; // Returns true if added, false if different restaurant
+  addToCart: (
+    item: Omit<CartItem, 'quantity'>,
+    options?: { maxItemsPerOrder?: number }
+  ) => AddToCartResult;
   removeFromCart: (id: string, size: string) => void;
   updateQuantity: (id: string, size: string, quantity: number) => void;
   clearCart: () => void;
@@ -17,6 +21,14 @@ interface CartContextType {
   getCartRestaurantId: () => string | null; // Get the restaurantId of items in cart
   clearAndAddToCart: (item: Omit<CartItem, 'quantity'>) => void; // Clear cart and add new item from different restaurant
 }
+
+export type AddToCartResult =
+  | { added: true }
+  | {
+      added: false;
+      reason: 'different_restaurant' | 'item_quantity_limit' | 'order_quantity_limit';
+      message: string;
+    };
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -67,16 +79,33 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     localStorage.setItem('cart', JSON.stringify(cartItems));
   }, [cartItems]);
 
-  const addToCart = (item: Omit<CartItem, 'quantity'>): boolean => {
-    let canAdd = true;
+  const addToCart = (
+    item: Omit<CartItem, 'quantity'>,
+    options: { maxItemsPerOrder?: number } = {}
+  ): AddToCartResult => {
+    if (cartItems.length > 0 && cartItems[0].restaurantId !== item.restaurantId) {
+      return {
+        added: false,
+        reason: 'different_restaurant',
+        message: 'Your cart contains items from another restaurant.',
+      };
+    }
+
+    const quantityLimitViolation = canAddItemToCart({
+      cartItems,
+      item,
+      maxItemsPerOrder: options.maxItemsPerOrder,
+    });
+
+    if (quantityLimitViolation) {
+      return {
+        added: false,
+        reason: quantityLimitViolation.type,
+        message: quantityLimitViolation.message,
+      };
+    }
 
     setCartItems((prevItems) => {
-      // Check if cart is empty or if item is from the same restaurant
-      if (prevItems.length > 0 && prevItems[0].restaurantId !== item.restaurantId) {
-        canAdd = false;
-        return prevItems; // Don't add, return unchanged
-      }
-
       const existingItem = prevItems.find((i) => i._id === item._id && i.size === item.size);
 
       if (existingItem) {
@@ -88,7 +117,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       return [...prevItems, { ...item, quantity: 1 }];
     });
 
-    return canAdd;
+    return { added: true };
   };
 
   const removeFromCart = (id: string, size: string) => {

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
+import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
 
@@ -15,7 +16,9 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
   }
 
   const restaurant = await Restaurant.findById(id)
-    .select('name workingHours blockedDates deliveryRadiusKm isPaused pauseReason activeOrderLimit')
+    .select(
+      'name workingHours blockedDates deliveryRadiusKm isPaused pauseReason activeOrderLimit maxItemsPerOrder'
+    )
     .lean();
 
   if (!restaurant) {
@@ -51,6 +54,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     isPaused: orderingStatus.isPaused,
     isBusy,
     isAcceptingOrders,
+    maxItemsPerOrder: normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder),
     reason,
   });
 }

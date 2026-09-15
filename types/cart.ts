@@ -11,6 +11,7 @@ export interface CartItem {
   price: number | null;
   quantity: number;
   restaurantId: EntityId;
+  maxQuantityPerOrder?: number;
 }
 
 export type CheckoutCartItemPayload = {
@@ -39,7 +40,13 @@ export type CartValidationRequestItem = {
   price?: number | null;
 };
 
-export type CartValidationStatus = 'valid' | 'unavailable' | 'deleted' | 'invalid_size' | 'invalid';
+export type CartValidationStatus =
+  | 'valid'
+  | 'unavailable'
+  | 'deleted'
+  | 'invalid_size'
+  | 'quantity_limit'
+  | 'invalid';
 
 export type CartValidationRestaurantStatus =
   | 'valid'
@@ -51,6 +58,7 @@ export type CartValidationRestaurantStatus =
   | 'closing_soon'
   | 'busy'
   | 'below_minimum'
+  | 'order_quantity_limit'
   | 'outside_delivery_radius'
   | 'missing_delivery_location';
 
@@ -66,6 +74,7 @@ export type CartValidationItem = {
   restaurantId?: EntityId;
   previousPrice?: number | null;
   priceChanged?: boolean;
+  maxQuantityPerOrder?: number;
   message?: string | null;
 };
 
@@ -81,6 +90,8 @@ export type CartValidationResponse = {
     message?: string | null;
     subtotal?: number;
     minimumOrderAmount?: number;
+    maxItemsPerOrder?: number;
+    totalCartQuantity?: number;
     deliveryRadiusKm?: number;
     distanceKm?: number | null;
     isOpen?: boolean;

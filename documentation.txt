@@ -1169,3 +1169,5 @@ Enhance super admin user management
 Improve audit logs filters and realtime stream cleanup
 
 Add documentation commit-name tracking rule
+
+Add order quantity and restaurant capacity safeguards

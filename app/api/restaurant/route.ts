@@ -10,6 +10,7 @@ import { createAuditLog } from '@/libs/auditLog';
 import { findBlockingRestaurantOrder } from '@/libs/orderDeletionGuards';
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
+import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import cloudinary from '@/libs/cloudinary';
 
 type BlockedDateInput = {
@@ -64,6 +65,10 @@ const sanitizeRestaurantPayload = (body: Record<string, unknown>, includeId: boo
     typeof body.activeOrderLimit === 'number'
       ? body.activeOrderLimit
       : Number(body.activeOrderLimit) || 10;
+  const maxItemsPerOrder =
+    typeof body.maxItemsPerOrder === 'number'
+      ? body.maxItemsPerOrder
+      : Number(body.maxItemsPerOrder) || 20;
   const deliveryRadiusKm =
     typeof body.deliveryRadiusKm === 'number'
       ? body.deliveryRadiusKm
@@ -103,6 +108,7 @@ const sanitizeRestaurantPayload = (body: Record<string, unknown>, includeId: boo
     averagePreparationMinutes: Math.min(240, Math.max(0, averagePreparationMinutes)),
     averageDeliveryMinutes: Math.min(240, Math.max(0, averageDeliveryMinutes)),
     activeOrderLimit: Math.min(100, Math.max(1, activeOrderLimit)),
+    maxItemsPerOrder: normalizeItemsPerOrderLimit(maxItemsPerOrder),
     deliveryRadiusKm: Math.min(15, Math.max(1, deliveryRadiusKm)),
     isPaused: Boolean(body.isPaused),
     pauseReason: pauseReason.slice(0, 160),
@@ -274,6 +280,7 @@ export async function POST(req: NextRequest) {
       averagePreparationMinutes: payload.averagePreparationMinutes,
       averageDeliveryMinutes: payload.averageDeliveryMinutes,
       activeOrderLimit: payload.activeOrderLimit,
+      maxItemsPerOrder: payload.maxItemsPerOrder,
       deliveryRadiusKm: payload.deliveryRadiusKm,
       isPaused: payload.isPaused,
       pauseReason: payload.pauseReason,
@@ -385,6 +392,7 @@ export async function PUT(req: NextRequest) {
         isPaused: updateData.isPaused,
         deliveryRadiusKm: updateData.deliveryRadiusKm,
         activeOrderLimit: updateData.activeOrderLimit,
+        maxItemsPerOrder: updateData.maxItemsPerOrder,
         minimumOrderAmount: updateData.minimumOrderAmount,
       },
     });

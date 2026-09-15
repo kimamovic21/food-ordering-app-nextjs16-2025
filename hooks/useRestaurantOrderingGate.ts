@@ -11,6 +11,7 @@ export type RestaurantOrderingStatus = {
   restaurantId: string;
   restaurantName: string;
   isAcceptingOrders: boolean;
+  maxItemsPerOrder?: number;
   reason?: string | null;
 };
 
@@ -60,7 +61,11 @@ const useRestaurantOrderingGate = () => {
 
   const assertRestaurantCanAcceptOrders = async (restaurantId: string) => {
     if (!restaurantId || restaurantId === 'default') {
-      return true;
+      return {
+        restaurantId,
+        restaurantName: 'Restaurant',
+        isAcceptingOrders: true,
+      } satisfies RestaurantOrderingStatus;
     }
 
     setCheckingRestaurantId(restaurantId);
@@ -75,13 +80,13 @@ const useRestaurantOrderingGate = () => {
             'Please try again later or choose a different restaurant from the menu.',
           duration: 5000,
         });
-        return false;
+        return null;
       }
 
-      return true;
+      return status;
     } catch (error) {
       sonnerToast.error(error instanceof Error ? error.message : 'Unable to check restaurant.');
-      return false;
+      return null;
     } finally {
       setCheckingRestaurantId(null);
     }

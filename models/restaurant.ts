@@ -87,6 +87,13 @@ const RestaurantSchema = new Schema(
       min: 1,
       max: 100,
     },
+    maxItemsPerOrder: {
+      type: Number,
+      required: true,
+      default: 20,
+      min: 1,
+      max: 20,
+    },
     deliveryRadiusKm: {
       type: Number,
       required: true,

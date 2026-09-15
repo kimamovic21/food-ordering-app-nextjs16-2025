@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MenuItem } from '@/models/menuItem';
+import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { CartSize } from '@/types/cart';
 
 const normalizeSize = (value: unknown, priceType?: string): CartSize => {
@@ -42,7 +43,7 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
 
   const menuItems = await MenuItem.find({ _id: { $in: productIds } })
     .select(
-      '_id name description image priceType priceSmall priceMedium priceLarge restaurantId isAvailable'
+      '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable'
     )
     .lean();
   const menuItemsById = new Map(menuItems.map((item: any) => [item._id.toString(), item]));
@@ -73,6 +74,7 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
       price,
       quantity: Math.max(1, Number(product.quantity) || 1),
       restaurantId: menuItem.restaurantId?.toString?.() || String(menuItem.restaurantId || ''),
+      maxQuantityPerOrder: normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder),
     };
   });
 

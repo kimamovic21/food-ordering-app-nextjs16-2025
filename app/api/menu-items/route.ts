@@ -9,6 +9,7 @@ import { authOptions } from '@/libs/authOptions';
 import mongoose, { PipelineStage } from 'mongoose';
 import cloudinary from '@/libs/cloudinary';
 import { findBlockingMenuItemOrder } from '@/libs/orderDeletionGuards';
+import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -141,6 +142,7 @@ export async function POST(req: Request) {
         priceType === 'single' ? null : data.priceMedium ? Number(data.priceMedium) : null,
       priceLarge:
         priceType === 'triple' ? (data.priceLarge ? Number(data.priceLarge) : null) : null,
+      maxQuantityPerOrder: normalizeMenuItemQuantityLimit(data.maxQuantityPerOrder),
       isAvailable: data.isAvailable !== false,
       adminId: currentUser._id,
       restaurantId: currentUser.restaurantId,
@@ -382,6 +384,7 @@ export async function PUT(req: Request) {
         priceType === 'single' ? null : data.priceMedium ? Number(data.priceMedium) : null,
       priceLarge:
         priceType === 'triple' ? (data.priceLarge ? Number(data.priceLarge) : null) : null,
+      maxQuantityPerOrder: normalizeMenuItemQuantityLimit(data.maxQuantityPerOrder),
       isAvailable: data.isAvailable !== false,
     };
 

@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { MenuItemCategory, MenuItemListItem } from '@/types/menu';
 
 interface MenuItemsProps {
@@ -361,6 +362,9 @@ const MenuItems = ({
                 </Badge>
               </div>
               <DescriptionPreview item={row.original} />
+              <p className='text-xs font-medium text-muted-foreground'>
+                Max {normalizeMenuItemQuantityLimit(row.original.maxQuantityPerOrder)} per order
+              </p>
             </div>
           ),
         }),
