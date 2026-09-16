@@ -69,6 +69,7 @@ It includes:
 - Restaurant operations overview at `/admin-dashboard/operations` with active stage counts, restaurant capacity, open/closing/paused status, courier availability, today revenue, unpaid/canceled counts, and orders that need attention
 - Restaurant reports at `/admin-dashboard/restaurant-reports` with daily, weekly, and monthly summaries plus PDF downloads when there is activity
 - Support ticket dashboard for reported order, delivery, and app issues
+- Audit logs surface checkout blocked-attempt reasons with summary counts, focused filters, and readable metadata details for super-admin review.
 - Notifications management with SSE-backed order, delivery, and assignment updates
 - Messaging center with delivery/seen states, inline editing, and per-user delete behavior
 - Payment link endpoint and Stripe webhook handling
