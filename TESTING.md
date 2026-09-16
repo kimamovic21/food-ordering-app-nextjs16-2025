@@ -116,6 +116,12 @@ Useful focused command after order quantity-limit changes:
 npm run test:file -- __tests__/libs/orderQuantityLimits.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/menuItem.model.test.ts __tests__/models/restaurant.model.test.ts
 ```
 
+Useful focused command after shared cart/checkout validation or order-index changes:
+
+```bash
+npm run test:file -- __tests__/libs/cartValidation.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/order.model.test.ts
+```
+
 Useful focused command after checkout capacity/audit maintenance changes:
 
 ```bash

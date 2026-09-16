@@ -28,6 +28,7 @@ It includes:
 - order safety automation for stale unpaid orders, unanswered courier assignments, ready orders that cannot get a courier, and expired Stripe Checkout sessions
 - restaurant busy checkout protection based on each restaurant's active kitchen order limit
 - courier-safe cart quantity protection with restaurant-level max items per order and per-menu-item quantity limits
+- shared cart and checkout validation so cart warnings and final Stripe checkout use the same server-side menu, restaurant, radius, minimum-order, and quantity rules
 - Stripe checkout/webhook flow
 - Cloudinary media uploads
 - email purchase receipts with Resend + React Email
