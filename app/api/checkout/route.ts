@@ -4,8 +4,6 @@ import { authOptions } from '@/libs/authOptions';
 import { Coupon } from '@/models/coupon';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
-import { Restaurant } from '@/models/restaurant';
-import { MenuItem } from '@/models/menuItem';
 import { calculateLoyaltyStatus } from '@/libs/loyaltyCalculator';
 import { notifyOrderPlaced } from '@/libs/notifications';
 import { createDeliveryPin } from '@/libs/deliveryPin';
@@ -16,13 +14,11 @@ import {
 } from '@/libs/coupon';
 import { createAuditLog } from '@/libs/auditLog';
 import { addMoney, multiplyMoney, roundMoney, subtractMoney } from '@/libs/money';
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { normalizePhoneNumberForStorage } from '@/libs/phone';
 import {
-  getCartTotalQuantity,
-  normalizeItemsPerOrderLimit,
-  normalizeMenuItemQuantityLimit,
-} from '@/libs/orderQuantityLimits';
+  normalizeDeliveryCoordinate,
+  validateCartForOrder,
+} from '@/libs/cartValidation';
 import {
   createRateLimitKey,
   createRateLimitResponse,
@@ -341,50 +337,6 @@ const getExistingCheckoutSessionResponse = async ({
   });
 };
 
-const normalizeCartSize = (value: unknown): CartSize | null => {
-  const size = String(value || '')
-    .trim()
-    .toLowerCase();
-
-  if (size === 'single' || size === 'small' || size === 'medium' || size === 'large') {
-    return size;
-  }
-
-  return null;
-};
-
-const normalizeDeliveryCoordinate = (value: unknown) => {
-  if (value === null || value === undefined || value === '') {
-    return null;
-  }
-
-  const coordinate = Number(value);
-
-  return Number.isFinite(coordinate) ? coordinate : null;
-};
-
-const getMenuItemSizePrice = (menuItem: any, requestedSize: CartSize) => {
-  const prices = [
-    { size: 'small' as const, price: Number(menuItem.priceSmall) },
-    { size: 'medium' as const, price: Number(menuItem.priceMedium) },
-    { size: 'large' as const, price: Number(menuItem.priceLarge) },
-  ].filter((entry) => Number.isFinite(entry.price) && entry.price > 0);
-
-  if (requestedSize === 'single') {
-    if (prices.length === 1) {
-      return { size: 'single' as const, price: prices[0].price };
-    }
-
-    return null;
-  }
-
-  if (menuItem.priceType === 'single' && requestedSize === 'small' && prices.length === 1) {
-    return { size: 'single' as const, price: prices[0].price };
-  }
-
-  return prices.find((entry) => entry.size === requestedSize) ?? null;
-};
-
 export async function POST(req: Request) {
   if (!stripe) {
     return Response.json({ error: 'Stripe is not configured' }, { status: 500 });
@@ -453,27 +405,6 @@ export async function POST(req: Request) {
   const normalizedSpecialInstructions =
     typeof specialInstructions === 'string' ? specialInstructions.trim().slice(0, 500) : '';
 
-  const sanitizedItems = cartItems
-    .map((item) => ({
-      _id: String(item._id),
-      size: normalizeCartSize(item.size),
-      quantity: Math.floor(Number(item.quantity)),
-      restaurantId: String(item.restaurantId),
-    }))
-    .filter((item) =>
-      Boolean(
-        item._id &&
-        item.size &&
-        Number.isFinite(item.quantity) &&
-        item.quantity > 0 &&
-        item.restaurantId
-      )
-    );
-
-  if (sanitizedItems.length !== cartItems.length || sanitizedItems.length === 0) {
-    return Response.json({ error: 'Invalid cart data' }, { status: 400 });
-  }
-
   await mongoose.connect(process.env.MONGODB_URL as string);
 
   const user = await User.findOne({ email: session.user.email });
@@ -503,17 +434,35 @@ export async function POST(req: Request) {
     });
   }
 
-  // Single restaurant checkout (enforced by frontend)
-  const restaurantId = sanitizedItems[0]?.restaurantId;
+  const requestedCartRestaurantIds = Array.from(
+    new Set(cartItems.map((item) => String(item.restaurantId || '')).filter(Boolean))
+  );
+
+  if (requestedCartRestaurantIds.length > 1) {
+    return createCheckoutBlockResponse({
+      user,
+      restaurantId: requestedCartRestaurantIds[0],
+      message: 'Cart must contain items from one restaurant only',
+      reason: 'multiple_restaurants',
+      status: 400,
+      metadata: {
+        restaurantIds: requestedCartRestaurantIds,
+      },
+    });
+  }
+
+  const cartValidation = await validateCartForOrder({
+    cartItems,
+    deliveryLatitude,
+    deliveryLongitude,
+  });
+  const restaurantId = cartValidation.currentRestaurantId;
+
   if (!restaurantId) {
     return Response.json({ error: 'No restaurant found in cart' }, { status: 400 });
   }
 
-  // Ensure all cart items are from the same restaurant
-  const cartHasMultipleRestaurants = sanitizedItems.some(
-    (item) => item.restaurantId !== restaurantId
-  );
-  if (cartHasMultipleRestaurants) {
+  if (cartValidation.restaurant?.status === 'multiple_restaurants') {
     return createCheckoutBlockResponse({
       user,
       restaurantId,
@@ -521,19 +470,23 @@ export async function POST(req: Request) {
       reason: 'multiple_restaurants',
       status: 400,
       metadata: {
-        restaurantIds: Array.from(new Set(sanitizedItems.map((item) => item.restaurantId))),
+        restaurantIds: cartValidation.requestedRestaurantIds,
       },
     });
   }
 
-  // Fetch restaurant data
-  const restaurant = await Restaurant.findById(restaurantId);
-  if (!restaurant) {
+  const restaurant = cartValidation.restaurantDocument;
+  const normalizedDeliveryLatitude = normalizeDeliveryCoordinate(deliveryLatitude);
+  const normalizedDeliveryLongitude = normalizeDeliveryCoordinate(deliveryLongitude);
+  const hasDeliveryLocation =
+    Number.isFinite(normalizedDeliveryLatitude) && Number.isFinite(normalizedDeliveryLongitude);
+
+  if (!restaurant && cartValidation.restaurant?.status === 'missing') {
     return Response.json({ error: `Restaurant ${restaurantId} not found` }, { status: 404 });
   }
 
   // Business rule: users cannot place orders from their own restaurant
-  if (user.restaurantId?.toString() === restaurant._id.toString()) {
+  if (restaurant && user.restaurantId?.toString() === String(restaurant._id)) {
     return createCheckoutBlockResponse({
       user,
       restaurant,
@@ -543,207 +496,191 @@ export async function POST(req: Request) {
     });
   }
 
-  const normalizedDeliveryLatitude = normalizeDeliveryCoordinate(deliveryLatitude);
-  const normalizedDeliveryLongitude = normalizeDeliveryCoordinate(deliveryLongitude);
-  const hasDeliveryLocation =
-    Number.isFinite(normalizedDeliveryLatitude) && Number.isFinite(normalizedDeliveryLongitude);
-  const orderingStatus = getRestaurantOrderingStatus({
-    restaurant,
-    deliveryLatitude: hasDeliveryLocation ? normalizedDeliveryLatitude : null,
-    deliveryLongitude: hasDeliveryLocation ? normalizedDeliveryLongitude : null,
+  const ownedMenuItem = cartValidation.validItems.find((item) => {
+    const menuItem = cartValidation.menuItemById.get(item._id);
+
+    return menuItem?.adminId?.toString?.() === user._id.toString();
   });
 
-  if (orderingStatus.requiresDeliveryLocation) {
-    return createCheckoutBlockResponse({
-      user,
-      restaurant,
-      message: `Please use your current location so we can confirm this restaurant delivers within ${orderingStatus.deliveryRadiusKm} km.`,
-      reason: 'missing_delivery_location',
-      status: 400,
-      metadata: {
-        deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
-      },
-    });
+  if (ownedMenuItem) {
+    return Response.json({ error: 'You cannot order your own menu items' }, { status: 403 });
   }
 
-  if (!orderingStatus.isAcceptingOrders) {
-    return createCheckoutBlockResponse({
-      user,
-      restaurant,
-      message: orderingStatus.reason || 'This restaurant is not accepting orders right now.',
-      reason:
-        orderingStatus.isWithinDeliveryRadius === false
-          ? 'outside_delivery_radius'
-          : 'restaurant_not_accepting_orders',
-      status: orderingStatus.isWithinDeliveryRadius === false ? 400 : 409,
-      metadata: {
-        isOpen: orderingStatus.isOpen,
-        isPaused: orderingStatus.isPaused,
-        isWithinDeliveryRadius: orderingStatus.isWithinDeliveryRadius,
-        deliveryDistanceKm: orderingStatus.distanceKm,
-        deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
-      },
-    });
-  }
+  if (!cartValidation.canCheckout) {
+    const blockingItem = cartValidation.blockingItems[0];
 
-  const activeOrderLimit = Math.min(
-    100,
-    Math.max(1, Number((restaurant as any).activeOrderLimit) || 10)
-  );
-  const activeKitchenOrders = await Order.countDocuments({
-    restaurantId: restaurant._id,
-    orderStatus: { $in: ['placed', 'processing', 'ready'] },
-    $or: [{ orderPaid: true }, { paid: true }, { paymentStatus: true }],
-  });
+    if (blockingItem) {
+      const menuItem = cartValidation.menuItemById.get(blockingItem._id);
 
-  if (activeKitchenOrders >= activeOrderLimit) {
-    return createCheckoutBlockResponse({
-      user,
-      restaurant,
-      message:
-        'This restaurant is very busy at the moment. Please wait a little bit and try again.',
-      reason: 'active_order_limit_reached',
-      status: 409,
-      metadata: {
-        activeKitchenOrders,
-        activeOrderLimit,
-      },
-    });
-  }
+      if (blockingItem.status === 'unavailable') {
+        return createCheckoutBlockResponse({
+          user,
+          restaurant,
+          restaurantId,
+          message: `${blockingItem.name || 'This menu item'} is currently unavailable`,
+          reason: 'menu_item_unavailable',
+          status: 400,
+          metadata: {
+            menuItemId: menuItem?._id || blockingItem._id,
+            menuItemName: blockingItem.name,
+          },
+        });
+      }
 
-  const maxItemsPerOrder = normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder);
-  const totalCartQuantity = getCartTotalQuantity(sanitizedItems);
+      if (blockingItem.status === 'invalid_size') {
+        return createCheckoutBlockResponse({
+          user,
+          restaurant,
+          restaurantId,
+          message: `${blockingItem.name || 'This menu item'} is not available in that size`,
+          reason: 'menu_item_size_unavailable',
+          status: 400,
+          metadata: {
+            menuItemId: menuItem?._id || blockingItem._id,
+            requestedSize: blockingItem.requestedSize,
+          },
+        });
+      }
 
-  if (totalCartQuantity > maxItemsPerOrder) {
-    return createCheckoutBlockResponse({
-      user,
-      restaurant,
-      message: `This restaurant accepts up to ${maxItemsPerOrder} items in one order. Your cart has ${totalCartQuantity} items.`,
-      reason: 'restaurant_item_limit_exceeded',
-      status: 400,
-      metadata: {
-        maxItemsPerOrder,
-        totalCartQuantity,
-      },
-    });
-  }
+      if (blockingItem.status === 'quantity_limit') {
+        const requestedItemQuantity = cartValidation.normalizedItems
+          .filter((item) => item._id === blockingItem._id)
+          .reduce((total, item) => total + Math.max(1, Number(item.quantity) || 1), 0);
 
-  const itemIds = sanitizedItems
-    .map((item) => item._id)
-    .filter((id) => mongoose.Types.ObjectId.isValid(id))
-    .map((id) => new mongoose.Types.ObjectId(id));
+        return createCheckoutBlockResponse({
+          user,
+          restaurant,
+          restaurantId,
+          message:
+            blockingItem.message ||
+            `${blockingItem.name || 'This menu item'} is limited to ${blockingItem.maxQuantityPerOrder} per order.`,
+          reason: 'menu_item_quantity_limit_exceeded',
+          status: 400,
+          metadata: {
+            menuItemId: menuItem?._id || blockingItem._id,
+            menuItemName: blockingItem.name,
+            maxQuantityPerOrder: blockingItem.maxQuantityPerOrder,
+            requestedItemQuantity,
+          },
+        });
+      }
 
-  if (itemIds.length !== sanitizedItems.length) {
-    return Response.json({ error: 'Cart contains invalid menu items' }, { status: 400 });
-  }
+      if (blockingItem.status === 'deleted') {
+        return Response.json({ error: 'Some menu items are no longer available' }, { status: 400 });
+      }
 
-  const uniqueItemIds = Array.from(new Set(sanitizedItems.map((item) => item._id))).map(
-    (id) => new mongoose.Types.ObjectId(id)
-  );
-
-  const menuItems = await MenuItem.find({ _id: { $in: uniqueItemIds } })
-    .select(
-      '_id name restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder'
-    )
-    .lean();
-
-  if (menuItems.length !== uniqueItemIds.length) {
-    return Response.json({ error: 'Some menu items are no longer available' }, { status: 400 });
-  }
-
-  const menuItemById = new Map(menuItems.map((menuItem) => [menuItem._id.toString(), menuItem]));
-  const requestedQuantityByItemId = new Map<string, number>();
-
-  for (const cartItem of sanitizedItems) {
-    requestedQuantityByItemId.set(
-      cartItem._id,
-      (requestedQuantityByItemId.get(cartItem._id) || 0) +
-        Math.max(1, Number(cartItem.quantity) || 1)
-    );
-  }
-
-  const verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize }> = [];
-
-  for (const cartItem of sanitizedItems) {
-    const menuItem = menuItemById.get(cartItem._id);
-
-    if (!menuItem) {
-      return Response.json({ error: 'Some menu items are no longer available' }, { status: 400 });
-    }
-
-    if (menuItem.isAvailable === false) {
-      return createCheckoutBlockResponse({
-        user,
-        restaurant,
-        message: `${menuItem.name || 'This menu item'} is currently unavailable`,
-        reason: 'menu_item_unavailable',
-        status: 400,
-        metadata: {
-          menuItemId: menuItem._id,
-          menuItemName: menuItem.name,
-        },
-      });
-    }
-
-    const requestedSize = cartItem.size;
-    if (!requestedSize) {
       return Response.json({ error: 'Invalid cart data' }, { status: 400 });
     }
 
-    const sizePrice = getMenuItemSizePrice(menuItem, requestedSize);
-    if (!sizePrice) {
+    const restaurantValidation = cartValidation.restaurant;
+
+    if (restaurantValidation?.status === 'busy') {
       return createCheckoutBlockResponse({
         user,
         restaurant,
-        message: `${menuItem.name || 'This menu item'} is not available in that size`,
-        reason: 'menu_item_size_unavailable',
-        status: 400,
+        restaurantId,
+        message:
+          restaurantValidation.message ||
+          'This restaurant is very busy at the moment. Please wait a little bit and try again.',
+        reason: 'active_order_limit_reached',
+        status: 409,
         metadata: {
-          menuItemId: menuItem._id,
-          requestedSize,
+          activeKitchenOrders: restaurantValidation.activeKitchenOrders,
+          activeOrderLimit: restaurantValidation.activeOrderLimit,
         },
       });
     }
 
-    if (menuItem.restaurantId?.toString() !== restaurant._id.toString()) {
-      return Response.json(
-        { error: 'Cart item does not belong to the selected restaurant' },
-        { status: 400 }
-      );
-    }
-
-    if (menuItem.adminId?.toString() === user._id.toString()) {
-      return Response.json({ error: 'You cannot order your own menu items' }, { status: 403 });
-    }
-
-    const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder);
-    const requestedItemQuantity = requestedQuantityByItemId.get(cartItem._id) || 0;
-
-    if (requestedItemQuantity > maxQuantityPerOrder) {
+    if (restaurantValidation?.status === 'order_quantity_limit') {
       return createCheckoutBlockResponse({
         user,
         restaurant,
-        message: `${menuItem.name || 'This menu item'} is limited to ${maxQuantityPerOrder} per order. Your cart has ${requestedItemQuantity}.`,
-        reason: 'menu_item_quantity_limit_exceeded',
+        restaurantId,
+        message: restaurantValidation.message || 'This cart exceeds the restaurant item limit.',
+        reason: 'restaurant_item_limit_exceeded',
         status: 400,
         metadata: {
-          menuItemId: menuItem._id,
-          menuItemName: menuItem.name,
-          maxQuantityPerOrder,
-          requestedItemQuantity,
+          maxItemsPerOrder: restaurantValidation.maxItemsPerOrder,
+          totalCartQuantity: restaurantValidation.totalCartQuantity,
         },
       });
     }
 
-    verifiedItems.push({
-      _id: menuItem._id.toString(),
-      name: menuItem.name,
-      size: sizePrice.size,
-      price: roundToTwoDecimals(sizePrice.price),
-      quantity: cartItem.quantity,
-      restaurantId: menuItem.restaurantId.toString(),
-    });
+    if (restaurantValidation?.status === 'missing_delivery_location') {
+      return createCheckoutBlockResponse({
+        user,
+        restaurant,
+        restaurantId,
+        message:
+          restaurantValidation.message ||
+          'Please use your current location so we can confirm the delivery radius.',
+        reason: 'missing_delivery_location',
+        status: 400,
+        metadata: {
+          deliveryRadiusKm: restaurantValidation.deliveryRadiusKm,
+        },
+      });
+    }
+
+    if (restaurantValidation?.status === 'outside_delivery_radius') {
+      return createCheckoutBlockResponse({
+        user,
+        restaurant,
+        restaurantId,
+        message:
+          restaurantValidation.message || 'This restaurant does not deliver to your location.',
+        reason: 'outside_delivery_radius',
+        status: 400,
+        metadata: {
+          deliveryDistanceKm: restaurantValidation.distanceKm,
+          deliveryRadiusKm: restaurantValidation.deliveryRadiusKm,
+          isOpen: restaurantValidation.isOpen,
+          isPaused: restaurantValidation.isPaused,
+          isWithinDeliveryRadius: false,
+        },
+      });
+    }
+
+    if (
+      restaurantValidation?.status === 'closed' ||
+      restaurantValidation?.status === 'paused' ||
+      restaurantValidation?.status === 'closing_soon'
+    ) {
+      return createCheckoutBlockResponse({
+        user,
+        restaurant,
+        restaurantId,
+        message: restaurantValidation.message || 'This restaurant is not accepting orders right now.',
+        reason: 'restaurant_not_accepting_orders',
+        status: 409,
+        metadata: {
+          deliveryDistanceKm: restaurantValidation.distanceKm,
+          deliveryRadiusKm: restaurantValidation.deliveryRadiusKm,
+          isOpen: restaurantValidation.isOpen,
+          isPaused: restaurantValidation.isPaused,
+        },
+      });
+    }
+
+    return Response.json(
+      { error: restaurantValidation?.message || cartValidation.message || 'Invalid cart data' },
+      { status: 400 }
+    );
   }
+
+  if (!restaurant) {
+    return Response.json({ error: `Restaurant ${restaurantId} not found` }, { status: 404 });
+  }
+
+  const verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize }> =
+    cartValidation.validItems.map((item) => ({
+      _id: item._id,
+      name: item.name || 'Menu item',
+      price: roundToTwoDecimals(Number(item.price) || 0),
+      quantity: item.quantity,
+      restaurantId: String(item.restaurantId),
+      size: item.size as CartSize,
+    }));
 
   // Verify loyalty discount by checking user's actual order count
   const completedOrderCount = await Order.countDocuments({
@@ -762,18 +699,6 @@ export async function POST(req: Request) {
   const subtotal = roundToTwoDecimals(
     verifiedItems.reduce((sum, item) => addMoney(sum, multiplyMoney(item.price, item.quantity)), 0)
   );
-  const minimumOrderAmount = roundToTwoDecimals(
-    Math.min(100, Math.max(1, Number((restaurant as any).minimumOrderAmount) || 10))
-  );
-
-  if (subtotal < minimumOrderAmount) {
-    return Response.json(
-      {
-        error: `Minimum order amount for this restaurant is $${minimumOrderAmount.toFixed(2)}.`,
-      },
-      { status: 400 }
-    );
-  }
 
   const normalizedCouponCode = couponCode ? normalizeCouponCode(couponCode) : '';
   const coupon = normalizedCouponCode

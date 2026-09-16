@@ -253,6 +253,15 @@ const OrderSchema = new Schema(
   { timestamps: true }
 );
 
+OrderSchema.index({ userId: 1, orderStatus: 1, createdAt: -1 });
+OrderSchema.index({ restaurantId: 1, orderStatus: 1, createdAt: -1 });
+OrderSchema.index({ courierId: 1, orderStatus: 1, createdAt: -1 });
+OrderSchema.index({ restaurantId: 1, orderPaid: 1, orderStatus: 1, createdAt: -1 });
+OrderSchema.index({ userId: 1, restaurantId: 1, checkoutFingerprint: 1, createdAt: -1 });
+OrderSchema.index({ courierAssignmentStatus: 1, courierAssignedAt: 1 });
+OrderSchema.index({ orderStatus: 1, readyAt: 1, courierId: 1 });
+OrderSchema.index({ createdAt: -1 });
+
 // In dev, Next.js hot-reloads can retain old models. Ensure schema updates take effect.
 try {
   if (mongoose.models.Order) {

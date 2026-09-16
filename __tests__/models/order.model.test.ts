@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { Order } from '@/models/order';
 
+const hasIndex = (expectedIndex: Record<string, 1 | -1>) =>
+  Order.schema.indexes().some(([index]) =>
+    Object.entries(expectedIndex).every(([key, value]) => index[key] === value)
+  );
+
 describe('Order model validation', () => {
   it('rejects creation when required fields are missing', async () => {
     const o: any = new Order({});
@@ -90,5 +95,18 @@ describe('Order model validation', () => {
 
     const o: any = new Order(data);
     await expect(o.validate()).rejects.toBeTruthy();
+  });
+
+  it('keeps compound indexes for high-traffic order queries', () => {
+    expect(hasIndex({ userId: 1, orderStatus: 1, createdAt: -1 })).toBe(true);
+    expect(hasIndex({ restaurantId: 1, orderStatus: 1, createdAt: -1 })).toBe(true);
+    expect(hasIndex({ courierId: 1, orderStatus: 1, createdAt: -1 })).toBe(true);
+    expect(hasIndex({ restaurantId: 1, orderPaid: 1, orderStatus: 1, createdAt: -1 })).toBe(true);
+    expect(hasIndex({ userId: 1, restaurantId: 1, checkoutFingerprint: 1, createdAt: -1 })).toBe(
+      true
+    );
+    expect(hasIndex({ courierAssignmentStatus: 1, courierAssignedAt: 1 })).toBe(true);
+    expect(hasIndex({ orderStatus: 1, readyAt: 1, courierId: 1 })).toBe(true);
+    expect(hasIndex({ createdAt: -1 })).toBe(true);
   });
 });

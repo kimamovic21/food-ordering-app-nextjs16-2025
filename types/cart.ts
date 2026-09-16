@@ -92,6 +92,8 @@ export type CartValidationResponse = {
     minimumOrderAmount?: number;
     maxItemsPerOrder?: number;
     totalCartQuantity?: number;
+    activeKitchenOrders?: number;
+    activeOrderLimit?: number;
     deliveryRadiusKm?: number;
     distanceKm?: number | null;
     isOpen?: boolean;
