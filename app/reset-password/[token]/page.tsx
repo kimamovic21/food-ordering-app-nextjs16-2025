@@ -2,7 +2,7 @@ import Title from '@/components/shared/Title';
 import ResetPasswordForm from './ResetPasswordForm';
 
 type ResetPasswordPageProps = {
-  params: { token: string } | Promise<{ token: string }>;
+  params: Promise<{ token: string }>;
 };
 
 export default async function ResetPasswordPage({ params }: ResetPasswordPageProps) {

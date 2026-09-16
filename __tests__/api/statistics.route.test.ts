@@ -1,4 +1,4 @@
-import { isSuperAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isSuperAdmin } from '@/libs/authGuards';
 
 vi.mock('mongoose', () => ({
   default: {
@@ -6,7 +6,7 @@ vi.mock('mongoose', () => ({
   },
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isSuperAdmin: vi.fn(),
 }));
 

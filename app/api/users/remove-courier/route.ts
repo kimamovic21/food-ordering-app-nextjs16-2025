@@ -1,4 +1,4 @@
-import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import { createUserRoleAuditLog } from '@/libs/userRoleAudit';
 import { User } from '@/models/user';
 import mongoose from 'mongoose';

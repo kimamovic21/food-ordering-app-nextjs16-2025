@@ -1,4 +1,4 @@
-import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import { User } from '@/models/user';
 import { Order } from '@/models/order';
 import { notifyCourierAboutAssignment } from '@/libs/notifications';

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
-import { isSuperAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isSuperAdmin } from '@/libs/authGuards';
 import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
 import { buildDailyData, buildMonthlyData, summarizeOrders } from '@/libs/statistics';

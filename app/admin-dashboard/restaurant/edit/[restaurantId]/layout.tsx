@@ -3,7 +3,7 @@ import { createPageMetadata } from '@/libs/metadata';
 
 type LayoutProps = {
   children: React.ReactNode;
-  params: { restaurantId: string } | Promise<{ restaurantId: string }>;
+  params: Promise<{ restaurantId: string }>;
 };
 
 export const generateMetadata = async ({ params }: LayoutProps): Promise<Metadata> => {

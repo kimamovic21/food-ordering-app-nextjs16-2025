@@ -6,7 +6,7 @@ import { Restaurant } from '@/models/restaurant';
 import { SupportTicket } from '@/models/supportTicket';
 import { User } from '@/models/user';
 import { NextResponse } from 'next/server';
-import { isSuperAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isSuperAdmin } from '@/libs/authGuards';
 import {
   buildDailyData,
   buildMonthlyData,

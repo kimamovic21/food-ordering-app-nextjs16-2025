@@ -10,7 +10,7 @@ vi.mock('next-auth/next', () => ({
   getServerSession: vi.fn(async () => activeSession),
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isAdmin: vi.fn(async () => activeSession?.user?.role === 'admin'),
 }));
 

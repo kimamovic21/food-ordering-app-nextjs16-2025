@@ -6,6 +6,7 @@ import { MenuItem } from '@/models/menuItem';
 import { Order } from '@/models/order';
 import { Coupon } from '@/models/coupon';
 import { getCouponValidationError } from '@/libs/coupon';
+import { createAuditLog } from '@/libs/auditLog';
 
 const stripeCreateSession = vi.fn();
 const stripeRetrieveSession = vi.fn();
@@ -386,6 +387,17 @@ describe('POST /api/checkout', () => {
       error: 'This restaurant is very busy at the moment. Please wait a little bit and try again.',
     });
     expect(stripeCreateSession).not.toHaveBeenCalled();
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'checkout.blocked',
+        entityType: 'checkout',
+        metadata: expect.objectContaining({
+          activeKitchenOrders: 10,
+          activeOrderLimit: 10,
+          reason: 'active_order_limit_reached',
+        }),
+      })
+    );
   });
 
   it('rejects checkout when cart quantity exceeds the restaurant item limit', async () => {
@@ -416,6 +428,17 @@ describe('POST /api/checkout', () => {
       error: 'This restaurant accepts up to 2 items in one order. Your cart has 3 items.',
     });
     expect(stripeCreateSession).not.toHaveBeenCalled();
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'checkout.blocked',
+        entityType: 'checkout',
+        metadata: expect.objectContaining({
+          maxItemsPerOrder: 2,
+          reason: 'restaurant_item_limit_exceeded',
+          totalCartQuantity: 3,
+        }),
+      })
+    );
   });
 
   it('rejects checkout when cart quantity exceeds a menu item limit', async () => {
@@ -468,6 +491,17 @@ describe('POST /api/checkout', () => {
       error: 'Pizza is limited to 2 per order. Your cart has 3.',
     });
     expect(stripeCreateSession).not.toHaveBeenCalled();
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'checkout.blocked',
+        entityType: 'checkout',
+        metadata: expect.objectContaining({
+          maxQuantityPerOrder: 2,
+          reason: 'menu_item_quantity_limit_exceeded',
+          requestedItemQuantity: 3,
+        }),
+      })
+    );
   });
 
   it('rejects checkout when subtotal is below restaurant minimum order amount', async () => {

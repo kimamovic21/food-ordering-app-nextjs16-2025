@@ -30,6 +30,8 @@ This folder contains unit tests grouped by feature area.
 - `libs/order-auto-cancellation.test.ts`: validates stale unpaid and ready-without-courier auto-cancel rules.
 - `libs/paymentExpiry.test.ts`: validates the customer-facing unpaid payment countdown helper.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item and per-order quantity-limit helpers used by cart UI and checkout APIs.
+- `libs/orderCapacityBackfill.test.ts`: validates server-side maintenance helpers for backfilling restaurant/menu item quantity-limit fields.
+- `libs/authGuards.test.ts`: validates shared server-side admin and super-admin guard behavior.
 - `libs/deliveryAddresses.test.ts`: validates saved delivery address normalization and duplicate matching.
 - `libs/orderDelay.test.ts`: validates active order delay warning thresholds and development time offsets.
 - `libs/restaurantOperations.test.ts`: validates operations overview stage counts, capacity, courier summary, revenue, and attention-order prioritization.
