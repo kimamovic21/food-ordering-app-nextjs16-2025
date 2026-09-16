@@ -50,6 +50,7 @@ const AUDIT_LOGS_LIMIT = 20;
 
 type AuditLogsFilters = {
   availableActions: string[];
+  availableCheckoutBlockReasons: string[];
   availableEntityTypes: string[];
 };
 
@@ -59,20 +60,82 @@ type AuditLogsResponse = {
   totalPages: number;
   totalLogs: number;
   filters?: AuditLogsFilters;
+  summary?: {
+    checkoutBlocksToday?: number;
+  };
 };
 
-const formatActionLabel = (action: string) =>
-  action
+const CHECKOUT_BLOCK_REASON_LABELS: Record<string, string> = {
+  active_customer_order: 'Active customer order',
+  active_order_limit_reached: 'Busy restaurant capacity',
+  menu_item_quantity_limit_exceeded: 'Menu item quantity limit',
+  menu_item_size_unavailable: 'Unavailable menu item size',
+  menu_item_unavailable: 'Unavailable menu item',
+  missing_delivery_location: 'Missing delivery location',
+  multiple_restaurants: 'Multiple restaurants in cart',
+  outside_delivery_radius: 'Outside delivery radius',
+  own_restaurant: 'Own restaurant order',
+  restaurant_item_limit_exceeded: 'Restaurant item limit',
+  restaurant_not_accepting_orders: 'Restaurant not accepting orders',
+};
+
+const formatTitleCase = (value: string) =>
+  value
     .split(/[._-]/)
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const formatActionLabel = (action: string) =>
+  action === 'checkout.blocked' ? 'Checkout Blocked' : formatTitleCase(action);
+
 const formatEntityLabel = (entityType: string) =>
   entityType.charAt(0).toUpperCase() + entityType.slice(1);
 
+const formatCheckoutBlockReasonLabel = (reason: unknown) => {
+  const normalizedReason = String(reason || '').trim();
+
+  return CHECKOUT_BLOCK_REASON_LABELS[normalizedReason] || formatTitleCase(normalizedReason);
+};
+
+const getCheckoutBlockReasonBadgeClassName = (reason: string) => {
+  if (reason.includes('quantity') || reason.includes('limit')) {
+    return 'border-red-500/35 bg-red-500/15 text-red-300';
+  }
+
+  if (reason.includes('unavailable') || reason.includes('not_accepting')) {
+    return 'border-amber-500/35 bg-amber-500/15 text-amber-300';
+  }
+
+  if (reason.includes('radius') || reason.includes('location')) {
+    return 'border-sky-500/35 bg-sky-500/15 text-sky-300';
+  }
+
+  return 'border-orange-500/35 bg-orange-500/15 text-orange-300';
+};
+
+const getCheckoutBlockReasonTextClassName = (reason: string) => {
+  if (reason.includes('quantity') || reason.includes('limit')) {
+    return 'text-red-300';
+  }
+
+  if (reason.includes('unavailable') || reason.includes('not_accepting')) {
+    return 'text-amber-300';
+  }
+
+  if (reason.includes('radius') || reason.includes('location')) {
+    return 'text-sky-300';
+  }
+
+  return 'text-orange-300';
+};
+
 const getActionBadgeClassName = (action: string) => {
   const normalizedAction = action.toLowerCase();
+
+  if (normalizedAction === 'checkout.blocked') {
+    return 'border-orange-500/35 bg-orange-500/15 text-orange-300';
+  }
 
   if (
     normalizedAction.includes('delete') ||
@@ -104,6 +167,18 @@ const getActionBadgeClassName = (action: string) => {
 const getMetadataEntries = (metadata: Record<string, unknown>) =>
   Object.entries(metadata || {}).filter(([, value]) => value !== undefined);
 
+const formatMetadataValue = (value: unknown) => {
+  if (value === null || value === undefined || value === '') {
+    return '-';
+  }
+
+  if (typeof value === 'object') {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+};
+
 const stringifyMetadata = (metadata: Record<string, unknown>) => {
   try {
     return JSON.stringify(metadata || {}, null, 2);
@@ -114,6 +189,26 @@ const stringifyMetadata = (metadata: Record<string, unknown>) => {
 
 const AuditLogDetailsDialog = ({ log }: { log: AuditLogItem }) => {
   const metadataEntries = getMetadataEntries(log.metadata);
+  const isCheckoutBlocked = log.action === 'checkout.blocked';
+  const checkoutBlockReason = String(log.metadata?.reason || '');
+  const checkoutBlockHighlights = (
+    [
+      ['Reason', formatCheckoutBlockReasonLabel(checkoutBlockReason)],
+      ['Status', log.metadata?.status],
+      ['Message', log.metadata?.message],
+      ['Cart quantity', log.metadata?.totalCartQuantity],
+      ['Order limit', log.metadata?.maxItemsPerOrder],
+      ['Item quantity', log.metadata?.requestedItemQuantity],
+      ['Item limit', log.metadata?.maxQuantityPerOrder],
+      ['Menu item', log.metadata?.menuItemName],
+      ['Active orders', log.metadata?.activeKitchenOrders],
+      ['Capacity limit', log.metadata?.activeOrderLimit],
+      ['Delivery radius', log.metadata?.deliveryRadiusKm],
+      ['Distance', log.metadata?.deliveryDistanceKm],
+      ['Active order status', log.metadata?.activeOrderStatus],
+      ['Active order ID', log.metadata?.activeOrderId],
+    ] as Array<[string, unknown]>
+  ).filter(([, value]) => value !== undefined && value !== null && value !== '');
 
   return (
     <Dialog>
@@ -165,6 +260,36 @@ const AuditLogDetailsDialog = ({ log }: { log: AuditLogItem }) => {
           </div>
         </div>
 
+        {isCheckoutBlocked ? (
+          <div className='space-y-3 rounded-lg border border-orange-500/25 bg-orange-500/10 p-4'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <Badge
+                variant='outline'
+                className={cn(
+                  'rounded-full font-medium',
+                  getCheckoutBlockReasonBadgeClassName(checkoutBlockReason)
+                )}
+              >
+                {formatCheckoutBlockReasonLabel(checkoutBlockReason)}
+              </Badge>
+              <span className='text-sm text-muted-foreground'>Checkout was blocked safely.</span>
+            </div>
+
+            <div className='grid gap-2 sm:grid-cols-2 lg:grid-cols-3'>
+              {checkoutBlockHighlights.map(([label, value]) => (
+                <div key={label} className='rounded-md border border-white/10 bg-background/50 p-3'>
+                  <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
+                    {label}
+                  </p>
+                  <p className='mt-1 break-words text-sm font-medium'>
+                    {formatMetadataValue(value)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className='space-y-3'>
           <h3 className='text-sm font-semibold'>Metadata</h3>
           {metadataEntries.length ? (
@@ -174,11 +299,7 @@ const AuditLogDetailsDialog = ({ log }: { log: AuditLogItem }) => {
                   <p className='text-xs font-medium uppercase tracking-wide text-muted-foreground'>
                     {key}
                   </p>
-                  <p className='mt-1 break-words text-sm'>
-                    {typeof value === 'object' && value !== null
-                      ? JSON.stringify(value)
-                      : String(value)}
-                  </p>
+                  <p className='mt-1 break-words text-sm'>{formatMetadataValue(value)}</p>
                 </div>
               ))}
             </div>
@@ -209,13 +330,26 @@ const auditLogColumns = columnHelper.columns([
   columnHelper.accessor((log) => log.action, {
     id: 'action',
     header: 'Action',
-    cell: ({ getValue }) => {
+    cell: ({ row, getValue }) => {
       const action = String(getValue() || '');
+      const checkoutBlockReason = String(row.original.metadata?.reason || '');
 
       return (
-        <Badge variant='outline' className={cn('font-medium', getActionBadgeClassName(action))}>
-          {formatActionLabel(action) || 'Unknown'}
-        </Badge>
+        <div className='space-y-1'>
+          <Badge variant='outline' className={cn('font-medium', getActionBadgeClassName(action))}>
+            {formatActionLabel(action) || 'Unknown'}
+          </Badge>
+          {action === 'checkout.blocked' && checkoutBlockReason ? (
+            <p
+              className={cn(
+                'text-xs font-medium',
+                getCheckoutBlockReasonTextClassName(checkoutBlockReason)
+              )}
+            >
+              {formatCheckoutBlockReasonLabel(checkoutBlockReason)}
+            </p>
+          ) : null}
+        </div>
       );
     },
   }),
@@ -264,12 +398,14 @@ const auditLogColumnLabels = {
 const buildAuditLogsUrl = ({
   action,
   actorEmail,
+  checkoutBlockReason,
   entityType,
   page,
   search,
 }: {
   action: string;
   actorEmail: string;
+  checkoutBlockReason: string;
   entityType: string;
   page: number;
   search: string;
@@ -282,6 +418,9 @@ const buildAuditLogsUrl = ({
   if (search.trim()) params.set('q', search.trim());
   if (action !== ALL_FILTER_VALUE) params.set('action', action);
   if (actorEmail.trim()) params.set('actorEmail', actorEmail.trim());
+  if (checkoutBlockReason !== ALL_FILTER_VALUE) {
+    params.set('checkoutBlockReason', checkoutBlockReason);
+  }
   if (entityType !== ALL_FILTER_VALUE) params.set('entityType', entityType);
 
   return `/api/audit-logs?${params.toString()}`;
@@ -293,6 +432,7 @@ const AuditLogsPageContent = () => {
   const [auditLogQuery, setAuditLogQuery] = useQueryStates({
     action: parseAsString.withDefault(ALL_FILTER_VALUE),
     actorEmail: parseAsString.withDefault(''),
+    checkoutBlockReason: parseAsString.withDefault(ALL_FILTER_VALUE),
     entityType: parseAsString.withDefault(ALL_FILTER_VALUE),
     page: parseAsInteger.withDefault(1),
     q: parseAsString.withDefault(''),
@@ -300,8 +440,10 @@ const AuditLogsPageContent = () => {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [filters, setFilters] = useState<AuditLogsFilters>({
     availableActions: [],
+    availableCheckoutBlockReasons: [],
     availableEntityTypes: [],
   });
+  const [checkoutBlocksToday, setCheckoutBlocksToday] = useState(0);
   const [totalLogs, setTotalLogs] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -312,25 +454,31 @@ const AuditLogsPageContent = () => {
   const searchQuery = auditLogQuery.q;
   const actionFilter = auditLogQuery.action;
   const actorEmailFilter = auditLogQuery.actorEmail;
+  const checkoutBlockReasonFilter = auditLogQuery.checkoutBlockReason;
   const entityTypeFilter = auditLogQuery.entityType;
   const [draftSearchQuery, setDraftSearchQuery] = useState(searchQuery);
   const [draftActionFilter, setDraftActionFilter] = useState(actionFilter);
   const [draftActorEmailFilter, setDraftActorEmailFilter] = useState(actorEmailFilter);
+  const [draftCheckoutBlockReasonFilter, setDraftCheckoutBlockReasonFilter] =
+    useState(checkoutBlockReasonFilter);
   const [draftEntityTypeFilter, setDraftEntityTypeFilter] = useState(entityTypeFilter);
   const hasActiveFilters =
     Boolean(searchQuery.trim()) ||
     Boolean(actorEmailFilter.trim()) ||
     actionFilter !== ALL_FILTER_VALUE ||
+    checkoutBlockReasonFilter !== ALL_FILTER_VALUE ||
     entityTypeFilter !== ALL_FILTER_VALUE;
   const hasDraftFilters =
     Boolean(draftSearchQuery.trim()) ||
     Boolean(draftActorEmailFilter.trim()) ||
     draftActionFilter !== ALL_FILTER_VALUE ||
+    draftCheckoutBlockReasonFilter !== ALL_FILTER_VALUE ||
     draftEntityTypeFilter !== ALL_FILTER_VALUE;
   const hasPendingFilterChanges =
     draftSearchQuery !== searchQuery ||
     draftActorEmailFilter !== actorEmailFilter ||
     draftActionFilter !== actionFilter ||
+    draftCheckoutBlockReasonFilter !== checkoutBlockReasonFilter ||
     draftEntityTypeFilter !== entityTypeFilter;
 
   const actionOptions = useMemo(
@@ -347,6 +495,14 @@ const AuditLogsPageContent = () => {
         ? [entityTypeFilter, ...filters.availableEntityTypes.filter(Boolean)]
         : filters.availableEntityTypes.filter(Boolean),
     [entityTypeFilter, filters.availableEntityTypes]
+  );
+  const checkoutBlockReasonOptions = useMemo(
+    () =>
+      checkoutBlockReasonFilter !== ALL_FILTER_VALUE &&
+      !filters.availableCheckoutBlockReasons.includes(checkoutBlockReasonFilter)
+        ? [checkoutBlockReasonFilter, ...filters.availableCheckoutBlockReasons.filter(Boolean)]
+        : filters.availableCheckoutBlockReasons.filter(Boolean),
+    [checkoutBlockReasonFilter, filters.availableCheckoutBlockReasons]
   );
 
   useEffect(() => {
@@ -379,6 +535,7 @@ const AuditLogsPageContent = () => {
           buildAuditLogsUrl({
             action: actionFilter,
             actorEmail: actorEmailFilter,
+            checkoutBlockReason: checkoutBlockReasonFilter,
             entityType: entityTypeFilter,
             page,
             search: searchQuery,
@@ -394,8 +551,10 @@ const AuditLogsPageContent = () => {
         setLogs(Array.isArray(json.logs) ? json.logs : []);
         setFilters({
           availableActions: json.filters?.availableActions || [],
+          availableCheckoutBlockReasons: json.filters?.availableCheckoutBlockReasons || [],
           availableEntityTypes: json.filters?.availableEntityTypes || [],
         });
+        setCheckoutBlocksToday(Number(json.summary?.checkoutBlocksToday || 0));
         setTotalLogs(Number(json.totalLogs || 0));
         setTotalPages(Number(json.totalPages || 1));
       } catch (err) {
@@ -417,6 +576,7 @@ const AuditLogsPageContent = () => {
   }, [
     actionFilter,
     actorEmailFilter,
+    checkoutBlockReasonFilter,
     entityTypeFilter,
     isSuperAdmin,
     page,
@@ -428,17 +588,22 @@ const AuditLogsPageContent = () => {
     setDraftSearchQuery(searchQuery);
     setDraftActionFilter(actionFilter);
     setDraftActorEmailFilter(actorEmailFilter);
+    setDraftCheckoutBlockReasonFilter(checkoutBlockReasonFilter);
     setDraftEntityTypeFilter(entityTypeFilter);
-  }, [actionFilter, actorEmailFilter, entityTypeFilter, searchQuery]);
+  }, [actionFilter, actorEmailFilter, checkoutBlockReasonFilter, entityTypeFilter, searchQuery]);
 
   const setFilter = (nextQuery: Partial<typeof auditLogQuery>) => {
     void setAuditLogQuery({ ...nextQuery, page: 1 });
   };
 
   const applyFilters = () => {
+    const nextActionFilter =
+      draftCheckoutBlockReasonFilter !== ALL_FILTER_VALUE ? 'checkout.blocked' : draftActionFilter;
+
     void setAuditLogQuery({
-      action: draftActionFilter,
+      action: nextActionFilter,
       actorEmail: draftActorEmailFilter,
+      checkoutBlockReason: draftCheckoutBlockReasonFilter,
       entityType: draftEntityTypeFilter,
       page: 1,
       q: draftSearchQuery,
@@ -449,17 +614,21 @@ const AuditLogsPageContent = () => {
     setDraftSearchQuery('');
     setDraftActionFilter(ALL_FILTER_VALUE);
     setDraftActorEmailFilter('');
+    setDraftCheckoutBlockReasonFilter(ALL_FILTER_VALUE);
     setDraftEntityTypeFilter(ALL_FILTER_VALUE);
     void setAuditLogQuery({
       action: ALL_FILTER_VALUE,
       actorEmail: '',
+      checkoutBlockReason: ALL_FILTER_VALUE,
       entityType: ALL_FILTER_VALUE,
       page: 1,
       q: '',
     });
   };
 
-  const clearAppliedFilter = (filterName: 'action' | 'actorEmail' | 'entityType' | 'q') => {
+  const clearAppliedFilter = (
+    filterName: 'action' | 'actorEmail' | 'checkoutBlockReason' | 'entityType' | 'q'
+  ) => {
     if (filterName === 'q') {
       setDraftSearchQuery('');
       void setAuditLogQuery({ page: 1, q: '' });
@@ -475,6 +644,12 @@ const AuditLogsPageContent = () => {
     if (filterName === 'entityType') {
       setDraftEntityTypeFilter(ALL_FILTER_VALUE);
       void setAuditLogQuery({ entityType: ALL_FILTER_VALUE, page: 1 });
+      return;
+    }
+
+    if (filterName === 'checkoutBlockReason') {
+      setDraftCheckoutBlockReasonFilter(ALL_FILTER_VALUE);
+      void setAuditLogQuery({ checkoutBlockReason: ALL_FILTER_VALUE, page: 1 });
       return;
     }
 
@@ -550,6 +725,26 @@ const AuditLogsPageContent = () => {
             </div>
           ) : (
             <>
+              <div className='mb-4 grid gap-3 md:grid-cols-3'>
+                <div className='rounded-xl border border-orange-500/25 bg-orange-500/10 p-4'>
+                  <p className='text-xs font-medium uppercase tracking-wide text-orange-200/80'>
+                    Checkout blocks today
+                  </p>
+                  <div className='mt-2 flex items-end justify-between gap-3'>
+                    <p className='text-3xl font-bold text-foreground'>{checkoutBlocksToday}</p>
+                    <Badge
+                      variant='outline'
+                      className='rounded-full border-orange-500/35 bg-orange-500/15 text-orange-300'
+                    >
+                      Checkout Blocked
+                    </Badge>
+                  </div>
+                  <p className='mt-2 text-sm text-muted-foreground'>
+                    Customer checkout attempts stopped by current guardrails.
+                  </p>
+                </div>
+              </div>
+
               <form
                 className='mb-4 space-y-3 rounded-xl border border-white/10 bg-background/40 p-4'
                 onSubmit={(event) => {
@@ -591,10 +786,15 @@ const AuditLogsPageContent = () => {
                   </span>
                 </div>
 
-                <div className='grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-[14rem_13rem_minmax(16rem,1fr)_auto] xl:items-center'>
+                <div className='grid min-w-0 gap-2 sm:grid-cols-2 xl:grid-cols-[14rem_13rem_16rem_minmax(16rem,1fr)_auto] xl:items-center'>
                   <Select
                     value={draftActionFilter}
-                    onValueChange={(value) => setDraftActionFilter(value)}
+                    onValueChange={(value) => {
+                      setDraftActionFilter(value);
+                      if (value !== 'checkout.blocked') {
+                        setDraftCheckoutBlockReasonFilter(ALL_FILTER_VALUE);
+                      }
+                    }}
                   >
                     <SelectTrigger className='h-10 w-full rounded-full bg-background/80'>
                       <SelectValue placeholder='Action type' />
@@ -621,6 +821,28 @@ const AuditLogsPageContent = () => {
                       {entityTypeOptions.map((entityType) => (
                         <SelectItem key={entityType} value={entityType}>
                           {formatEntityLabel(entityType)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select
+                    value={draftCheckoutBlockReasonFilter}
+                    onValueChange={(value) => {
+                      setDraftCheckoutBlockReasonFilter(value);
+                      if (value !== ALL_FILTER_VALUE) {
+                        setDraftActionFilter('checkout.blocked');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className='h-10 w-full rounded-full bg-background/80'>
+                      <SelectValue placeholder='Checkout block reason' />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_FILTER_VALUE}>All checkout reasons</SelectItem>
+                      {checkoutBlockReasonOptions.map((reason) => (
+                        <SelectItem key={reason} value={reason}>
+                          {formatCheckoutBlockReasonLabel(reason)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -711,6 +933,24 @@ const AuditLogsPageContent = () => {
                           className='ml-1 grid size-4 cursor-pointer place-items-center rounded-full hover:bg-primary/15'
                           onClick={() => clearAppliedFilter('entityType')}
                           aria-label='Remove entity filter'
+                        >
+                          <X className='size-3' aria-hidden='true' />
+                        </button>
+                      </Badge>
+                    ) : null}
+
+                    {checkoutBlockReasonFilter !== ALL_FILTER_VALUE ? (
+                      <Badge
+                        variant='outline'
+                        className='gap-1 rounded-full border-orange-500/35 bg-orange-500/15 px-3 py-1 text-orange-300'
+                      >
+                        Reason: {formatCheckoutBlockReasonLabel(checkoutBlockReasonFilter)}
+                        <button
+                          type='button'
+                          data-slot='button'
+                          className='ml-1 grid size-4 cursor-pointer place-items-center rounded-full hover:bg-orange-500/15'
+                          onClick={() => clearAppliedFilter('checkoutBlockReason')}
+                          aria-label='Remove checkout block reason filter'
                         >
                           <X className='size-3' aria-hidden='true' />
                         </button>

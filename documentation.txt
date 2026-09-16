@@ -1175,3 +1175,5 @@ Add order quantity and restaurant capacity safeguards
 Improve Next 16 typecheck and route module hygiene
 
 Strengthen checkout guardrails and capacity maintenance
+
+Polish checkout blocked audit logs

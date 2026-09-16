@@ -98,7 +98,9 @@ describe('GET /api/audit-logs', () => {
     vi.mocked(AuditLog.countDocuments).mockResolvedValueOnce(1 as never);
     vi.mocked(AuditLog.distinct)
       .mockResolvedValueOnce(['user.deleted_by_super_admin'] as never)
-      .mockResolvedValueOnce(['user'] as never);
+      .mockResolvedValueOnce(['user'] as never)
+      .mockResolvedValueOnce(['active_order_limit_reached'] as never);
+    vi.mocked(AuditLog.countDocuments).mockResolvedValueOnce(3 as never);
 
     const response = await GET(
       new Request(
@@ -117,7 +119,43 @@ describe('GET /api/audit-logs', () => {
     expect(body.totalLogs).toBe(1);
     expect(body.filters).toEqual({
       availableActions: ['user.deleted_by_super_admin'],
+      availableCheckoutBlockReasons: ['active_order_limit_reached'],
       availableEntityTypes: ['user'],
     });
+    expect(body.summary).toEqual({ checkoutBlocksToday: 3 });
+  });
+
+  it('filters checkout blocked audit logs by metadata reason', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'super@example.com' },
+    } as never);
+    mockUserFindOneLean({
+      _id: 'admin-1',
+      email: 'super@example.com',
+      role: 'admin',
+    });
+    mockAuditFindLean([]);
+    vi.mocked(AuditLog.countDocuments)
+      .mockResolvedValueOnce(0 as never)
+      .mockResolvedValueOnce(2 as never);
+    vi.mocked(AuditLog.distinct)
+      .mockResolvedValueOnce(['checkout.blocked'] as never)
+      .mockResolvedValueOnce(['checkout'] as never)
+      .mockResolvedValueOnce(['restaurant_item_limit_exceeded'] as never);
+
+    const response = await GET(
+      new Request(
+        'http://localhost/api/audit-logs?checkoutBlockReason=restaurant_item_limit_exceeded'
+      )
+    );
+    const query = vi.mocked(AuditLog.find).mock.calls[0]?.[0] as Record<string, unknown>;
+
+    expect(response.status).toBe(200);
+    expect(query).toEqual(
+      expect.objectContaining({
+        action: 'checkout.blocked',
+        'metadata.reason': 'restaurant_item_limit_exceeded',
+      })
+    );
   });
 });

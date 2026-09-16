@@ -60,8 +60,13 @@ export async function GET(request: Request) {
   const action = (url.searchParams.get('action') || '').trim();
   const actorEmail = (url.searchParams.get('actorEmail') || '').trim();
   const entityType = (url.searchParams.get('entityType') || '').trim();
+  const checkoutBlockReason = (url.searchParams.get('checkoutBlockReason') || '').trim();
   const skip = (page - 1) * limit;
   const scopedQuery = { ...query };
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayEnd = new Date(todayStart);
+  todayEnd.setHours(23, 59, 59, 999);
 
   if (search) {
     const searchRegex = new RegExp(escapeRegExp(search), 'i');
@@ -93,11 +98,32 @@ export async function GET(request: Request) {
     query = { ...query, entityType };
   }
 
-  const [logs, totalLogs, availableActions, availableEntityTypes] = await Promise.all([
+  if (checkoutBlockReason) {
+    query = {
+      ...query,
+      action: 'checkout.blocked',
+      'metadata.reason': checkoutBlockReason,
+    };
+  }
+
+  const [
+    logs,
+    totalLogs,
+    availableActions,
+    availableEntityTypes,
+    availableCheckoutBlockReasons,
+    checkoutBlocksToday,
+  ] = await Promise.all([
     AuditLog.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
     AuditLog.countDocuments(query),
     AuditLog.distinct('action', scopedQuery),
     AuditLog.distinct('entityType', scopedQuery),
+    AuditLog.distinct('metadata.reason', { ...scopedQuery, action: 'checkout.blocked' }),
+    AuditLog.countDocuments({
+      ...scopedQuery,
+      action: 'checkout.blocked',
+      createdAt: { $gte: todayStart, $lte: todayEnd },
+    }),
   ]);
 
   return Response.json({
@@ -107,7 +133,11 @@ export async function GET(request: Request) {
     totalLogs,
     filters: {
       availableActions: availableActions.filter(Boolean).sort(),
+      availableCheckoutBlockReasons: availableCheckoutBlockReasons.filter(Boolean).sort(),
       availableEntityTypes: availableEntityTypes.filter(Boolean).sort(),
+    },
+    summary: {
+      checkoutBlocksToday,
     },
   });
 }

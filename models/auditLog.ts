@@ -56,6 +56,10 @@ const AuditLogSchema = new Schema(
 );
 
 AuditLogSchema.index({ createdAt: -1 });
+AuditLogSchema.index({ action: 1, createdAt: -1 });
+AuditLogSchema.index({ action: 1, 'metadata.reason': 1, createdAt: -1 });
+AuditLogSchema.index({ restaurantId: 1, action: 1, createdAt: -1 });
+AuditLogSchema.index({ entityType: 1, entityId: 1, createdAt: -1 });
 
 try {
   if (models.AuditLog) {
