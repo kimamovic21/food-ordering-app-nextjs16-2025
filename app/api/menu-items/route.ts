@@ -3,7 +3,7 @@ import { Category } from '@/models/category';
 import { attachRestaurantRatings } from '@/libs/reviewSummary';
 import { MenuItem } from '@/models/menuItem';
 import { User } from '@/models/user';
-import { isAdmin } from '../auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 import mongoose, { PipelineStage } from 'mongoose';

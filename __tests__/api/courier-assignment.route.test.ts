@@ -1,4 +1,4 @@
-import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import {
   notifyCourierAboutAssignment,
   notifyUserAboutOrderStatusChange,
@@ -20,7 +20,7 @@ vi.mock('mongoose', () => ({
   },
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isAdmin: vi.fn(),
 }));
 

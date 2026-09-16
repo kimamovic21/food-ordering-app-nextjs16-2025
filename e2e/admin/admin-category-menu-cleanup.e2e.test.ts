@@ -7,7 +7,7 @@ import cloudinary from '@/libs/cloudinary';
 
 let activeSession: any = null;
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isAdmin: vi.fn(async () => activeSession?.user?.role === 'admin'),
   isSuperAdmin: vi.fn(async () => activeSession?.user?.email === process.env.SUPER_ADMIN_EMAIL),
 }));

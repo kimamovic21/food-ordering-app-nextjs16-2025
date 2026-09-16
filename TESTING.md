@@ -34,6 +34,7 @@ Auth is a high-value and high-risk area. Testing register and login first gives 
   - credentials `authorize` handler in `libs/authOptions.ts`
   - restaurant availability helpers in `libs/restaurantAvailability.ts`
   - order quantity limit helpers in `libs/orderQuantityLimits.ts`
+  - order capacity backfill helper behavior in `libs/orderCapacityBackfill.ts`
   - restaurant operations overview summaries in `libs/restaurantOperations.ts`
   - notification copy/routing helpers in `libs/notifications.ts`
   - order delay warning helper behavior in `libs/orderDelay.ts`
@@ -47,7 +48,7 @@ Auth is a high-value and high-risk area. Testing register and login first gives 
   - profile management flow (info update, image upload/remove, account deletion)
   - checkout & payment flow (order creation, coupon application, payment webhook)
 
-Recent high-priority coverage also checks best coupon suggestion rules, restaurant closed/busy/minimum/radius/cart-quantity validation helpers, checkout quantity-limit blockers, pre-cart ordering status checks, saved delivery address duplicate matching, active customer order lookup, restaurant operations overview summaries, internal admin order notes staying out of customer payloads, ETA-style notification copy, unpaid payment-expiry countdowns, order activity events, order delay warnings, courier delivery summaries, delete protection for active restaurant/menu orders, Redis rate-limit helper behavior, Stripe Checkout session expiration for stale unpaid/customer-canceled orders, and app date formatting helpers.
+Recent high-priority coverage also checks best coupon suggestion rules, restaurant closed/busy/minimum/radius/cart-quantity validation helpers, checkout quantity-limit blockers, checkout blocked-attempt audit logs, pre-cart ordering status checks, saved delivery address duplicate matching, active customer order lookup, restaurant operations overview summaries, internal admin order notes staying out of customer payloads, ETA-style notification copy, unpaid payment-expiry countdowns, order activity events, order delay warnings, courier delivery summaries, delete protection for active restaurant/menu orders, Redis rate-limit helper behavior, Stripe Checkout session expiration for stale unpaid/customer-canceled orders, and app date formatting helpers.
 
 ## Folder Layout
 
@@ -69,6 +70,7 @@ Recent high-priority coverage also checks best coupon suggestion rules, restaura
 ## Commands
 
 - `npm run test`: run all tests once
+- `npm run typecheck`: run TypeScript plus Next generated route/page type checks
 - `npm run test:watch`: run in watch mode
 - `npm run test:file -- <path>`: run only one file
 - `npm run test:api`: run API route tests
@@ -112,6 +114,13 @@ Useful focused command after order quantity-limit changes:
 
 ```bash
 npm run test:file -- __tests__/libs/orderQuantityLimits.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/menuItem.model.test.ts __tests__/models/restaurant.model.test.ts
+```
+
+Useful focused command after checkout capacity/audit maintenance changes:
+
+```bash
+npm run test:file -- __tests__/libs/orderCapacityBackfill.test.ts __tests__/api/checkout.route.test.ts __tests__/api/profile-change-password.route.test.ts
+npm run test:e2e:file -- e2e/checkout/checkout-order-quantity-limits.e2e.test.ts
 ```
 
 Useful focused command after rate-limit changes:

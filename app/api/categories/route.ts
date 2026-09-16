@@ -2,7 +2,7 @@ import { Category } from '@/models/category';
 import { MenuItem } from '@/models/menuItem';
 import cloudinary from '@/libs/cloudinary';
 import mongoose from 'mongoose';
-import { isSuperAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isSuperAdmin } from '@/libs/authGuards';
 
 export async function POST(request: Request) {
   mongoose.connect(process.env.MONGODB_URL as string);

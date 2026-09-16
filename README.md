@@ -32,7 +32,7 @@ It includes:
 - Cloudinary media uploads
 - email purchase receipts with Resend + React Email
 - AI-assisted menu item descriptions for admin create/edit flows
-- Upstash Redis-backed rate limiting for sensitive auth, checkout, support, and AI endpoints
+- Upstash Redis-backed rate limiting for sensitive auth, profile password, checkout, support, and AI endpoints
 - Upstash QStash delayed background jobs for order maintenance checks
 - Sentry error monitoring, tracing, and production-only error-sampled privacy-masked Session Replay
 
@@ -273,6 +273,8 @@ This project uses many dependencies; below are the main packages actively used i
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
 - Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits and total order item limits so oversized courier-unfriendly orders cannot bypass the UI.
+- Blocked checkout attempts for active-order, restaurant-availability, capacity, unavailable-item, and quantity-limit reasons are written to audit logs as `checkout.blocked` without exposing secrets.
+- `libs/orderCapacityBackfill.ts` provides a server-only helper to dry-run or repair older restaurant/menu item documents that are missing or have out-of-range order capacity fields.
 - Checkout deduplicates recent identical unpaid `placed` order attempts by reusing or recovering the existing Stripe Checkout session instead of creating another order.
 - Unpaid `placed` orders show the customer a countdown based on the same 30-minute auto-cancel window used by background maintenance.
 - When a stale unpaid `placed` order is system-canceled, the app also attempts to expire the still-open Stripe Checkout session so old payment tabs cannot complete canceled orders.
@@ -341,7 +343,7 @@ See `libs/authEmails.tsx` for token generation, hashing, and sending logic (Rese
 ## Rate Limiting
 
 - Upstash Redis stores short-lived counters for sensitive endpoints.
-- Protected flows include credentials login, register, forgot password, resend verification, checkout, support ticket creation, and AI menu description generation.
+- Protected flows include credentials login, register, forgot password, resend verification, profile password changes, checkout, support ticket creation, and AI menu description generation.
 - Redis is not the main database. MongoDB remains the source of truth for users, orders, restaurants, messages, and tickets.
 - If Upstash env vars are missing or Redis is temporarily unavailable, `libs/rateLimit.ts` fails open so local development and critical app flows do not break.
 
@@ -410,6 +412,7 @@ npm run dev                # Start dev server
 npm run build              # Build for production
 npm run start              # Run production server
 npm run lint               # Run ESLint
+npm run typecheck          # Run TypeScript and Next generated type checks
 npm run test:qstash        # Run QStash helper and endpoint tests
 npm run commitlint         # Lint commit message
 npm run cloudinary:menu-items:audit   # Dry-run menu item image orphan audit

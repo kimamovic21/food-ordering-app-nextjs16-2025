@@ -45,6 +45,46 @@ const DUPLICATE_CHECKOUT_WINDOW_MS = 5 * 60 * 1000;
 
 const roundToTwoDecimals = roundMoney;
 
+type CheckoutBlockAuditInput = {
+  user?: any;
+  restaurant?: any;
+  restaurantId?: unknown;
+  message: string;
+  reason: string;
+  status: number;
+  metadata?: Record<string, unknown>;
+};
+
+const createCheckoutBlockResponse = async ({
+  user,
+  restaurant,
+  restaurantId,
+  message,
+  reason,
+  status,
+  metadata = {},
+}: CheckoutBlockAuditInput) => {
+  const auditRestaurantId = restaurant?._id || restaurantId || null;
+
+  if (user) {
+    await createAuditLog({
+      actor: user,
+      action: 'checkout.blocked',
+      entityType: 'checkout',
+      entityId: auditRestaurantId || user._id,
+      restaurantId: auditRestaurantId,
+      metadata: {
+        reason,
+        status,
+        message,
+        ...metadata,
+      },
+    });
+  }
+
+  return Response.json({ error: message }, { status });
+};
+
 const canRecoverFromStripeSessionLookupError = (error: unknown) => {
   const stripeError = error as { code?: string; statusCode?: number };
 
@@ -450,13 +490,17 @@ export async function POST(req: Request) {
     .lean();
 
   if (activeCustomerOrder) {
-    return Response.json(
-      {
-        error:
-          'You already have an active order. Please wait until it is completed or canceled before starting a new checkout.',
+    return createCheckoutBlockResponse({
+      user,
+      message:
+        'You already have an active order. Please wait until it is completed or canceled before starting a new checkout.',
+      reason: 'active_customer_order',
+      status: 400,
+      metadata: {
+        activeOrderId: activeCustomerOrder._id,
+        activeOrderStatus: activeCustomerOrder.orderStatus,
       },
-      { status: 400 }
-    );
+    });
   }
 
   // Single restaurant checkout (enforced by frontend)
@@ -470,10 +514,16 @@ export async function POST(req: Request) {
     (item) => item.restaurantId !== restaurantId
   );
   if (cartHasMultipleRestaurants) {
-    return Response.json(
-      { error: 'Cart must contain items from one restaurant only' },
-      { status: 400 }
-    );
+    return createCheckoutBlockResponse({
+      user,
+      restaurantId,
+      message: 'Cart must contain items from one restaurant only',
+      reason: 'multiple_restaurants',
+      status: 400,
+      metadata: {
+        restaurantIds: Array.from(new Set(sanitizedItems.map((item) => item.restaurantId))),
+      },
+    });
   }
 
   // Fetch restaurant data
@@ -484,7 +534,13 @@ export async function POST(req: Request) {
 
   // Business rule: users cannot place orders from their own restaurant
   if (user.restaurantId?.toString() === restaurant._id.toString()) {
-    return Response.json({ error: 'You cannot order from your own restaurant' }, { status: 403 });
+    return createCheckoutBlockResponse({
+      user,
+      restaurant,
+      message: 'You cannot order from your own restaurant',
+      reason: 'own_restaurant',
+      status: 403,
+    });
   }
 
   const normalizedDeliveryLatitude = normalizeDeliveryCoordinate(deliveryLatitude);
@@ -498,21 +554,36 @@ export async function POST(req: Request) {
   });
 
   if (orderingStatus.requiresDeliveryLocation) {
-    return Response.json(
-      {
-        error: `Please use your current location so we can confirm this restaurant delivers within ${orderingStatus.deliveryRadiusKm} km.`,
+    return createCheckoutBlockResponse({
+      user,
+      restaurant,
+      message: `Please use your current location so we can confirm this restaurant delivers within ${orderingStatus.deliveryRadiusKm} km.`,
+      reason: 'missing_delivery_location',
+      status: 400,
+      metadata: {
+        deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
       },
-      { status: 400 }
-    );
+    });
   }
 
   if (!orderingStatus.isAcceptingOrders) {
-    return Response.json(
-      {
-        error: orderingStatus.reason || 'This restaurant is not accepting orders right now.',
+    return createCheckoutBlockResponse({
+      user,
+      restaurant,
+      message: orderingStatus.reason || 'This restaurant is not accepting orders right now.',
+      reason:
+        orderingStatus.isWithinDeliveryRadius === false
+          ? 'outside_delivery_radius'
+          : 'restaurant_not_accepting_orders',
+      status: orderingStatus.isWithinDeliveryRadius === false ? 400 : 409,
+      metadata: {
+        isOpen: orderingStatus.isOpen,
+        isPaused: orderingStatus.isPaused,
+        isWithinDeliveryRadius: orderingStatus.isWithinDeliveryRadius,
+        deliveryDistanceKm: orderingStatus.distanceKm,
+        deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
       },
-      { status: orderingStatus.isWithinDeliveryRadius === false ? 400 : 409 }
-    );
+    });
   }
 
   const activeOrderLimit = Math.min(
@@ -526,25 +597,35 @@ export async function POST(req: Request) {
   });
 
   if (activeKitchenOrders >= activeOrderLimit) {
-    return Response.json(
-      {
-        error:
-          'This restaurant is very busy at the moment. Please wait a little bit and try again.',
+    return createCheckoutBlockResponse({
+      user,
+      restaurant,
+      message:
+        'This restaurant is very busy at the moment. Please wait a little bit and try again.',
+      reason: 'active_order_limit_reached',
+      status: 409,
+      metadata: {
+        activeKitchenOrders,
+        activeOrderLimit,
       },
-      { status: 409 }
-    );
+    });
   }
 
   const maxItemsPerOrder = normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder);
   const totalCartQuantity = getCartTotalQuantity(sanitizedItems);
 
   if (totalCartQuantity > maxItemsPerOrder) {
-    return Response.json(
-      {
-        error: `This restaurant accepts up to ${maxItemsPerOrder} items in one order. Your cart has ${totalCartQuantity} items.`,
+    return createCheckoutBlockResponse({
+      user,
+      restaurant,
+      message: `This restaurant accepts up to ${maxItemsPerOrder} items in one order. Your cart has ${totalCartQuantity} items.`,
+      reason: 'restaurant_item_limit_exceeded',
+      status: 400,
+      metadata: {
+        maxItemsPerOrder,
+        totalCartQuantity,
       },
-      { status: 400 }
-    );
+    });
   }
 
   const itemIds = sanitizedItems
@@ -591,10 +672,17 @@ export async function POST(req: Request) {
     }
 
     if (menuItem.isAvailable === false) {
-      return Response.json(
-        { error: `${menuItem.name || 'This menu item'} is currently unavailable` },
-        { status: 400 }
-      );
+      return createCheckoutBlockResponse({
+        user,
+        restaurant,
+        message: `${menuItem.name || 'This menu item'} is currently unavailable`,
+        reason: 'menu_item_unavailable',
+        status: 400,
+        metadata: {
+          menuItemId: menuItem._id,
+          menuItemName: menuItem.name,
+        },
+      });
     }
 
     const requestedSize = cartItem.size;
@@ -604,10 +692,17 @@ export async function POST(req: Request) {
 
     const sizePrice = getMenuItemSizePrice(menuItem, requestedSize);
     if (!sizePrice) {
-      return Response.json(
-        { error: `${menuItem.name || 'This menu item'} is not available in that size` },
-        { status: 400 }
-      );
+      return createCheckoutBlockResponse({
+        user,
+        restaurant,
+        message: `${menuItem.name || 'This menu item'} is not available in that size`,
+        reason: 'menu_item_size_unavailable',
+        status: 400,
+        metadata: {
+          menuItemId: menuItem._id,
+          requestedSize,
+        },
+      });
     }
 
     if (menuItem.restaurantId?.toString() !== restaurant._id.toString()) {
@@ -625,12 +720,19 @@ export async function POST(req: Request) {
     const requestedItemQuantity = requestedQuantityByItemId.get(cartItem._id) || 0;
 
     if (requestedItemQuantity > maxQuantityPerOrder) {
-      return Response.json(
-        {
-          error: `${menuItem.name || 'This menu item'} is limited to ${maxQuantityPerOrder} per order. Your cart has ${requestedItemQuantity}.`,
+      return createCheckoutBlockResponse({
+        user,
+        restaurant,
+        message: `${menuItem.name || 'This menu item'} is limited to ${maxQuantityPerOrder} per order. Your cart has ${requestedItemQuantity}.`,
+        reason: 'menu_item_quantity_limit_exceeded',
+        status: 400,
+        metadata: {
+          menuItemId: menuItem._id,
+          menuItemName: menuItem.name,
+          maxQuantityPerOrder,
+          requestedItemQuantity,
         },
-        { status: 400 }
-      );
+      });
     }
 
     verifiedItems.push({

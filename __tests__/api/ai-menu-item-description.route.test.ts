@@ -1,11 +1,11 @@
-import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import { generateMenuItemDescription } from '@/libs/aiMenuDescription';
 import {
   AI_MENU_DESCRIPTION_MAX_CHARS,
   AI_MENU_DESCRIPTION_MODEL,
 } from '@/libs/menuItemDescription';
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isAdmin: vi.fn(),
 }));
 

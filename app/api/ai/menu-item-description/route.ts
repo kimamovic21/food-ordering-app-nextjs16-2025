@@ -1,4 +1,4 @@
-import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import { generateMenuItemDescription } from '@/libs/aiMenuDescription';
 import {
   AI_MENU_DESCRIPTION_MAX_CHARS,

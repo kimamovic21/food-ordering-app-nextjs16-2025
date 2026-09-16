@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { isSuperAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isSuperAdmin } from '@/libs/authGuards';
 import { Category } from '@/models/category';
 import { MenuItem } from '@/models/menuItem';
 import cloudinary from '@/libs/cloudinary';
@@ -10,7 +10,7 @@ vi.mock('mongoose', () => ({
   },
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isSuperAdmin: vi.fn(),
 }));
 

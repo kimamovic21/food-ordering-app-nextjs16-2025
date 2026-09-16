@@ -17,7 +17,7 @@ const getCurrentUser = async () => {
 
 const HEARTBEAT_INTERVAL_MS = 25000;
 
-export async function GET(request: Request = new Request('http://localhost')) {
+export async function GET(request: Request) {
   await mongoose.connect(process.env.MONGODB_URL as string);
 
   const currentUser = await getCurrentUser();

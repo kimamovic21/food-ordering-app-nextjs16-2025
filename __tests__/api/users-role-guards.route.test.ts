@@ -2,7 +2,7 @@ vi.mock('mongoose', () => ({
   default: { connect: vi.fn(), Types: { ObjectId: { isValid: vi.fn(() => true) } } },
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isSuperAdmin: vi.fn(),
   isAdmin: vi.fn(),
 }));
@@ -37,7 +37,7 @@ describe('User role mutation route guards', () => {
   });
 
   it('blocks make-admin when not super admin', async () => {
-    const auth = await import('@/app/api/auth/[...nextauth]/route');
+    const auth = await import('@/libs/authGuards');
     vi.mocked(auth.isSuperAdmin).mockResolvedValueOnce(false as never);
 
     const PATCH = await loadMakeAdmin();
@@ -54,7 +54,7 @@ describe('User role mutation route guards', () => {
   });
 
   it('returns 400 for invalid user id on make-courier', async () => {
-    const auth = await import('@/app/api/auth/[...nextauth]/route');
+    const auth = await import('@/libs/authGuards');
     vi.mocked(auth.isAdmin).mockResolvedValueOnce(true as never);
 
     const PATCH = await loadMakeCourier();
@@ -76,7 +76,7 @@ describe('User role mutation route guards', () => {
   });
 
   it('returns 404 when target user not found for remove-admin', async () => {
-    const auth = await import('@/app/api/auth/[...nextauth]/route');
+    const auth = await import('@/libs/authGuards');
     vi.mocked(auth.isSuperAdmin).mockResolvedValueOnce(true as never);
 
     vi.mocked((await import('@/models/user')).User.findById).mockResolvedValueOnce(null as never);
@@ -96,7 +96,7 @@ describe('User role mutation route guards', () => {
   });
 
   it('promotes to courier when admin requests make-courier', async () => {
-    const auth = await import('@/app/api/auth/[...nextauth]/route');
+    const auth = await import('@/libs/authGuards');
     const { createAuditLog } = await import('@/libs/auditLog');
     const { getServerSession } = await import('next-auth/next');
     const { User } = await import('@/models/user');

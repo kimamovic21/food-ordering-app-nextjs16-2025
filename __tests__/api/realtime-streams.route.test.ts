@@ -73,6 +73,8 @@ const readSsePayload = async (reader: ReadableStreamDefaultReader<Uint8Array>) =
   return JSON.parse(match?.[1] || '{}');
 };
 
+const createStreamRequest = () => new Request('http://localhost/api/realtime-stream');
+
 describe('realtime stream routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -85,7 +87,7 @@ describe('realtime stream routes', () => {
     vi.mocked(getServerSession).mockResolvedValueOnce(null as never);
 
     const { GET } = await import('@/app/api/messages/stream/route');
-    const response = await GET();
+    const response = await GET(createStreamRequest());
 
     expect(response.status).toBe(401);
     await expect(response.text()).resolves.toBe('Unauthorized');
@@ -96,7 +98,7 @@ describe('realtime stream routes', () => {
     mockCurrentUser('user-1');
 
     const { GET } = await import('@/app/api/messages/stream/route');
-    const response = await GET();
+    const response = await GET(createStreamRequest());
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/event-stream');
@@ -133,7 +135,7 @@ describe('realtime stream routes', () => {
     mockCurrentUser('recipient-1');
 
     const { GET } = await import('@/app/api/notifications/stream/route');
-    const response = await GET();
+    const response = await GET(createStreamRequest());
 
     expect(response.status).toBe(200);
     expect(response.headers.get('Content-Type')).toBe('text/event-stream');

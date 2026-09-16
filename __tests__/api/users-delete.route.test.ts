@@ -23,7 +23,7 @@ vi.mock('@/libs/authOptions', () => ({
   authOptions: {},
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isAdmin: vi.fn(),
 }));
 

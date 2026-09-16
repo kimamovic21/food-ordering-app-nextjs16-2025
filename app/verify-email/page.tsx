@@ -2,11 +2,12 @@ import { Suspense } from 'react';
 import VerifyEmailClient from './VerifyEmailClient';
 
 type VerifyEmailPageProps = {
-  searchParams?: { email?: string };
+  searchParams?: Promise<{ email?: string }>;
 };
 
-export default function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
-  const defaultEmail = searchParams?.email || '';
+export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const defaultEmail = resolvedSearchParams?.email || '';
 
   return (
     <Suspense fallback={null}>

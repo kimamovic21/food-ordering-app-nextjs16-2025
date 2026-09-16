@@ -1171,3 +1171,7 @@ Improve audit logs filters and realtime stream cleanup
 Add documentation commit-name tracking rule
 
 Add order quantity and restaurant capacity safeguards
+
+Improve Next 16 typecheck and route module hygiene
+
+Strengthen checkout guardrails and capacity maintenance

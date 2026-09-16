@@ -291,8 +291,8 @@ describe('high-priority order, review, and payment-link routes', () => {
   });
 
   it('removes internal admin notes from customer order payloads', async () => {
-    const { normalizeOrder } = await import('@/app/api/my-orders/route');
-    const normalizedOrder = normalizeOrder({
+    const { normalizeCustomerOrder } = await import('@/libs/orderNormalizer');
+    const normalizedOrder = normalizeCustomerOrder({
       _id: 'order-1',
       orderPaid: true,
       paid: true,

@@ -1,6 +1,6 @@
 import { type UploadApiResponse } from 'cloudinary';
 import { MenuItem } from '@/models/menuItem';
-import { isAdmin } from '../../auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import cloudinary from '@/libs/cloudinary';
 import mongoose from 'mongoose';
 

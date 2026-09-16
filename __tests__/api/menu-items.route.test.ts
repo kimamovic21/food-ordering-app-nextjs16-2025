@@ -1,6 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import mongoose from 'mongoose';
-import { isAdmin } from '@/app/api/auth/[...nextauth]/route';
+import { isAdmin } from '@/libs/authGuards';
 import { User } from '@/models/user';
 import { MenuItem } from '@/models/menuItem';
 import { Category } from '@/models/category';
@@ -45,7 +45,7 @@ vi.mock('mongoose', () => ({
   },
 }));
 
-vi.mock('@/app/api/auth/[...nextauth]/route', () => ({
+vi.mock('@/libs/authGuards', () => ({
   isAdmin: vi.fn(),
 }));
 

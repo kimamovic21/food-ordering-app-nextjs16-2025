@@ -2,6 +2,12 @@ import * as z from 'zod';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 import { strongPasswordSchema } from '@/libs/password';
+import {
+  createRateLimitKey,
+  createRateLimitResponse,
+  enforceRateLimit,
+  getClientIp,
+} from '@/libs/rateLimit';
 import { User } from '@/models/user';
 import bcrypt from 'bcrypt';
 import mongoose from 'mongoose';
@@ -36,6 +42,20 @@ export async function PUT(req: Request) {
 
   if (!email) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const rateLimit = await enforceRateLimit({
+    identifier: createRateLimitKey('profile-change-password', getClientIp(req), email),
+    limit: 6,
+    namespace: 'profile-change-password',
+    window: '15 m',
+  });
+
+  if (!rateLimit.success) {
+    return createRateLimitResponse(
+      rateLimit,
+      'Too many password change attempts. Please try again later.'
+    );
   }
 
   const body = await req.json();

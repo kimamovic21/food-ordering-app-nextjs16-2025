@@ -31,6 +31,9 @@ This folder contains end-to-end style tests for critical user flows using a real
 - `checkout/checkout-restaurant-capacity.e2e.test.ts`
   - checkout blocks active kitchen capacity overloads
   - active orders from other customers count toward the restaurant limit
+- `checkout/checkout-order-quantity-limits.e2e.test.ts`
+  - checkout blocks oversized carts before order creation
+  - quantity-limit checkout blocks create an audit-log trail
 - `checkout/checkout-restaurant-guards.e2e.test.ts`
   - minimum order amount validation
   - paused restaurant checkout blocks

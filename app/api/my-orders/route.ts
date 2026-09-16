@@ -12,26 +12,8 @@ import {
   notifyUserAboutOrderCompletion,
 } from '@/libs/notifications';
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
+import { normalizeCustomerOrder } from '@/libs/orderNormalizer';
 import mongoose from 'mongoose';
-
-export const normalizeOrder = (order: any) => {
-  const { adminInternalNote: _adminInternalNote, ...safeOrder } = order;
-
-  return {
-    ...safeOrder,
-    paymentStatus: Boolean(order.orderPaid || order.paymentStatus || order.paid),
-    orderStatus: order.orderStatus || 'pending',
-    courier:
-      order.courierId && typeof order.courierId === 'object'
-        ? {
-            _id: String(order.courierId._id || ''),
-            name: order.courierId.name || '',
-            email: order.courierId.email || '',
-            image: order.courierId.image || null,
-          }
-        : null,
-  };
-};
 
 export async function GET(request: Request) {
   await mongoose.connect(process.env.MONGODB_URL as string);
@@ -95,7 +77,7 @@ export async function GET(request: Request) {
       .lean();
 
     return Response.json({
-      order: normalizeOrder(orderObject),
+      order: normalizeCustomerOrder(orderObject),
       receiptItems,
       restaurant: restaurant
         ? {
@@ -135,7 +117,7 @@ export async function GET(request: Request) {
     const { order: normalizedDocument } = await applyOrderAutoCancellation(order);
     await normalizedDocument.populate('courierId', 'name email image');
 
-    return Response.json({ order: normalizeOrder(normalizedDocument.toObject()) });
+    return Response.json({ order: normalizeCustomerOrder(normalizedDocument.toObject()) });
   }
 
   // Fetch all orders for the current user
@@ -148,7 +130,7 @@ export async function GET(request: Request) {
 
   const normalizedOrders = (
     await Promise.all(orders.map((order) => applyOrderAutoCancellation(order)))
-  ).map(({ order }) => normalizeOrder(order.toObject()));
+  ).map(({ order }) => normalizeCustomerOrder(order.toObject()));
 
   const totalPages = Math.ceil(totalOrders / limit) || 1;
 
@@ -247,7 +229,7 @@ export async function PATCH(request: Request) {
       console.error('Failed to create admin notification for canceled order:', notificationError);
     }
 
-    return Response.json({ order: normalizeOrder(order.toObject()) });
+    return Response.json({ order: normalizeCustomerOrder(order.toObject()) });
   }
 
   if (order.orderStatus !== 'delivered') {
@@ -285,5 +267,5 @@ export async function PATCH(request: Request) {
     metadata: { completedAt: now.toISOString() },
   });
 
-  return Response.json({ order: normalizeOrder(order.toObject()) });
+  return Response.json({ order: normalizeCustomerOrder(order.toObject()) });
 }
