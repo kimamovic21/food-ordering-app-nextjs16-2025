@@ -1,8 +1,7 @@
 import 'server-only';
 import type { Types } from 'mongoose';
 import { notifyUsersAboutRestaurantAvailable } from '@/libs/notifications';
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
-import { Order } from '@/models/order';
+import { getRestaurantOrderingCapacityStatus } from '@/libs/restaurantOrderingStatus';
 import { Restaurant } from '@/models/restaurant';
 import { RestaurantAvailabilityRequest } from '@/models/restaurantAvailabilityRequest';
 
@@ -46,21 +45,13 @@ export const notifyWaitingUsersIfRestaurantCanAcceptOrders = async (restaurantId
   const restaurant = await Restaurant.findById(restaurantId);
   if (!restaurant) return;
 
-  const activeKitchenOrders = await Order.countDocuments({
-    restaurantId: restaurant._id,
-    orderStatus: { $in: ['placed', 'processing', 'ready'] },
-    $or: [{ orderPaid: true }, { paid: true }],
-  });
-
-  const orderingStatus = getRestaurantOrderingStatus({
+  const orderingStatus = await getRestaurantOrderingCapacityStatus({
     restaurant,
   });
-  const activeOrderLimit = Math.min(100, Math.max(1, Number(restaurant.activeOrderLimit) || 10));
-  const hasCapacity = activeKitchenOrders < activeOrderLimit;
 
   await notifyWaitingUsersIfRestaurantAcceptingOrders({
     restaurantId: restaurant._id,
     restaurantName: restaurant.name,
-    isAcceptingOrders: orderingStatus.isAcceptingOrders && hasCapacity,
+    isAcceptingOrders: orderingStatus.isAcceptingOrders,
   });
 };

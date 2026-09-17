@@ -219,6 +219,7 @@ Cart:
 - Cart keeps selected menu item snapshots in client state.
 - Cart validates the latest server state before checkout.
 - It checks deleted items, unavailable items, price changes, restaurant status, delivery radius, minimum order amount, busy capacity, and courier-safe order quantity limits.
+- Restaurant open/paused/radius/capacity checks are centralized server-side so the menu, cart, checkout, restaurant pages, availability alerts, and admin operations views report the same ordering state.
 - Price changes are shown clearly and can be refreshed.
 - Deleted, unavailable, invalid, cross-restaurant, or blocked restaurant states prevent checkout.
 - The cart can show a "checking restaurant status" state so closed/open messages do not flicker during loading.
@@ -228,6 +229,7 @@ Checkout:
 
 - Checkout is server-authoritative.
 - The server recalculates item prices, totals, tax, delivery fee, coupon discounts, loyalty discounts, and restaurant availability.
+- Checkout uses the same cart validation and centralized restaurant ordering status helpers as cart preflight, so client-side warnings and final Stripe session creation follow the same rules.
 - The customer cannot checkout with mixed restaurants.
 - The customer cannot checkout from their own restaurant.
 - The customer cannot checkout while they already have a paid active order that is not completed or canceled.
@@ -305,6 +307,8 @@ Restaurant data:
 Restaurant availability:
 
 - The app checks if the restaurant is open based on working hours and blocked dates.
+- `libs/restaurantOrderingStatus.ts` combines restaurant availability, delivery radius, pause state, closing-soon cutoff, active kitchen capacity, max items per order, and minimum order amount into one capacity-aware ordering status.
+- `libs/restaurantCapacity.ts` keeps the reusable capacity math separate from database access, so operations summaries can reuse the same near-capacity and at-capacity thresholds without pulling in server-only order queries.
 - Checkout is blocked in the final 60 minutes before closing.
 - Admins can pause the restaurant manually when the kitchen is overwhelmed.
 - A pause reason can be shown to users.
@@ -560,7 +564,7 @@ Operations overview:
 - Shows active order counts for today.
 - Breaks active orders into placed, processing, ready, and transportation stages.
 - Shows whether the restaurant is open, paused, closing soon, or closed.
-- Shows whether the restaurant is near or at capacity.
+- Shows whether the restaurant is near or at capacity using the same shared capacity thresholds that checkout and public restaurant status checks use.
 - Shows available courier count.
 - Shows orders that need attention.
 - Shows today's revenue.
@@ -794,6 +798,7 @@ Restaurant availability:
 - Final 60 minutes before closing blocks checkout.
 - Outside delivery radius blocks checkout.
 - Active kitchen capacity blocks checkout.
+- Active kitchen capacity also affects public ordering status and availability-alert behavior, so users are not told a restaurant is accepting orders while the kitchen is already full.
 - Minimum order amount blocks checkout when subtotal is too low.
 - Availability alerts can notify users when ordering becomes possible again.
 
@@ -980,7 +985,10 @@ Checkout and payment:
 Restaurant availability:
 
 - `libs/restaurantAvailability.ts`
+- `libs/restaurantCapacity.ts`
+- `libs/restaurantOrderingStatus.ts`
 - `app/api/restaurants/[id]/ordering-status/route.ts`
+- `app/api/restaurants/[id]/availability-alert/route.ts`
 - `app/api/cart/validate/route.ts`
 
 Order lifecycle:

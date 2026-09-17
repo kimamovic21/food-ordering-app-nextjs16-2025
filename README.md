@@ -28,7 +28,7 @@ It includes:
 - order safety automation for stale unpaid orders, unanswered courier assignments, ready orders that cannot get a courier, and expired Stripe Checkout sessions
 - restaurant busy checkout protection based on each restaurant's active kitchen order limit
 - courier-safe cart quantity protection with restaurant-level max items per order and per-menu-item quantity limits
-- shared cart and checkout validation so cart warnings and final Stripe checkout use the same server-side menu, restaurant, radius, minimum-order, and quantity rules
+- shared cart and checkout validation so cart warnings and final Stripe checkout use the same server-side menu, restaurant, radius, minimum-order, capacity, and quantity rules
 - Stripe checkout/webhook flow
 - Cloudinary media uploads
 - email purchase receipts with Resend + React Email
@@ -272,6 +272,7 @@ This project uses many dependencies; below are the main packages actively used i
 - Restaurants can configure `maxItemsPerOrder` up to 20 items, and each menu item can configure `maxQuantityPerOrder` up to 20 units per order.
 - Checkout snapshots the restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
 - Public menu item pages check the restaurant ordering status before adding to cart, while checkout remains the final server-side source of truth.
+- `libs/restaurantOrderingStatus.ts` centralizes restaurant ordering availability with active kitchen capacity so public status checks, restaurant details, cart validation, checkout, availability alerts, and admin load indicators use the same busy/open/paused result.
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
 - Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits and total order item limits so oversized courier-unfriendly orders cannot bypass the UI.

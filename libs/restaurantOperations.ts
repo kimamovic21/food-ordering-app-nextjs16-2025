@@ -3,6 +3,7 @@ import {
   READY_WITHOUT_COURIER_AUTO_CANCEL_MINUTES,
   UNPAID_ORDER_AUTO_CANCEL_MINUTES,
 } from '@/libs/orderMaintenanceConfig';
+import { buildRestaurantCapacitySnapshot } from '@/libs/restaurantCapacity';
 import type {
   RestaurantOperationsAttentionOrder,
   RestaurantOperationsOverview,
@@ -267,20 +268,12 @@ export const buildRestaurantOperationsOverview = ({
   todayLabel: string;
   now?: Date;
 }): RestaurantOperationsOverview => {
-  const activeOrderLimit = Math.min(100, Math.max(1, Number(restaurant.activeOrderLimit) || 10));
   const activeKitchenOrders = activeOrders.filter(
     (order) =>
       OPERATIONS_KITCHEN_STATUSES.some((status) => status === order.orderStatus) &&
       isOperationsOrderPaid(order)
   ).length;
-  const capacityUsagePercent = Math.min(
-    100,
-    Math.round((activeKitchenOrders / activeOrderLimit) * 100)
-  );
-  const busySuggestionThreshold = Math.max(1, activeOrderLimit - 2);
-  const isAtCapacity = activeKitchenOrders >= activeOrderLimit;
-  const isNearCapacity =
-    activeKitchenOrders >= busySuggestionThreshold && activeKitchenOrders < activeOrderLimit;
+  const capacity = buildRestaurantCapacitySnapshot({ restaurant, activeKitchenOrders });
   const paidToday = todayOrders.filter(isOperationsOrderPaid);
   const revenueOrders = paidToday.filter((order) => order.orderStatus !== 'canceled');
   const revenue = roundMoney(
@@ -295,16 +288,16 @@ export const buildRestaurantOperationsOverview = ({
     restaurant: {
       _id: toEntityId(restaurant._id),
       name: String(restaurant.name || 'Restaurant'),
-      activeKitchenOrders,
-      activeOrderLimit,
-      capacityUsagePercent,
-      isNearCapacity,
-      isAtCapacity,
-      shouldSuggestPause: !restaurant.isPaused && isNearCapacity,
+      activeKitchenOrders: capacity.activeKitchenOrders,
+      activeOrderLimit: capacity.activeOrderLimit,
+      capacityUsagePercent: capacity.capacityUsagePercent,
+      isNearCapacity: capacity.isNearCapacity,
+      isAtCapacity: capacity.isAtCapacity,
+      shouldSuggestPause: capacity.shouldSuggestPause,
       status: buildRestaurantStatus({
         orderingStatus,
-        isAtCapacity,
-        isNearCapacity,
+        isAtCapacity: capacity.isAtCapacity,
+        isNearCapacity: capacity.isNearCapacity,
       }),
     },
     today: {

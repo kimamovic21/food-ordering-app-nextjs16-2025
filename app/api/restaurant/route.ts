@@ -5,12 +5,11 @@ import { mongoConnect } from '@/libs/mongoConnect';
 import { Restaurant } from '@/models/restaurant';
 import { User } from '@/models/user';
 import { MenuItem } from '@/models/menuItem';
-import { Order } from '@/models/order';
 import { createAuditLog } from '@/libs/auditLog';
 import { findBlockingRestaurantOrder } from '@/libs/orderDeletionGuards';
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
 import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
+import { getRestaurantOrderingCapacityStatus } from '@/libs/restaurantOrderingStatus';
 import cloudinary from '@/libs/cloudinary';
 
 type BlockedDateInput = {
@@ -175,28 +174,16 @@ export async function GET() {
       );
     }
 
-    const activeOrderLimit = Math.min(
-      100,
-      Math.max(1, Number((restaurant as any).activeOrderLimit) || 10)
-    );
-    const activeKitchenOrders = await Order.countDocuments({
-      restaurantId: restaurant._id,
-      orderStatus: { $in: ['placed', 'processing', 'ready'] },
-      $or: [{ orderPaid: true }, { paid: true }, { paymentStatus: true }],
-    });
-    const busySuggestionThreshold = Math.max(1, activeOrderLimit - 2);
+    const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
 
     return NextResponse.json(
       {
         restaurant,
         orderingLoad: {
-          activeKitchenOrders,
-          activeOrderLimit,
-          shouldSuggestPause:
-            !restaurant.isPaused &&
-            activeKitchenOrders >= busySuggestionThreshold &&
-            activeKitchenOrders < activeOrderLimit,
-          isAtCapacity: activeKitchenOrders >= activeOrderLimit,
+          activeKitchenOrders: orderingStatus.activeKitchenOrders,
+          activeOrderLimit: orderingStatus.activeOrderLimit,
+          shouldSuggestPause: orderingStatus.shouldSuggestPause,
+          isAtCapacity: orderingStatus.isAtCapacity,
         },
       },
       { status: 200 }
@@ -398,7 +385,9 @@ export async function PUT(req: NextRequest) {
     });
 
     if (updatedRestaurant) {
-      const orderingStatus = getRestaurantOrderingStatus({ restaurant: updatedRestaurant });
+      const orderingStatus = await getRestaurantOrderingCapacityStatus({
+        restaurant: updatedRestaurant,
+      });
       await notifyWaitingUsersIfRestaurantAcceptingOrders({
         restaurantId: updatedRestaurant._id,
         restaurantName: updatedRestaurant.name,
