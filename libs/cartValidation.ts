@@ -1,21 +1,22 @@
 import mongoose from 'mongoose';
 
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import {
   getCartTotalQuantity,
-  normalizeItemsPerOrderLimit,
   normalizeMenuItemQuantityLimit,
 } from '@/libs/orderQuantityLimits';
+import {
+  getRestaurantCartValidationMessage,
+  getRestaurantCartValidationStatus,
+  getRestaurantOrderingCapacityStatus,
+} from '@/libs/restaurantOrderingStatus';
 import { roundMoney } from '@/libs/money';
 import { MenuItem } from '@/models/menuItem';
-import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
 import type {
   CartSize,
   CartValidationItem,
   CartValidationRequestItem,
   CartValidationResponse,
-  CartValidationRestaurantStatus,
 } from '@/types/cart';
 
 export type NormalizedCartValidationItem = {
@@ -107,15 +108,6 @@ export const getMenuItemSizePrice = (menuItem: CartValidationMenuItem, requested
   }
 
   return prices.find((entry) => entry.size === requestedSize) ?? null;
-};
-
-const toRestaurantStatus = (orderingStatus: ReturnType<typeof getRestaurantOrderingStatus>) => {
-  if (orderingStatus.isPaused) return 'paused' as const;
-  if (!orderingStatus.isOpen) return 'closed' as const;
-  if (orderingStatus.isClosingSoonForCheckout) return 'closing_soon' as const;
-  if (orderingStatus.isWithinDeliveryRadius === false) return 'outside_delivery_radius' as const;
-  if (orderingStatus.requiresDeliveryLocation) return 'missing_delivery_location' as const;
-  return 'valid' as const;
 };
 
 const normalizeCartValidationItems = (
@@ -366,21 +358,11 @@ export async function validateCartForOrder({
         } else {
           const normalizedDeliveryLatitude = normalizeDeliveryCoordinate(deliveryLatitude);
           const normalizedDeliveryLongitude = normalizeDeliveryCoordinate(deliveryLongitude);
-          const orderingStatus = getRestaurantOrderingStatus({
+          const orderingStatus = await getRestaurantOrderingCapacityStatus({
             restaurant,
             deliveryLatitude: normalizedDeliveryLatitude,
             deliveryLongitude: normalizedDeliveryLongitude,
           });
-          const activeOrderLimit = Math.min(
-            100,
-            Math.max(1, Number((restaurant as any).activeOrderLimit) || 10)
-          );
-          const activeKitchenOrders = await Order.countDocuments({
-            $or: [{ orderPaid: true }, { paid: true }, { paymentStatus: true }],
-            orderStatus: { $in: ['placed', 'processing', 'ready'] },
-            restaurantId: (restaurant as any)._id,
-          });
-          const isBusy = activeKitchenOrders >= activeOrderLimit;
           const subtotal = roundMoney(
             items.reduce((sum, item) => {
               if (item.status !== 'valid' || typeof item.price !== 'number') {
@@ -390,50 +372,31 @@ export async function validateCartForOrder({
               return sum + item.price * Math.max(1, Number(item.quantity) || 1);
             }, 0)
           );
-          const minimumOrderAmount = roundMoney(
-            Math.min(100, Math.max(1, Number((restaurant as any).minimumOrderAmount) || 10))
-          );
-          const maxItemsPerOrder = normalizeItemsPerOrderLimit(
-            (restaurant as any).maxItemsPerOrder
-          );
           const totalCartQuantity = getCartTotalQuantity(validItems);
-          const baseRestaurantStatus = toRestaurantStatus(orderingStatus);
-          let restaurantStatus: CartValidationRestaurantStatus = 'valid';
-
-          if (isBusy) {
-            restaurantStatus = 'busy';
-          } else if (baseRestaurantStatus !== 'valid') {
-            restaurantStatus = baseRestaurantStatus;
-          } else if (totalCartQuantity > maxItemsPerOrder) {
-            restaurantStatus = 'order_quantity_limit';
-          } else if (subtotal < minimumOrderAmount) {
-            restaurantStatus = 'below_minimum';
-          }
-
-          const restaurantMessage =
-            restaurantStatus === 'busy'
-              ? 'This restaurant is very busy at the moment. Please wait a little bit and try again.'
-              : restaurantStatus === 'order_quantity_limit'
-                ? `This restaurant accepts up to ${maxItemsPerOrder} items in one order. Your cart has ${totalCartQuantity} items.`
-                : restaurantStatus === 'below_minimum'
-                  ? `Minimum order amount for this restaurant is $${minimumOrderAmount.toFixed(2)}.`
-                  : orderingStatus.requiresDeliveryLocation
-                    ? `Please use your current location so we can confirm this restaurant delivers within ${orderingStatus.deliveryRadiusKm} km.`
-                    : orderingStatus.reason;
+          const restaurantStatus = getRestaurantCartValidationStatus({
+            orderingStatus,
+            subtotal,
+            totalCartQuantity,
+          });
+          const restaurantMessage = getRestaurantCartValidationMessage({
+            orderingStatus,
+            restaurantStatus,
+            totalCartQuantity,
+          });
 
           restaurantValidation = {
-            activeKitchenOrders,
-            activeOrderLimit,
+            activeKitchenOrders: orderingStatus.activeKitchenOrders,
+            activeOrderLimit: orderingStatus.activeOrderLimit,
             canCheckout: restaurantStatus === 'valid',
             deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
             distanceKm: orderingStatus.distanceKm,
-            isAcceptingOrders: orderingStatus.isAcceptingOrders && !isBusy,
-            isBusy,
+            isAcceptingOrders: orderingStatus.isAcceptingOrders,
+            isBusy: orderingStatus.isBusy,
             isOpen: orderingStatus.isOpen,
             isPaused: orderingStatus.isPaused,
-            maxItemsPerOrder,
+            maxItemsPerOrder: orderingStatus.maxItemsPerOrder,
             message: restaurantMessage,
-            minimumOrderAmount,
+            minimumOrderAmount: orderingStatus.minimumOrderAmount,
             restaurantId: String((restaurant as any)._id),
             restaurantName: String((restaurant as any).name || 'The restaurant'),
             status: restaurantStatus,

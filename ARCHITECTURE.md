@@ -183,7 +183,7 @@ flowchart LR
 
 ## Checkout And Payment Flow
 
-Checkout is intentionally server-authoritative. The cart can show warnings, but `/api/cart/validate` and `/api/checkout` share `libs/cartValidation.ts` so cart preflight and final Stripe checkout use the same menu, restaurant, radius, minimum-order, busy-capacity, and quantity-limit rules before creating a Stripe session.
+Checkout is intentionally server-authoritative. The cart can show warnings, but `/api/cart/validate` and `/api/checkout` share `libs/cartValidation.ts` so cart preflight and final Stripe checkout use the same menu, restaurant, radius, minimum-order, busy-capacity, and quantity-limit rules before creating a Stripe session. Restaurant open/paused/radius state plus active kitchen capacity are centralized in `libs/restaurantOrderingStatus.ts`, with pure capacity math in `libs/restaurantCapacity.ts`, so cart validation, public restaurant status checks, restaurant detail payloads, availability alerts, and admin operations summaries do not drift apart.
 
 Key checks:
 

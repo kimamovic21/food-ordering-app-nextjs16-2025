@@ -33,6 +33,7 @@ Auth is a high-value and high-risk area. Testing register and login first gives 
   - `app/api/my-deliveries/route.ts`
   - credentials `authorize` handler in `libs/authOptions.ts`
   - restaurant availability helpers in `libs/restaurantAvailability.ts`
+  - restaurant capacity and capacity-aware ordering-status helpers in `libs/restaurantCapacity.ts` and `libs/restaurantOrderingStatus.ts`
   - order quantity limit helpers in `libs/orderQuantityLimits.ts`
   - order capacity backfill helper behavior in `libs/orderCapacityBackfill.ts`
   - restaurant operations overview summaries in `libs/restaurantOperations.ts`
@@ -120,6 +121,12 @@ Useful focused command after shared cart/checkout validation or order-index chan
 
 ```bash
 npm run test:file -- __tests__/libs/cartValidation.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/order.model.test.ts
+```
+
+Useful focused command after restaurant ordering capacity/status changes:
+
+```bash
+npm run test:file -- __tests__/libs/restaurantCapacity.test.ts __tests__/libs/restaurantOrderingStatus.test.ts __tests__/libs/cartValidation.test.ts __tests__/api/restaurant-ordering-status.route.test.ts __tests__/api/restaurant.route.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts
 ```
 
 Useful focused command after checkout capacity/audit maintenance changes:

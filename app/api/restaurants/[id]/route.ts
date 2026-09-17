@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mongoConnect } from '@/libs/mongoConnect';
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
-import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
+import { getRestaurantOrderingCapacityStatus } from '@/libs/restaurantOrderingStatus';
 import { getRestaurantRatingSummaries } from '@/libs/reviewSummary';
-import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
 
 export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -27,24 +25,14 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    const orderingStatus = getRestaurantOrderingStatus({ restaurant });
+    const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
     const ratingMap = await getRestaurantRatingSummaries([restaurant._id]);
     const rating = ratingMap.get(String(restaurant._id));
-    const activeOrderLimit = Math.min(
-      100,
-      Math.max(1, Number((restaurant as any).activeOrderLimit) || 10)
-    );
-    const activeKitchenOrders = await Order.countDocuments({
-      restaurantId: restaurant._id,
-      orderStatus: { $in: ['placed', 'processing', 'ready'] },
-      $or: [{ orderPaid: true }, { paid: true }, { paymentStatus: true }],
-    });
-    const isBusy = activeKitchenOrders >= activeOrderLimit;
 
     await notifyWaitingUsersIfRestaurantAcceptingOrders({
       restaurantId: restaurant._id,
       restaurantName: restaurant.name,
-      isAcceptingOrders: orderingStatus.isAcceptingOrders && !isBusy,
+      isAcceptingOrders: orderingStatus.isAcceptingOrders,
     });
 
     return NextResponse.json(
@@ -57,14 +45,11 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
           isAcceptingOrders: orderingStatus.isAcceptingOrders,
           orderingUnavailableReason: orderingStatus.reason,
           deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
-          minimumOrderAmount: Math.min(
-            100,
-            Math.max(1, Number((restaurant as any).minimumOrderAmount) || 10)
-          ),
-          activeOrderLimit,
-          maxItemsPerOrder: normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder),
-          activeKitchenOrders,
-          isBusy,
+          minimumOrderAmount: orderingStatus.minimumOrderAmount,
+          activeOrderLimit: orderingStatus.activeOrderLimit,
+          maxItemsPerOrder: orderingStatus.maxItemsPerOrder,
+          activeKitchenOrders: orderingStatus.activeKitchenOrders,
+          isBusy: orderingStatus.isBusy,
           averageRating: rating?.averageRating ?? 0,
           ratingCount: rating?.ratingCount ?? 0,
         },

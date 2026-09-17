@@ -1,10 +1,8 @@
 import { NextRequest } from 'next/server';
 import mongoose from 'mongoose';
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
-import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
-import { Order } from '@/models/order';
+import { getRestaurantOrderingCapacityStatus } from '@/libs/restaurantOrderingStatus';
 import { Restaurant } from '@/models/restaurant';
 
 export async function GET(_req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -25,26 +23,12 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     return Response.json({ error: 'Restaurant not found' }, { status: 404 });
   }
 
-  const orderingStatus = getRestaurantOrderingStatus({ restaurant });
-  const activeOrderLimit = Math.min(
-    100,
-    Math.max(1, Number((restaurant as any).activeOrderLimit) || 10)
-  );
-  const activeKitchenOrders = await Order.countDocuments({
-    restaurantId: restaurant._id,
-    orderStatus: { $in: ['placed', 'processing', 'ready'] },
-    $or: [{ orderPaid: true }, { paid: true }, { paymentStatus: true }],
-  });
-  const isBusy = activeKitchenOrders >= activeOrderLimit;
-  const reason = isBusy
-    ? 'This restaurant is very busy at the moment. Please wait a little bit and try again.'
-    : orderingStatus.reason;
-  const isAcceptingOrders = orderingStatus.isAcceptingOrders && !isBusy;
+  const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
 
   await notifyWaitingUsersIfRestaurantAcceptingOrders({
     restaurantId: restaurant._id,
     restaurantName: restaurant.name,
-    isAcceptingOrders,
+    isAcceptingOrders: orderingStatus.isAcceptingOrders,
   });
 
   return Response.json({
@@ -52,9 +36,11 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
     restaurantName: restaurant.name,
     isOpen: orderingStatus.isOpen,
     isPaused: orderingStatus.isPaused,
-    isBusy,
-    isAcceptingOrders,
-    maxItemsPerOrder: normalizeItemsPerOrderLimit((restaurant as any).maxItemsPerOrder),
-    reason,
+    isBusy: orderingStatus.isBusy,
+    isAcceptingOrders: orderingStatus.isAcceptingOrders,
+    activeKitchenOrders: orderingStatus.activeKitchenOrders,
+    activeOrderLimit: orderingStatus.activeOrderLimit,
+    maxItemsPerOrder: orderingStatus.maxItemsPerOrder,
+    reason: orderingStatus.reason,
   });
 }

@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth/next';
 import mongoose from 'mongoose';
 import { authOptions } from '@/libs/authOptions';
-import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
+import { getRestaurantOrderingCapacityStatus } from '@/libs/restaurantOrderingStatus';
 import { Restaurant } from '@/models/restaurant';
 import { RestaurantAvailabilityRequest } from '@/models/restaurantAvailabilityRequest';
 import { User } from '@/models/user';
@@ -46,7 +46,7 @@ export async function POST(_request: Request, context: { params: Promise<{ id: s
     );
   }
 
-  const orderingStatus = getRestaurantOrderingStatus({ restaurant });
+  const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
   if (orderingStatus.isAcceptingOrders) {
     return Response.json({
       success: true,

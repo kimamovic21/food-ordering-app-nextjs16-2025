@@ -10,7 +10,10 @@ export const RESTAURANT_ORDERING_STATUS_STALE_MS = 30 * 1000;
 export type RestaurantOrderingStatus = {
   restaurantId: string;
   restaurantName: string;
+  activeKitchenOrders?: number;
+  activeOrderLimit?: number;
   isAcceptingOrders: boolean;
+  isBusy?: boolean;
   maxItemsPerOrder?: number;
   reason?: string | null;
 };

@@ -1179,3 +1179,5 @@ Strengthen checkout guardrails and capacity maintenance
 Polish checkout blocked audit logs
 
 Centralize cart checkout validation
+
+Centralize restaurant ordering capacity status
