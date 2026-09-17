@@ -220,6 +220,7 @@ Cart:
 - Cart validates the latest server state before checkout.
 - It checks deleted items, unavailable items, price changes, restaurant status, delivery radius, minimum order amount, busy capacity, and courier-safe order quantity limits.
 - Restaurant open/paused/radius/capacity checks are centralized server-side so the menu, cart, checkout, restaurant pages, availability alerts, and admin operations views report the same ordering state.
+- Cart and restaurant pages show dynamic prep/delivery ETA messaging that reflects current kitchen load instead of only static restaurant averages.
 - Price changes are shown clearly and can be refreshed.
 - Deleted, unavailable, invalid, cross-restaurant, or blocked restaurant states prevent checkout.
 - The cart can show a "checking restaurant status" state so closed/open messages do not flicker during loading.
@@ -230,6 +231,7 @@ Checkout:
 - Checkout is server-authoritative.
 - The server recalculates item prices, totals, tax, delivery fee, coupon discounts, loyalty discounts, and restaurant availability.
 - Checkout uses the same cart validation and centralized restaurant ordering status helpers as cart preflight, so client-side warnings and final Stripe session creation follow the same rules.
+- Checkout saves the current load-adjusted preparation, delivery, and total estimate on the order so later order timelines and delay warnings use the estimate the customer saw before payment.
 - The customer cannot checkout with mixed restaurants.
 - The customer cannot checkout from their own restaurant.
 - The customer cannot checkout while they already have a paid active order that is not completed or canceled.
@@ -309,6 +311,7 @@ Restaurant availability:
 - The app checks if the restaurant is open based on working hours and blocked dates.
 - `libs/restaurantOrderingStatus.ts` combines restaurant availability, delivery radius, pause state, closing-soon cutoff, active kitchen capacity, max items per order, and minimum order amount into one capacity-aware ordering status.
 - `libs/restaurantCapacity.ts` keeps the reusable capacity math separate from database access, so operations summaries can reuse the same near-capacity and at-capacity thresholds without pulling in server-only order queries.
+- `libs/restaurantEta.ts` keeps dynamic timing rules separate from availability rules, increasing prep estimates as active kitchen load rises and exposing clear customer-facing busy messages.
 - Checkout is blocked in the final 60 minutes before closing.
 - Admins can pause the restaurant manually when the kitchen is overwhelmed.
 - A pause reason can be shown to users.
@@ -986,6 +989,7 @@ Restaurant availability:
 
 - `libs/restaurantAvailability.ts`
 - `libs/restaurantCapacity.ts`
+- `libs/restaurantEta.ts`
 - `libs/restaurantOrderingStatus.ts`
 - `app/api/restaurants/[id]/ordering-status/route.ts`
 - `app/api/restaurants/[id]/availability-alert/route.ts`

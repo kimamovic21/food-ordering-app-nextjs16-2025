@@ -476,6 +476,7 @@ export async function POST(req: Request) {
   }
 
   const restaurant = cartValidation.restaurantDocument;
+  const restaurantValidation = cartValidation.restaurant;
   const normalizedDeliveryLatitude = normalizeDeliveryCoordinate(deliveryLatitude);
   const normalizedDeliveryLongitude = normalizeDeliveryCoordinate(deliveryLongitude);
   const hasDeliveryLocation =
@@ -571,8 +572,6 @@ export async function POST(req: Request) {
 
       return Response.json({ error: 'Invalid cart data' }, { status: 400 });
     }
-
-    const restaurantValidation = cartValidation.restaurant;
 
     if (restaurantValidation?.status === 'busy') {
       return createCheckoutBlockResponse({
@@ -746,11 +745,15 @@ export async function POST(req: Request) {
   const deliveryFee = roundToTwoDecimals(restaurant.courierFee || 5);
   const estimatedPreparationMinutes = Math.max(
     0,
-    Number((restaurant as any).averagePreparationMinutes) || 25
+    Number(restaurantValidation?.estimatedPreparationMinutes) ||
+      Number((restaurant as any).averagePreparationMinutes) ||
+      25
   );
   const estimatedDeliveryMinutes = Math.max(
     0,
-    Number((restaurant as any).averageDeliveryMinutes) || 20
+    Number(restaurantValidation?.estimatedDeliveryMinutes) ||
+      Number((restaurant as any).averageDeliveryMinutes) ||
+      20
   );
   const estimatedTotalMinutes = estimatedPreparationMinutes + estimatedDeliveryMinutes;
   const discountedSubtotal = roundToTwoDecimals(

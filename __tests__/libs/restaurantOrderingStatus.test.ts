@@ -65,9 +65,14 @@ describe('restaurant ordering capacity status', () => {
       expect.objectContaining({
         activeKitchenOrders: 2,
         activeOrderLimit: 2,
+        capacitySlotsRemaining: 0,
+        estimatedPreparationMinutes: 45,
+        estimatedTotalMinutes: 65,
+        etaDelayMinutes: 20,
+        etaTone: 'at_capacity',
         isAcceptingOrders: false,
         isBusy: true,
-        reason: RESTAURANT_BUSY_MESSAGE,
+        reason: `${RESTAURANT_BUSY_MESSAGE} Kitchen is at capacity with 2 active paid orders.`,
       })
     );
   });
@@ -82,6 +87,9 @@ describe('restaurant ordering capacity status', () => {
     });
 
     expect(Order.countDocuments).not.toHaveBeenCalled();
+    expect(orderingStatus.estimatedPreparationMinutes).toBe(25);
+    expect(orderingStatus.estimatedDeliveryMinutes).toBe(20);
+    expect(orderingStatus.estimatedTotalMinutes).toBe(45);
 
     const orderLimitStatus = getRestaurantCartValidationStatus({
       orderingStatus,

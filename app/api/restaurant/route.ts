@@ -182,6 +182,13 @@ export async function GET() {
         orderingLoad: {
           activeKitchenOrders: orderingStatus.activeKitchenOrders,
           activeOrderLimit: orderingStatus.activeOrderLimit,
+          capacitySlotsRemaining: orderingStatus.capacitySlotsRemaining,
+          estimatedPreparationMinutes: orderingStatus.estimatedPreparationMinutes,
+          estimatedDeliveryMinutes: orderingStatus.estimatedDeliveryMinutes,
+          estimatedTotalMinutes: orderingStatus.estimatedTotalMinutes,
+          etaDelayMinutes: orderingStatus.etaDelayMinutes,
+          etaMessage: orderingStatus.etaMessage,
+          etaTone: orderingStatus.etaTone,
           shouldSuggestPause: orderingStatus.shouldSuggestPause,
           isAtCapacity: orderingStatus.isAtCapacity,
         },

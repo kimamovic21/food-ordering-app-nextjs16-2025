@@ -30,6 +30,7 @@ This folder contains unit tests grouped by feature area.
 - `libs/order-auto-cancellation.test.ts`: validates stale unpaid and ready-without-courier auto-cancel rules.
 - `libs/paymentExpiry.test.ts`: validates the customer-facing unpaid payment countdown helper.
 - `libs/restaurantCapacity.test.ts`: validates shared active kitchen capacity normalization and near-capacity snapshot behavior.
+- `libs/restaurantEta.test.ts`: validates load-adjusted restaurant preparation/delivery estimates and customer-facing busy timing messages.
 - `libs/restaurantOrderingStatus.test.ts`: validates capacity-aware ordering status, busy copy, active-order counting, and cart validation status mapping.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item and per-order quantity-limit helpers used by cart UI and checkout APIs.
 - `libs/orderCapacityBackfill.test.ts`: validates server-side maintenance helpers for backfilling restaurant/menu item quantity-limit fields.

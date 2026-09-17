@@ -6,6 +6,7 @@ import {
   normalizeMinimumOrderAmount,
 } from '@/libs/restaurantCapacity';
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
+import { buildRestaurantDynamicEta } from '@/libs/restaurantEta';
 import { Order } from '@/models/order';
 import type { CartValidationRestaurantStatus } from '@/types/cart';
 
@@ -16,6 +17,8 @@ export const RESTAURANT_BUSY_MESSAGE =
 type RestaurantLike = {
   _id?: unknown;
   activeOrderLimit?: unknown;
+  averageDeliveryMinutes?: unknown;
+  averagePreparationMinutes?: unknown;
   blockedDates?: unknown;
   deliveryRadiusKm?: unknown;
   isPaused?: unknown;
@@ -43,8 +46,19 @@ export const countRestaurantActiveKitchenOrders = async (restaurantId: unknown) 
 
 export type RestaurantOrderingCapacityStatus = ReturnType<typeof getRestaurantOrderingStatus> &
   ReturnType<typeof buildRestaurantCapacitySnapshot> & {
+    baseDeliveryMinutes: number;
+    basePreparationMinutes: number;
+    capacityMessage: string | null;
+    capacitySlotsRemaining: number;
+    estimatedDeliveryMinutes: number;
+    estimatedPreparationMinutes: number;
+    estimatedTotalMinutes: number;
+    etaDelayMinutes: number;
+    etaMessage: string;
+    etaTone: 'normal' | 'moderate' | 'busy' | 'at_capacity';
     maxItemsPerOrder: number;
     minimumOrderAmount: number;
+    orderingMessage: string;
   };
 
 export const getRestaurantOrderingCapacityStatus = async ({
@@ -74,14 +88,23 @@ export const getRestaurantOrderingCapacityStatus = async ({
     restaurant,
     activeKitchenOrders: resolvedActiveKitchenOrders,
   });
-  const reason = capacity.isBusy ? RESTAURANT_BUSY_MESSAGE : orderingStatus.reason;
+  const eta = buildRestaurantDynamicEta({
+    restaurant,
+    activeKitchenOrders: capacity.activeKitchenOrders,
+    activeOrderLimit: capacity.activeOrderLimit,
+  });
+  const reason = capacity.isBusy
+    ? `${RESTAURANT_BUSY_MESSAGE} ${eta.capacityMessage || ''}`.trim()
+    : orderingStatus.reason;
 
   return {
     ...orderingStatus,
     ...capacity,
+    ...eta,
     isAcceptingOrders: orderingStatus.isAcceptingOrders && !capacity.isBusy,
     maxItemsPerOrder: normalizeItemsPerOrderLimit(restaurant?.maxItemsPerOrder),
     minimumOrderAmount: normalizeMinimumOrderAmount(restaurant?.minimumOrderAmount),
+    orderingMessage: reason || eta.etaMessage,
     reason,
   };
 };
@@ -117,7 +140,7 @@ export const getRestaurantCartValidationMessage = ({
   totalCartQuantity: number;
 }) => {
   if (restaurantStatus === 'busy') {
-    return RESTAURANT_BUSY_MESSAGE;
+    return orderingStatus.reason || RESTAURANT_BUSY_MESSAGE;
   }
 
   if (restaurantStatus === 'order_quantity_limit') {

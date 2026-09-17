@@ -170,6 +170,11 @@ const RestaurantDetailsPage = () => {
         )
       : null;
   const shareUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/restaurants/${restaurant._id}`;
+  const hasDynamicEta =
+    typeof restaurant.estimatedPreparationMinutes === 'number' &&
+    typeof restaurant.estimatedDeliveryMinutes === 'number' &&
+    typeof restaurant.estimatedTotalMinutes === 'number';
+  const isBusyEta = restaurant.etaTone === 'busy' || restaurant.etaTone === 'moderate';
 
   return (
     <section className='mt-8 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>
@@ -231,6 +236,28 @@ const RestaurantDetailsPage = () => {
             <p className='mt-1 text-amber-800 dark:text-amber-100/80'>
               Ask the app to notify you when ordering is available again.
             </p>
+          </div>
+        )}
+        {restaurant.isAcceptingOrders !== false && restaurant.etaMessage && (
+          <div
+            className={`rounded-lg border p-4 text-sm ${
+              isBusyEta
+                ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100'
+                : 'border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/30 dark:text-green-100'
+            }`}
+          >
+            <p className='font-semibold'>
+              {isBusyEta ? 'Kitchen is busy but accepting orders' : 'Ordering is available'}
+            </p>
+            <p className='mt-1 opacity-90'>{restaurant.etaMessage}</p>
+            {typeof restaurant.capacitySlotsRemaining === 'number' &&
+              restaurant.capacitySlotsRemaining <= 2 && (
+                <p className='mt-2 font-medium'>
+                  {restaurant.capacitySlotsRemaining} active order{' '}
+                  {restaurant.capacitySlotsRemaining === 1 ? 'slot' : 'slots'} left before
+                  capacity.
+                </p>
+              )}
           </div>
         )}
         <div className='flex flex-wrap gap-3'>
@@ -341,6 +368,13 @@ const RestaurantDetailsPage = () => {
               </p>
               <p>Tax: {restaurant.tax}%</p>
               <p>Courier fee: ${restaurant.courierFee}</p>
+              {hasDynamicEta && (
+                <>
+                  <p>Estimated prep: {restaurant.estimatedPreparationMinutes} min</p>
+                  <p>Estimated delivery: {restaurant.estimatedDeliveryMinutes} min</p>
+                  <p>Estimated total: {restaurant.estimatedTotalMinutes} min</p>
+                </>
+              )}
             </CardContent>
           </Card>
 
