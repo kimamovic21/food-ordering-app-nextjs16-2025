@@ -157,12 +157,20 @@ describe('/api/restaurant route', () => {
     const body = await res.json();
 
     expect(res.status).toBe(200);
-    expect(body.orderingLoad).toEqual({
-      activeKitchenOrders: 9,
-      activeOrderLimit: 10,
-      shouldSuggestPause: true,
-      isAtCapacity: false,
-    });
+    expect(body.orderingLoad).toEqual(
+      expect.objectContaining({
+        activeKitchenOrders: 9,
+        activeOrderLimit: 10,
+        capacitySlotsRemaining: 1,
+        estimatedPreparationMinutes: 40,
+        estimatedDeliveryMinutes: 20,
+        estimatedTotalMinutes: 60,
+        etaDelayMinutes: 15,
+        etaTone: 'busy',
+        shouldSuggestPause: true,
+        isAtCapacity: false,
+      })
+    );
   });
 
   it('rejects invalid blocked dates before creating a restaurant', async () => {

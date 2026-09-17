@@ -5,7 +5,6 @@ import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { MapPin } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Pagination,
   PaginationContent,
@@ -21,6 +20,7 @@ import useFavorites from '@/hooks/useFavorites';
 import ShareActions from '@/components/shared/ShareActions';
 import HeartRating from '@/components/shared/HeartRating';
 import SearchInput from './SearchInput';
+import RestaurantsPageSkeleton from './RestaurantsPageSkeleton';
 import type { RestaurantListItem } from '@/types/restaurant';
 
 const PAGE_SIZE = 9;
@@ -52,6 +52,10 @@ const RestaurantsPage = () => {
     const controller = new AbortController();
 
     const fetchRestaurants = async () => {
+      if (locationLoading) {
+        return;
+      }
+
       try {
         setLoading(true);
         const params = new URLSearchParams();
@@ -94,7 +98,7 @@ const RestaurantsPage = () => {
     return () => {
       controller.abort();
     };
-  }, [page, activeSearch, userLocation]);
+  }, [page, activeSearch, userLocation, locationLoading]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -167,185 +171,150 @@ const RestaurantsPage = () => {
     void setRestaurantQuery({ page: validPage });
   };
 
+  const shouldShowLoading = loading || (locationLoading && restaurants.length === 0);
+
+  if (shouldShowLoading) {
+    return <RestaurantsPageSkeleton />;
+  }
+
   return (
     <section className='mt-8 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>
-      {loading ? (
-        <>
-          {/* Loading - Title and Description Skeletons */}
-          <div className='mb-6 flex flex-col gap-3'>
-            <Skeleton className='h-12 w-full max-w-md rounded-lg' />
-            <Skeleton className='h-5 w-full rounded-lg' />
-          </div>
+      {/* Loaded - Title and Description */}
+      <div className='mb-6 flex flex-col gap-3'>
+        <Title>Restaurants</Title>
+        <p className='text-sm text-muted-foreground'>
+          Browse restaurants, discover their details, and choose where you want to order from.
+        </p>
+        <p className='text-sm text-muted-foreground'>
+          {locationLoading
+            ? 'Detecting your location for nearest restaurants...'
+            : userLocation
+              ? 'Showing restaurants from closest to farthest based on your location.'
+              : locationError || 'Location unavailable. Showing default order.'}
+        </p>
+      </div>
 
-          {/* Loading - Search Input Skeleton */}
-          <div className='mb-8'>
-            <Skeleton className='h-11 w-full rounded-md' />
-          </div>
+      {/* Loaded - Search Input */}
+      <div className='mb-8'>
+        <SearchInput
+          value={searchInput}
+          onChange={setSearchInput}
+          onSearch={handleSearch}
+          onClear={handleClear}
+          onKeyDown={handleKeyDown}
+        />
+      </div>
 
-          {/* Loading - Restaurant Cards Grid */}
-          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-            {Array.from({ length: PAGE_SIZE }).map((_, index) => (
-              <div
-                key={index}
-                className='rounded-xl border border-border bg-card overflow-hidden p-0'
-              >
-                <Skeleton className='h-40 w-full rounded-none' />
-                <div className='p-3 space-y-2'>
-                  <div className='flex items-start justify-between gap-2'>
-                    <Skeleton className='h-5 grow' />
-                    <Skeleton className='h-6 w-12' />
-                  </div>
-                  <Skeleton className='h-4 w-3/4' />
-                  <Skeleton className='h-4 w-full' />
-                  <Skeleton className='h-4 w-full' />
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+      {/* Loaded - Restaurant Cards or No Results */}
+      {restaurants.length === 0 ? (
+        <Card>
+          <CardContent className='py-10 text-center text-muted-foreground'>
+            No restaurants found for your search.
+          </CardContent>
+        </Card>
       ) : (
-        <>
-          {/* Loaded - Title and Description */}
-          <div className='mb-6 flex flex-col gap-3'>
-            <Title>Restaurants</Title>
-            <p className='text-sm text-muted-foreground'>
-              Browse restaurants, discover their details, and choose where you want to order from.
-            </p>
-            <p className='text-sm text-muted-foreground'>
-              {locationLoading
-                ? 'Detecting your location for nearest restaurants...'
-                : userLocation
-                  ? 'Showing restaurants from closest to farthest based on your location.'
-                  : locationError || 'Location unavailable. Showing default order.'}
-            </p>
-          </div>
-
-          {/* Loaded - Search Input */}
-          <div className='mb-8'>
-            <SearchInput
-              value={searchInput}
-              onChange={setSearchInput}
-              onSearch={handleSearch}
-              onClear={handleClear}
-              onKeyDown={handleKeyDown}
-            />
-          </div>
-
-          {/* Loaded - Restaurant Cards or No Results */}
-          {restaurants.length === 0 ? (
-            <Card>
-              <CardContent className='py-10 text-center text-muted-foreground'>
-                No restaurants found for your search.
+        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+          {restaurants.map((restaurant) => (
+            <Card
+              key={restaurant._id}
+              className='h-full overflow-hidden border-border/80 hover:shadow-md transition-shadow'
+            >
+              <Link href={`/restaurants/${restaurant._id}`}>
+                <div className='relative h-48 w-full bg-muted'>
+                  {restaurant.image ? (
+                    <Image
+                      src={restaurant.image}
+                      alt={restaurant.name}
+                      fill
+                      className='object-cover'
+                      sizes='(max-width: 1024px) 100vw, 33vw'
+                    />
+                  ) : (
+                    <div className='h-full w-full flex items-center justify-center text-muted-foreground text-sm'>
+                      No image available
+                    </div>
+                  )}
+                </div>
+              </Link>
+              <CardHeader className='space-y-2'>
+                <div className='flex items-start justify-between gap-3'>
+                  <CardTitle className='text-xl'>
+                    <Link href={`/restaurants/${restaurant._id}`}>{restaurant.name}</Link>
+                  </CardTitle>
+                  <FavoriteToggleButton
+                    type='restaurant'
+                    targetId={restaurant._id}
+                    isFavorite={favorites.favoriteRestaurantIds.includes(restaurant._id)}
+                    onChanged={(nextIsFavorite) =>
+                      setRestaurantFavorite(restaurant._id, nextIsFavorite)
+                    }
+                  />
+                </div>
+                <Badge variant={restaurant.isOpen ? 'default' : 'secondary'}>
+                  {restaurant.isOpen ? 'Open' : 'Closed'}
+                </Badge>
+                <HeartRating rating={restaurant.averageRating} ratingCount={restaurant.ratingCount} />
+                <p className='text-sm text-muted-foreground flex items-center gap-1'>
+                  <MapPin className='h-4 w-4' />
+                  {restaurant.city}, {restaurant.country}
+                </p>
+                {typeof restaurant.distanceKm === 'number' && (
+                  <p className='text-xs text-muted-foreground'>
+                    {restaurant.distanceKm.toFixed(1)} km away
+                  </p>
+                )}
+              </CardHeader>
+              <CardContent className='space-y-3'>
+                <p className='text-sm text-muted-foreground'>{restaurant.street}</p>
+                <p className='text-sm text-foreground/90'>
+                  {restaurant.description.length > 110
+                    ? `${restaurant.description.slice(0, 110)}...`
+                    : restaurant.description}
+                </p>
+                <ShareActions
+                  url={`${typeof window !== 'undefined' ? window.location.origin : ''}/restaurants/${restaurant._id}`}
+                  title={`Check out this restaurant: ${restaurant.name}`}
+                />
               </CardContent>
             </Card>
-          ) : (
-            <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {restaurants.map((restaurant) => (
-                <Card
-                  key={restaurant._id}
-                  className='h-full overflow-hidden border-border/80 hover:shadow-md transition-shadow'
-                >
-                  <Link href={`/restaurants/${restaurant._id}`}>
-                    <div className='relative h-48 w-full bg-muted'>
-                      {restaurant.image ? (
-                        <Image
-                          src={restaurant.image}
-                          alt={restaurant.name}
-                          fill
-                          className='object-cover'
-                          sizes='(max-width: 1024px) 100vw, 33vw'
-                        />
-                      ) : (
-                        <div className='h-full w-full flex items-center justify-center text-muted-foreground text-sm'>
-                          No image available
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                  <CardHeader className='space-y-2'>
-                    <div className='flex items-start justify-between gap-3'>
-                      <CardTitle className='text-xl'>
-                        <Link href={`/restaurants/${restaurant._id}`}>{restaurant.name}</Link>
-                      </CardTitle>
-                      <FavoriteToggleButton
-                        type='restaurant'
-                        targetId={restaurant._id}
-                        isFavorite={favorites.favoriteRestaurantIds.includes(restaurant._id)}
-                        onChanged={(nextIsFavorite) =>
-                          setRestaurantFavorite(restaurant._id, nextIsFavorite)
-                        }
-                      />
-                    </div>
-                    <Badge variant={restaurant.isOpen ? 'default' : 'secondary'}>
-                      {restaurant.isOpen ? 'Open' : 'Closed'}
-                    </Badge>
-                    <HeartRating
-                      rating={restaurant.averageRating}
-                      ratingCount={restaurant.ratingCount}
-                    />
-                    <p className='text-sm text-muted-foreground flex items-center gap-1'>
-                      <MapPin className='h-4 w-4' />
-                      {restaurant.city}, {restaurant.country}
-                    </p>
-                    {typeof restaurant.distanceKm === 'number' && (
-                      <p className='text-xs text-muted-foreground'>
-                        {restaurant.distanceKm.toFixed(1)} km away
-                      </p>
-                    )}
-                  </CardHeader>
-                  <CardContent className='space-y-3'>
-                    <p className='text-sm text-muted-foreground'>{restaurant.street}</p>
-                    <p className='text-sm text-foreground/90'>
-                      {restaurant.description.length > 110
-                        ? `${restaurant.description.slice(0, 110)}...`
-                        : restaurant.description}
-                    </p>
-                    <ShareActions
-                      url={`${typeof window !== 'undefined' ? window.location.origin : ''}/restaurants/${restaurant._id}`}
-                      title={`Check out this restaurant: ${restaurant.name}`}
-                    />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          ))}
+        </div>
+      )}
 
-          {restaurants.length > 0 && (
-            <div className='mt-8 flex items-center justify-center'>
-              <Pagination>
-                <PaginationContent>
-                  <PaginationItem>
-                    <PaginationPrevious
-                      href={getRestaurantsHref(Math.max(1, page - 1))}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        goToPage(page - 1);
-                      }}
-                      aria-disabled={page <= 1}
-                      className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
-                    />
-                  </PaginationItem>
+      {restaurants.length > 0 && (
+        <div className='mt-8 flex items-center justify-center'>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  href={getRestaurantsHref(Math.max(1, page - 1))}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToPage(page - 1);
+                  }}
+                  aria-disabled={page <= 1}
+                  className={page <= 1 ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
 
-                  <div className='px-4 text-sm text-muted-foreground'>
-                    Page {page} of {totalPages}
-                  </div>
+              <div className='px-4 text-sm text-muted-foreground'>
+                Page {page} of {totalPages}
+              </div>
 
-                  <PaginationItem>
-                    <PaginationNext
-                      href={getRestaurantsHref(Math.min(totalPages, page + 1))}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        goToPage(page + 1);
-                      }}
-                      aria-disabled={page >= totalPages}
-                      className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
-                    />
-                  </PaginationItem>
-                </PaginationContent>
-              </Pagination>
-            </div>
-          )}
-        </>
+              <PaginationItem>
+                <PaginationNext
+                  href={getRestaurantsHref(Math.min(totalPages, page + 1))}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    goToPage(page + 1);
+                  }}
+                  aria-disabled={page >= totalPages}
+                  className={page >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       )}
     </section>
   );

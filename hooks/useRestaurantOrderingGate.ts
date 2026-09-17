@@ -12,9 +12,18 @@ export type RestaurantOrderingStatus = {
   restaurantName: string;
   activeKitchenOrders?: number;
   activeOrderLimit?: number;
+  capacityMessage?: string | null;
+  capacitySlotsRemaining?: number;
+  estimatedDeliveryMinutes?: number;
+  estimatedPreparationMinutes?: number;
+  estimatedTotalMinutes?: number;
+  etaDelayMinutes?: number;
+  etaMessage?: string;
+  etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity';
   isAcceptingOrders: boolean;
   isBusy?: boolean;
   maxItemsPerOrder?: number;
+  orderingMessage?: string;
   reason?: string | null;
 };
 

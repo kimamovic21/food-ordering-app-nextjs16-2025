@@ -94,12 +94,21 @@ export type CartValidationResponse = {
     totalCartQuantity?: number;
     activeKitchenOrders?: number;
     activeOrderLimit?: number;
+    capacityMessage?: string | null;
+    capacitySlotsRemaining?: number;
     deliveryRadiusKm?: number;
     distanceKm?: number | null;
+    estimatedDeliveryMinutes?: number;
+    estimatedPreparationMinutes?: number;
+    estimatedTotalMinutes?: number;
+    etaDelayMinutes?: number;
+    etaMessage?: string;
+    etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity';
     isOpen?: boolean;
     isPaused?: boolean;
     isBusy?: boolean;
     isAcceptingOrders?: boolean;
+    orderingMessage?: string;
   } | null;
 };
 

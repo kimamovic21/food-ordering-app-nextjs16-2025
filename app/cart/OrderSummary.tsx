@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
+import { Clock3, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 interface OrderSummaryProps {
@@ -39,6 +39,13 @@ interface OrderSummaryProps {
   loadingRestaurants: boolean;
   hasUnavailableItems?: boolean;
   loadingMenuAvailability?: boolean;
+  estimatedPreparationMinutes?: number | null;
+  estimatedDeliveryMinutes?: number | null;
+  estimatedTotalMinutes?: number | null;
+  etaDelayMinutes?: number | null;
+  etaMessage?: string | null;
+  etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity' | string;
+  capacitySlotsRemaining?: number | null;
 }
 
 const OrderSummary: React.FC<OrderSummaryProps> = ({
@@ -76,10 +83,25 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   loadingRestaurants,
   hasUnavailableItems = false,
   loadingMenuAvailability = false,
+  estimatedPreparationMinutes = null,
+  estimatedDeliveryMinutes = null,
+  estimatedTotalMinutes = null,
+  etaDelayMinutes = null,
+  etaMessage = null,
+  etaTone = 'normal',
+  capacitySlotsRemaining = null,
 }) => {
   const subtotalAfterCoupon = Math.max(0, subtotal - couponDiscount);
   const subtotalAfterLoyalty = Math.max(0, subtotalAfterCoupon - loyaltyDiscount);
   const total = subtotalAfterLoyalty + deliveryFee;
+  const hasEta =
+    typeof estimatedPreparationMinutes === 'number' &&
+    typeof estimatedDeliveryMinutes === 'number' &&
+    typeof estimatedTotalMinutes === 'number';
+  const etaToneClass =
+    etaTone === 'busy' || etaTone === 'moderate'
+      ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100'
+      : 'border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/30 dark:text-green-100';
 
   return (
     <div className='bg-card border rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4'>
@@ -106,6 +128,44 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
           <span>${deliveryFee.toFixed(2)}</span>
         </div>
       </div>
+
+      {hasEta && (
+        <div className={`rounded-lg border p-3 text-sm ${etaToneClass}`}>
+          <div className='flex items-center gap-2 font-semibold'>
+            <Clock3 className='size-4' aria-hidden='true' />
+            Estimated timing
+          </div>
+          <p className='mt-1 text-xs opacity-90'>
+            {etaMessage ||
+              `Estimated prep is about ${estimatedPreparationMinutes} min, plus about ${estimatedDeliveryMinutes} min for delivery.`}
+          </p>
+          <div className='mt-3 grid grid-cols-3 gap-2 text-xs'>
+            <div className='rounded-md bg-background/70 p-2 text-center'>
+              <span className='block text-muted-foreground'>Prep</span>
+              <strong>{estimatedPreparationMinutes} min</strong>
+            </div>
+            <div className='rounded-md bg-background/70 p-2 text-center'>
+              <span className='block text-muted-foreground'>Delivery</span>
+              <strong>{estimatedDeliveryMinutes} min</strong>
+            </div>
+            <div className='rounded-md bg-background/70 p-2 text-center'>
+              <span className='block text-muted-foreground'>Total</span>
+              <strong>{estimatedTotalMinutes} min</strong>
+            </div>
+          </div>
+          {typeof etaDelayMinutes === 'number' && etaDelayMinutes > 0 && (
+            <p className='mt-2 text-xs font-medium'>
+              Current kitchen load adds about {etaDelayMinutes} min to preparation.
+            </p>
+          )}
+          {typeof capacitySlotsRemaining === 'number' && capacitySlotsRemaining <= 2 && (
+            <p className='mt-1 text-xs font-medium'>
+              {capacitySlotsRemaining} active order{' '}
+              {capacitySlotsRemaining === 1 ? 'slot' : 'slots'} left before capacity.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className='space-y-3 border-b pb-3'>
         <div className='space-y-2'>

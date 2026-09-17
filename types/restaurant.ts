@@ -55,6 +55,18 @@ export type RestaurantDetails = RestaurantSummary & {
   isAcceptingOrders?: boolean;
   orderingUnavailableReason?: string | null;
   isBusy?: boolean;
+  isNearCapacity?: boolean;
+  activeKitchenOrders?: number;
+  activeOrderLimit?: number;
+  capacityMessage?: string | null;
+  capacitySlotsRemaining?: number;
+  estimatedPreparationMinutes?: number;
+  estimatedDeliveryMinutes?: number;
+  estimatedTotalMinutes?: number;
+  etaDelayMinutes?: number;
+  etaMessage?: string;
+  etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity';
+  orderingMessage?: string;
   averageRating: number;
   ratingCount: number;
 };

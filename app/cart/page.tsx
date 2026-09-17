@@ -615,6 +615,28 @@ const CartPage = () => {
     return restaurant?.orderingUnavailableReason || null;
   };
 
+  const getRestaurantEtaMessage = () => {
+    const restaurant = getCartRestaurant();
+    return typeof restaurant?.etaMessage === 'string' ? restaurant.etaMessage : null;
+  };
+
+  const getRestaurantEtaTone = () => {
+    const restaurant = getCartRestaurant();
+    return typeof restaurant?.etaTone === 'string' ? restaurant.etaTone : 'normal';
+  };
+
+  const getRestaurantCapacityMessage = () => {
+    const restaurant = getCartRestaurant();
+    return typeof restaurant?.capacityMessage === 'string' ? restaurant.capacityMessage : null;
+  };
+
+  const getRestaurantNumberField = (field: string) => {
+    const restaurant = getCartRestaurant();
+    const value = restaurant?.[field];
+
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+
   const getDeliveryRadiusKm = () => {
     const restaurant = getCartRestaurant();
     return typeof restaurant?.deliveryRadiusKm === 'number' ? restaurant.deliveryRadiusKm : null;
@@ -1177,6 +1199,14 @@ const CartPage = () => {
   const restaurantName = getRestaurantName();
   const cartRestaurantId = getCartRestaurantId();
   const maxItemsPerOrder = getMaxItemsPerOrder();
+  const restaurantEtaMessage = getRestaurantEtaMessage();
+  const restaurantEtaTone = getRestaurantEtaTone();
+  const restaurantCapacityMessage = getRestaurantCapacityMessage();
+  const estimatedPreparationMinutes = getRestaurantNumberField('estimatedPreparationMinutes');
+  const estimatedDeliveryMinutes = getRestaurantNumberField('estimatedDeliveryMinutes');
+  const estimatedTotalMinutes = getRestaurantNumberField('estimatedTotalMinutes');
+  const etaDelayMinutes = getRestaurantNumberField('etaDelayMinutes');
+  const capacitySlotsRemaining = getRestaurantNumberField('capacitySlotsRemaining');
   const cartTotalQuantity = getCartTotalQuantity(cartItems);
   const exceedsMaxItemsPerOrder =
     !multipleRestaurants && cartItems.length > 0 && cartTotalQuantity > maxItemsPerOrder;
@@ -1303,6 +1333,7 @@ const CartPage = () => {
         !restaurantLookupFailed &&
         restaurantOpen &&
         !restaurantPaused &&
+        !restaurantBusy &&
         !restaurantAcceptingCheckout && (
           <CartAvailabilityBanner
             tone='warning'
@@ -1326,14 +1357,17 @@ const CartPage = () => {
       {showRestaurantStatus &&
         !restaurantLookupFailed &&
         restaurantOpen &&
-        restaurantAcceptingCheckout &&
         !restaurantPaused &&
         restaurantBusy && (
           <CartAvailabilityBanner
             tone='warning'
             icon={<Clock3 className='size-5' aria-hidden='true' />}
-            title={`${restaurantName} is busy`}
-            message={`${restaurantName} is very busy at the moment. Please wait a little bit and try again.`}
+            title={`${restaurantName} is at capacity`}
+            message={
+              getRestaurantUnavailableReason() ||
+              restaurantCapacityMessage ||
+              `${restaurantName} is very busy at the moment. Please wait a little bit and try again.`
+            }
           >
             {cartRestaurantId ? (
               <RestaurantAvailabilityNotifyButton
@@ -1352,10 +1386,23 @@ const CartPage = () => {
         !restaurantPaused &&
         !restaurantBusy && (
           <CartAvailabilityBanner
-            tone='success'
-            icon={<CheckCircle2 className='size-5' aria-hidden='true' />}
-            title={`${restaurantName} is accepting orders`}
-            message='Restaurant is open right now. You can continue checkout once your cart and delivery details are ready.'
+            tone={restaurantEtaTone === 'busy' || restaurantEtaTone === 'moderate' ? 'warning' : 'success'}
+            icon={
+              restaurantEtaTone === 'busy' || restaurantEtaTone === 'moderate' ? (
+                <Clock3 className='size-5' aria-hidden='true' />
+              ) : (
+                <CheckCircle2 className='size-5' aria-hidden='true' />
+              )
+            }
+            title={
+              restaurantEtaTone === 'busy'
+                ? `${restaurantName} is busy but accepting orders`
+                : `${restaurantName} is accepting orders`
+            }
+            message={
+              restaurantEtaMessage ||
+              'Restaurant is open right now. You can continue checkout once your cart and delivery details are ready.'
+            }
           />
         )}
 
@@ -1562,6 +1609,13 @@ const CartPage = () => {
             loadingRestaurants={loadingRestaurants}
             hasUnavailableItems={blockingCartItems.length > 0}
             loadingMenuAvailability={loadingMenuAvailability}
+            estimatedPreparationMinutes={estimatedPreparationMinutes}
+            estimatedDeliveryMinutes={estimatedDeliveryMinutes}
+            estimatedTotalMinutes={estimatedTotalMinutes}
+            etaDelayMinutes={etaDelayMinutes}
+            etaMessage={restaurantEtaMessage}
+            etaTone={restaurantEtaTone}
+            capacitySlotsRemaining={capacitySlotsRemaining}
           />
         </div>
       </div>

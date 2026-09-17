@@ -270,9 +270,10 @@ This project uses many dependencies; below are the main packages actively used i
 
 - Restaurants can configure average preparation time, average delivery time, and an active kitchen order limit in the admin restaurant form.
 - Restaurants can configure `maxItemsPerOrder` up to 20 items, and each menu item can configure `maxQuantityPerOrder` up to 20 units per order.
-- Checkout snapshots the restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
+- Checkout snapshots load-adjusted restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
 - Public menu item pages check the restaurant ordering status before adding to cart, while checkout remains the final server-side source of truth.
-- `libs/restaurantOrderingStatus.ts` centralizes restaurant ordering availability with active kitchen capacity so public status checks, restaurant details, cart validation, checkout, availability alerts, and admin load indicators use the same busy/open/paused result.
+- `libs/restaurantOrderingStatus.ts` centralizes restaurant ordering availability with active kitchen capacity and dynamic ETA data so public status checks, restaurant details, cart validation, checkout, availability alerts, and admin load indicators use the same busy/open/paused result.
+- `libs/restaurantEta.ts` increases preparation estimates as the active kitchen load rises, and exposes customer-facing busy messaging plus remaining active order slots.
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
 - Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits and total order item limits so oversized courier-unfriendly orders cannot bypass the UI.

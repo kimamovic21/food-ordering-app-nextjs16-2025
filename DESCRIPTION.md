@@ -46,6 +46,7 @@ Important customer rules:
 - Customers cannot add unavailable menu items to cart or checkout with them.
 - Customers cannot add items from restaurants that are closed, paused, closing soon, blocked by date, outside radius, or at active kitchen capacity.
 - Customers cannot checkout from restaurants that are closed, paused, outside delivery radius, blocked by date, inside the final 60 minutes before closing, or at active kitchen capacity.
+- Customers see load-adjusted restaurant ETA messaging before checkout, including when kitchen load adds preparation time or when only a few active order slots remain.
 - Saved delivery addresses require complete address fields and confirmed latitude/longitude; duplicate saved-address attempts reuse the existing address, and checkout still revalidates the selected delivery location server-side.
 - Checkout and profile updates validate phone numbers and store valid values in E.164 format.
 - Customers can only message contacts allowed by their order flow.
@@ -258,7 +259,7 @@ Checkout server rules:
 - Recent identical unpaid `placed` checkout attempts reuse or recover the existing Stripe Checkout session instead of creating duplicate orders.
 - Customers see a payment-expiry countdown for unpaid `placed` orders that matches the 30-minute auto-cancel window.
 - Cart validation surfaces item-specific unavailable/deleted-item blockers and non-blocking price-change warnings before checkout.
-- Cart validation also performs a server-side restaurant preflight for closed/paused/closing-soon/busy/minimum-order/delivery-radius/order-quantity blockers, while the cart UI shows matching visible warnings before Stripe Checkout.
+- Cart validation also performs a server-side restaurant preflight for closed/paused/closing-soon/busy/minimum-order/delivery-radius/order-quantity blockers, while the cart UI shows matching visible warnings and dynamic ETA before Stripe Checkout.
 - Order is created as unpaid before redirecting to Stripe.
 - QStash schedules a delayed unpaid-order maintenance check after a new Stripe Checkout session is created.
 - If that unpaid order expires, the app attempts to expire the original Stripe Checkout session and stores the expiration result in the cancellation audit log.

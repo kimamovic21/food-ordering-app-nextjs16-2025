@@ -384,7 +384,8 @@ describe('POST /api/checkout', () => {
 
     expect(response.status).toBe(409);
     expect(body).toEqual({
-      error: 'This restaurant is very busy at the moment. Please wait a little bit and try again.',
+      error:
+        'This restaurant is very busy at the moment. Please wait a little bit and try again. Kitchen is at capacity with 10 active paid orders.',
     });
     expect(stripeCreateSession).not.toHaveBeenCalled();
     expect(createAuditLog).toHaveBeenCalledWith(
@@ -620,6 +621,30 @@ describe('POST /api/checkout', () => {
             }),
           }),
         ]),
+      })
+    );
+  });
+
+  it('stores load-adjusted restaurant estimates on the checkout order', async () => {
+    vi.mocked(Restaurant.findById).mockResolvedValueOnce({
+      ...openRestaurant,
+      activeOrderLimit: 10,
+      averagePreparationMinutes: 25,
+      averageDeliveryMinutes: 20,
+    } as never);
+    vi.mocked(Order.countDocuments).mockResolvedValueOnce(8 as never);
+
+    const POST = await loadCheckoutRoute();
+    const response = await POST(createCheckoutRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session/test-1' });
+    expect(Order.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        estimatedPreparationMinutes: 40,
+        estimatedDeliveryMinutes: 20,
+        estimatedTotalMinutes: 60,
       })
     );
   });

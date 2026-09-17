@@ -50,6 +50,13 @@ const RestaurantLocation = dynamic(() => import('@/components/shared/RestaurantL
 type OrderingLoad = {
   activeKitchenOrders: number;
   activeOrderLimit: number;
+  capacitySlotsRemaining?: number;
+  estimatedPreparationMinutes?: number;
+  estimatedDeliveryMinutes?: number;
+  estimatedTotalMinutes?: number;
+  etaDelayMinutes?: number;
+  etaMessage?: string;
+  etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity';
   shouldSuggestPause: boolean;
   isAtCapacity: boolean;
 };
@@ -327,6 +334,20 @@ const RestaurantPage = () => {
                     kitchen orders are waiting. Consider pausing checkout for a little while if the
                     kitchen needs time to catch up.
                   </p>
+                  {orderingLoad.etaMessage && (
+                    <p className='mt-2 text-sm font-medium text-amber-900 dark:text-amber-100'>
+                      Customer ETA now shows: {orderingLoad.etaMessage}
+                    </p>
+                  )}
+                  {typeof orderingLoad.capacitySlotsRemaining === 'number' && (
+                    <p className='mt-1 text-xs text-amber-800 dark:text-amber-100/80'>
+                      Remaining active order slots: {orderingLoad.capacitySlotsRemaining}
+                      {typeof orderingLoad.etaDelayMinutes === 'number' &&
+                      orderingLoad.etaDelayMinutes > 0
+                        ? `, prep delay: about ${orderingLoad.etaDelayMinutes} min`
+                        : ''}
+                    </p>
+                  )}
                 </div>
               </div>
               <Button

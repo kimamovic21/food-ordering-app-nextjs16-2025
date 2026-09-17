@@ -249,7 +249,7 @@ describe('cart validation helpers', () => {
       })
     );
     expect(result.message).toBe(
-      'This restaurant is very busy at the moment. Please wait a little bit and try again.'
+      'This restaurant is very busy at the moment. Please wait a little bit and try again. Kitchen is at capacity with 1 active paid order.'
     );
   });
 });
