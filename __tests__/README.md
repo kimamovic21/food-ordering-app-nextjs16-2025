@@ -39,6 +39,7 @@ This folder contains unit tests grouped by feature area.
 - `libs/orderDelay.test.ts`: validates active order delay warning thresholds and development time offsets.
 - `libs/restaurantOperations.test.ts`: validates operations overview stage counts, capacity, courier summary, revenue, and attention-order prioritization.
 - `components/OrderActivityLog.test.ts`: validates customer/admin order activity event status and cancellation behavior.
+- `hooks/useOrderListQueries.test.ts`: validates shared order-list fetchers, queue normalization, and status-aware query errors.
 - `hooks/useRestaurantOrderingGate.test.ts`: validates restaurant ordering-status prefetch caching for visible menu items.
 - `libs/realtimeClient.test.ts`: validates client-side realtime payload helpers.
 

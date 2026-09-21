@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,66 +28,53 @@ import MyOrdersTable from './MyOrdersTable';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { useCart } from '@/contexts/CartContext';
 import { formatAppDate } from '@/libs/dateFormat';
-import type { OrderListItem, UsualOrder } from '@/types/order';
+import { useCustomerOrdersListQuery, useUsualOrderQuery } from '@/hooks/useOrderListQueries';
+import { queryKeys } from '@/libs/queryKeys';
+import {
+  APP_NOTIFICATION_REALTIME_EVENT,
+  getNotificationRealtimePayload,
+  isOrderRelatedRealtimePayload,
+} from '@/libs/realtimeClient';
+import type { CustomerOrdersListResponse, OrderListItem } from '@/types/order';
 
 const MyOrdersPage = () => {
-  const [orders, setOrders] = useState<OrderListItem[]>([]);
-  const [usualOrder, setUsualOrder] = useState<UsualOrder | null>(null);
-  const [loadingUsualOrder, setLoadingUsualOrder] = useState(true);
   const [addingUsualOrder, setAddingUsualOrder] = useState(false);
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
   const [pageQuery, setPageQuery] = useQueryState('page', parseAsInteger.withDefault(1));
   const page = Math.max(1, pageQuery);
   const { data, loading } = useProfile();
+  const queryClient = useQueryClient();
   const { replaceCart } = useCart();
   const router = useRouter();
+  const isAuthenticated = Boolean(data?.email);
+  const ordersQuery = useCustomerOrdersListQuery(page, !loading && isAuthenticated);
+  const usualOrderQuery = useUsualOrderQuery(!loading && isAuthenticated);
+  const orders = ordersQuery.data?.orders || [];
+  const usualOrder = usualOrderQuery.data?.usualOrder || null;
+  const totalPages = ordersQuery.data?.totalPages || 1;
+  const loadingOrders = ordersQuery.isLoading;
+  const loadingUsualOrder = usualOrderQuery.isLoading;
 
   useEffect(() => {
-    if (loading || !data?.email) return;
+    if (!isAuthenticated) {
+      return;
+    }
 
-    const fetchOrders = async () => {
-      try {
-        setLoadingOrders(true);
-        const res = await fetch(`/api/my-orders?page=${page}`);
+    const handleRealtimeOrderUpdate = (event: Event) => {
+      const payload = getNotificationRealtimePayload(event);
 
-        if (!res.ok) {
-          throw new Error('Failed to fetch orders');
-        }
-
-        const json = await res.json();
-        setOrders(json.orders || []);
-        setTotalPages(json.totalPages || 1);
-      } catch (error) {
-        console.error('Failed to load orders', error);
-      } finally {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        setLoadingOrders(false);
+      if (isOrderRelatedRealtimePayload(payload)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.orders.customerLists() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.orders.active() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.orders.usual() });
       }
     };
 
-    const fetchUsualOrder = async () => {
-      try {
-        setLoadingUsualOrder(true);
-        const response = await fetch('/api/my-orders/usual', { cache: 'no-store' });
-        const json = await response.json().catch(() => null);
+    window.addEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
 
-        if (!response.ok) {
-          throw new Error(json?.error || 'Failed to load usual order');
-        }
-
-        setUsualOrder(json?.usualOrder || null);
-      } catch (error) {
-        console.error('Failed to load usual order', error);
-        setUsualOrder(null);
-      } finally {
-        setLoadingUsualOrder(false);
-      }
+    return () => {
+      window.removeEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
     };
-
-    fetchOrders();
-    fetchUsualOrder();
-  }, [loading, data?.email, page]);
+  }, [isAuthenticated, queryClient]);
 
   const handleAddUsualOrder = async () => {
     if (!usualOrder?.cartItems?.length) {
@@ -101,6 +89,25 @@ const MyOrdersPage = () => {
     } finally {
       setAddingUsualOrder(false);
     }
+  };
+
+  const handleOrderUpdated = (updatedOrder: OrderListItem) => {
+    queryClient.setQueryData<CustomerOrdersListResponse>(
+      queryKeys.orders.customerList(page),
+      (currentData) => {
+        if (!currentData) {
+          return currentData;
+        }
+
+        return {
+          ...currentData,
+          orders: currentData.orders.map((order) =>
+            order._id === updatedOrder._id ? { ...order, ...updatedOrder } : order
+          ),
+        };
+      }
+    );
+    void queryClient.invalidateQueries({ queryKey: queryKeys.orders.active() });
   };
 
   if (loading) {
@@ -198,6 +205,28 @@ const MyOrdersPage = () => {
         ) : null}
 
         <div className='flex-1'>
+          {ordersQuery.isError && (
+            <Card className='border-destructive/30 bg-destructive/10'>
+              <CardContent className='p-6'>
+                <p className='font-semibold text-destructive'>Could not load your orders</p>
+                <p className='mt-2 text-sm text-muted-foreground'>
+                  {ordersQuery.error instanceof Error
+                    ? ordersQuery.error.message
+                    : 'Failed to load orders.'}
+                </p>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  className='mt-4'
+                  onClick={() => void ordersQuery.refetch()}
+                >
+                  Try again
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {loadingOrders && (
             <Card className='border border-border bg-card text-card-foreground shadow-sm'>
               <div className='overflow-x-auto'>
@@ -227,19 +256,13 @@ const MyOrdersPage = () => {
             </Card>
           )}
 
-          {!loadingOrders && orders.length === 0 && <p>No orders found.</p>}
+          {!loadingOrders && !ordersQuery.isError && orders.length === 0 && <p>No orders found.</p>}
 
-          {!loadingOrders && orders.length > 0 && (
+          {!loadingOrders && !ordersQuery.isError && orders.length > 0 && (
             <MyOrdersTable
               orders={orders}
               loading={loadingOrders}
-              onOrderUpdated={(updatedOrder) =>
-                setOrders((currentOrders) =>
-                  currentOrders.map((order) =>
-                    order._id === updatedOrder._id ? { ...order, ...updatedOrder } : order
-                  )
-                )
-              }
+              onOrderUpdated={handleOrderUpdated}
             />
           )}
         </div>
