@@ -1,6 +1,7 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { parseAsInteger, useQueryState } from 'nuqs';
@@ -23,110 +24,69 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import Title from '@/components/shared/Title';
+import {
+  getOrderListErrorStatus,
+  useAdminOrdersListQuery,
+  useOrderQueueQuery,
+} from '@/hooks/useOrderListQueries';
 import useProfile from '@/hooks/useProfile';
+import { queryKeys } from '@/libs/queryKeys';
 import {
   APP_NOTIFICATION_REALTIME_EVENT,
   getNotificationRealtimePayload,
   isOrderRelatedRealtimePayload,
 } from '@/libs/realtimeClient';
 import OrdersTable from './OrdersTable';
-import type { OrderListItem } from '@/types/order';
 
 const OrdersPage = () => {
-  const [orders, setOrders] = useState<OrderListItem[]>([]);
-  const [operationalAlerts, setOperationalAlerts] = useState({
-    activeOrders: 0,
-    lateOrders: 0,
-    readyWithoutCourierOrders: 0,
-    lateThresholdMinutes: 120,
-  });
-  const [loadingOrders, setLoadingOrders] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
-  const [error, setError] = useState<string | null>(null);
-  const [noRestaurant, setNoRestaurant] = useState(false);
   const { data, loading } = useProfile();
+  const queryClient = useQueryClient();
   const router = useRouter();
   const [pageQuery, setPageQuery] = useQueryState('page', parseAsInteger.withDefault(1));
   const page = Math.max(1, pageQuery);
+  const isAdmin = data?.role === 'admin';
+  const ordersQuery = useAdminOrdersListQuery(page, !loading && isAdmin);
+  const queueQuery = useOrderQueueQuery(!loading && isAdmin && Boolean(data?.restaurantId));
+  const orders = ordersQuery.data?.orders || [];
+  const totalPages = ordersQuery.data?.totalPages || 1;
+  const orderErrorStatus = getOrderListErrorStatus(ordersQuery.error);
+  const noRestaurant = ordersQuery.isError && orderErrorStatus === 403;
+  const error =
+    ordersQuery.isError && !noRestaurant
+      ? ordersQuery.error instanceof Error
+        ? ordersQuery.error.message
+        : 'Failed to load orders'
+      : null;
+  const queueOrders = queueQuery.data?.orders || [];
+  const operationalAlerts = {
+    activeOrders: queueOrders.length,
+    lateOrders: queueOrders.filter((order) => order.isLateBeforeTransport).length,
+    readyWithoutCourierOrders: queueOrders.filter((order) => order.isReadyWithoutCourierLate)
+      .length,
+    lateThresholdMinutes: queueQuery.data?.lateThresholdMinutes || 120,
+  };
+  const loadingOrders = ordersQuery.isLoading;
 
   useEffect(() => {
-    if (loading) return;
-
-    if (data?.role !== 'admin') {
+    if (!isAdmin) {
       return;
     }
-
-    const fetchOrders = async (showLoading = true) => {
-      try {
-        if (showLoading) {
-          setLoadingOrders(true);
-        }
-        const res = await fetch(`/api/orders?page=${page}`);
-
-        if (!res.ok) {
-          const errorData = await res.json();
-          if (res.status === 403) {
-            setNoRestaurant(true);
-            setError(null);
-          } else {
-            setError(errorData.error || 'Failed to load orders');
-            setNoRestaurant(false);
-          }
-          return;
-        }
-
-        const json = await res.json();
-        setOrders(json.orders || []);
-        setTotalPages(json.totalPages || 1);
-        setError(null);
-        setNoRestaurant(false);
-
-        const queueResponse = await fetch('/api/orders/queue', { cache: 'no-store' });
-        if (queueResponse.ok) {
-          const queueJson = await queueResponse.json();
-          const queueOrders = Array.isArray(queueJson.orders) ? queueJson.orders : [];
-          setOperationalAlerts({
-            activeOrders: queueOrders.length,
-            lateOrders: queueOrders.filter((order: any) => order.isLateBeforeTransport).length,
-            readyWithoutCourierOrders: queueOrders.filter(
-              (order: any) => order.isReadyWithoutCourierLate
-            ).length,
-            lateThresholdMinutes: Number(queueJson.lateThresholdMinutes) || 120,
-          });
-        }
-      } catch (error) {
-        console.error('Failed to load orders', error);
-      } finally {
-        if (showLoading) {
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          setLoadingOrders(false);
-        }
-      }
-    };
-
-    // Fetch immediately on mount with loading indicator
-    fetchOrders(true);
-
-    // Poll for order updates every 10 seconds without loading indicator
-    const interval = setInterval(() => {
-      fetchOrders(false);
-    }, 10000);
 
     const handleRealtimeOrderUpdate = (event: Event) => {
       const payload = getNotificationRealtimePayload(event);
 
       if (isOrderRelatedRealtimePayload(payload)) {
-        void fetchOrders(false);
+        void queryClient.invalidateQueries({ queryKey: queryKeys.orders.adminLists() });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.orders.queue() });
       }
     };
 
     window.addEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
 
     return () => {
-      clearInterval(interval);
       window.removeEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
     };
-  }, [loading, data?.role, page]);
+  }, [isAdmin, queryClient]);
 
   if (loading) {
     return (

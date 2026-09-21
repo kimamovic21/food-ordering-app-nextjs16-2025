@@ -1,15 +1,18 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { AlertTriangle, ExternalLink, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ExternalLink, Loader2, RefreshCw } from 'lucide-react';
 import Title from '@/components/shared/Title';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
+import { getOrderListErrorStatus, useOrderQueueQuery } from '@/hooks/useOrderListQueries';
 import useProfile from '@/hooks/useProfile';
+import { queryKeys } from '@/libs/queryKeys';
 import {
   APP_NOTIFICATION_REALTIME_EVENT,
   getNotificationRealtimePayload,
@@ -27,51 +30,41 @@ const columns: Array<{ status: QueueOrder['orderStatus']; title: string }> = [
 
 const OrderQueuePage = () => {
   const { data: profileData, loading: profileLoading } = useProfile();
-  const [orders, setOrders] = useState<QueueOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const isAdmin = profileData?.role === 'admin';
-
-  const fetchQueue = useCallback(async () => {
-    if (!isAdmin) return;
-
-    setLoading(true);
-    try {
-      const response = await fetch('/api/orders/queue', { cache: 'no-store' });
-      const json = await response.json();
-
-      if (!response.ok) {
-        throw new Error(json.error || 'Failed to load order queue');
-      }
-
-      setOrders(Array.isArray(json.orders) ? json.orders : []);
-    } catch (error) {
-      sonnerToast.error(error instanceof Error ? error.message : 'Failed to load order queue');
-    } finally {
-      setLoading(false);
-    }
-  }, [isAdmin]);
+  const queueQuery = useOrderQueueQuery(!profileLoading && isAdmin);
+  const orders = useMemo(() => queueQuery.data?.orders || [], [queueQuery.data?.orders]);
+  const queueErrorStatus = getOrderListErrorStatus(queueQuery.error);
 
   useEffect(() => {
-    if (!profileLoading && isAdmin) {
-      void fetchQueue();
-      const interval = setInterval(fetchQueue, 15000);
-
-      const handleRealtimeOrderUpdate = (event: Event) => {
-        const payload = getNotificationRealtimePayload(event);
-
-        if (isOrderRelatedRealtimePayload(payload)) {
-          void fetchQueue();
-        }
-      };
-
-      window.addEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
-
-      return () => {
-        clearInterval(interval);
-        window.removeEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
-      };
+    if (!queueQuery.isError || !queueQuery.error) {
+      return;
     }
-  }, [fetchQueue, isAdmin, profileLoading]);
+
+    sonnerToast.error(
+      queueQuery.error instanceof Error ? queueQuery.error.message : 'Failed to load order queue'
+    );
+  }, [queueQuery.error, queueQuery.isError]);
+
+  useEffect(() => {
+    if (!isAdmin) {
+      return;
+    }
+
+    const handleRealtimeOrderUpdate = (event: Event) => {
+      const payload = getNotificationRealtimePayload(event);
+
+      if (isOrderRelatedRealtimePayload(payload)) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.orders.queue() });
+      }
+    };
+
+    window.addEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
+
+    return () => {
+      window.removeEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeOrderUpdate);
+    };
+  }, [isAdmin, queryClient]);
 
   const groupedOrders = useMemo(
     () =>
@@ -84,7 +77,7 @@ const OrderQueuePage = () => {
     [orders]
   );
 
-  if (profileLoading || loading) {
+  if (profileLoading || queueQuery.isLoading) {
     return (
       <section className='space-y-6'>
         <Skeleton className='h-10 w-64' />
@@ -101,6 +94,34 @@ const OrderQueuePage = () => {
     return <p className='text-sm text-muted-foreground'>Only admins can view the order queue.</p>;
   }
 
+  if (queueQuery.isError) {
+    const message =
+      queueQuery.error instanceof Error ? queueQuery.error.message : 'Failed to load order queue';
+
+    return (
+      <section className='space-y-6'>
+        <Title>Order Queue</Title>
+        <Card className='border-destructive/30 bg-destructive/10'>
+          <CardContent className='p-6'>
+            <p className='font-semibold text-destructive'>
+              {queueErrorStatus === 403 ? 'Restaurant queue unavailable' : 'Could not load queue'}
+            </p>
+            <p className='mt-2 text-sm text-muted-foreground'>{message}</p>
+            <Button
+              type='button'
+              variant='outline'
+              className='mt-4 gap-2'
+              onClick={() => void queueQuery.refetch()}
+            >
+              <RefreshCw className='size-4' />
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      </section>
+    );
+  }
+
   return (
     <section className='space-y-6'>
       <div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
@@ -110,9 +131,19 @@ const OrderQueuePage = () => {
             Track active orders from kitchen intake through courier handoff.
           </p>
         </div>
-        <Button type='button' variant='outline' onClick={() => fetchQueue()} className='gap-2'>
-          <RefreshCw className='size-4' />
-          Refresh
+        <Button
+          type='button'
+          variant='outline'
+          onClick={() => void queueQuery.refetch()}
+          disabled={queueQuery.isFetching}
+          className='gap-2'
+        >
+          {queueQuery.isFetching ? (
+            <Loader2 className='size-4 animate-spin' />
+          ) : (
+            <RefreshCw className='size-4' />
+          )}
+          {queueQuery.isFetching ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 

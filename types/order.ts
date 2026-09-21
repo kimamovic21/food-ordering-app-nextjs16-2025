@@ -145,3 +145,24 @@ export type UsualOrder = {
   items: { name: string; size: string; quantity: number }[];
   cartItems: CartItem[];
 };
+
+export type PaginatedOrdersResponse = {
+  orders: OrderListItem[];
+  page: number;
+  totalPages: number;
+  totalOrders: number;
+};
+
+export type AdminOrdersListResponse = PaginatedOrdersResponse;
+
+export type CustomerOrdersListResponse = PaginatedOrdersResponse;
+
+export type OrderQueueResponse = {
+  orders: QueueOrder[];
+  lateThresholdMinutes: number;
+};
+
+export type UsualOrderResponse = {
+  usualOrder: UsualOrder | null;
+  error?: string;
+};

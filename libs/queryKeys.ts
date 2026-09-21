@@ -43,6 +43,12 @@ export const queryKeys = {
   orders: {
     all: ['orders'] as const,
     active: () => [...queryKeys.orders.all, 'active'] as const,
+    adminLists: () => [...queryKeys.orders.all, 'admin-list'] as const,
+    adminList: (page: number) => [...queryKeys.orders.adminLists(), page] as const,
+    customerLists: () => [...queryKeys.orders.all, 'customer-list'] as const,
+    customerList: (page: number) => [...queryKeys.orders.customerLists(), page] as const,
+    queue: () => [...queryKeys.orders.all, 'queue'] as const,
+    usual: () => [...queryKeys.orders.all, 'usual'] as const,
   },
   soundSettings: {
     all: ['sound-settings'] as const,
