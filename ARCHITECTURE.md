@@ -77,7 +77,7 @@ flowchart LR
 - `libs/phone.ts` wraps `libphonenumber-js` so profile and checkout phones are validated and stored in E.164 format.
 - `libs/dateFormat.ts` uses `date-fns` with `@date-fns/tz` so UI, email, and PDF dates render in the app timezone.
 
-`nuqs` is currently used where refreshed or shared URLs should preserve UI state: public menu filters, restaurant menu filters, restaurants search/page, customer orders, customer reports, admin orders, admin users, admin menu items, support ticket filters, and restaurant report period/date filters.
+`nuqs` is currently used where refreshed or shared URLs should preserve UI state: public menu filters, restaurant menu filters, public restaurant discovery filters, customer orders, customer reports, admin orders, admin users, admin restaurants, admin menu items, support ticket filters, and restaurant report period/date filters.
 
 TanStack Table is currently used for larger list views that benefit from client-side search, sorting, pagination, and column visibility controls: `/admin-dashboard/orders`, `/admin-dashboard/users`, `/admin-dashboard/menu-items`, `/admin-dashboard/audit-logs`, and `/my-orders`. Order detail item tables on `/admin-dashboard/orders/[id]` and `/my-orders/[id]` use a simple TanStack mode without toolbar or pagination so the read-only receipt-style layout stays quiet.
 
@@ -104,6 +104,7 @@ flowchart TD
   Customer --> Messages["/messages"]
 
   Admin --> Restaurant["/admin-dashboard/restaurant"]
+  SuperAdmin --> Restaurants["/admin-dashboard/restaurants"]
   Admin --> Reports["/admin-dashboard/restaurant-reports"]
   Admin --> MenuItems["/admin-dashboard/menu-items"]
   Admin --> Orders["/admin-dashboard/orders"]

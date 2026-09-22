@@ -203,6 +203,7 @@ Customer discovery:
 
 - Customers can browse all menu items.
 - Public menu and restaurant pages support filtering, search, sorting, pagination, and shareable URL params.
+- Public restaurant discovery can filter by accepting/open/closed/paused status, city, country, rating, minimum order, and delivery-to-me when the customer shares location.
 - Menu cards show availability and restaurant ordering status.
 - Visible menu cards can prefetch restaurant ordering status to make first add-to-cart interaction feel faster.
 - A customer cannot add an unavailable item or an item from a blocked restaurant state.
@@ -868,9 +869,10 @@ Use this flow when presenting the project.
 14. Show restaurant review and courier review options.
 15. Show `/admin-dashboard/operations` for live operational overview.
 16. Show `/admin-dashboard/restaurant-reports` for daily/weekly/monthly reports and PDF export.
-17. Show `/messages`, `/notifications`, and sound settings.
-18. Show support ticket creation from an order and admin support ticket handling.
-19. Explain Sentry, Vercel Analytics, Speed Insights, Redis rate limits, and QStash background jobs.
+17. Show `/admin-dashboard/restaurants` as super admin to review all restaurants with customer-facing and operational filters.
+18. Show `/messages`, `/notifications`, and sound settings.
+19. Show support ticket creation from an order and admin support ticket handling.
+20. Explain Sentry, Vercel Analytics, Speed Insights, Redis rate limits, and QStash background jobs.
 
 ## 22. Suggested Presentation Talking Points
 

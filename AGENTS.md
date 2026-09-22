@@ -101,6 +101,7 @@ See `example.env`. Variables currently used in the project include:
 - Best coupon suggestions are user-facing help only; checkout must revalidate coupons server-side.
 - Reorder must rebuild from current `menu_items` data and block deleted, unavailable, cross-restaurant, or invalid items.
 - Restaurant quick reorder must use the same current `menu_items` rebuild rules as order reorder.
+- Public and superadmin restaurant filters should stay server-authoritative before pagination so status, rating, delivery-radius, and operational filters do not produce incorrect page counts.
 - Restaurant report UI lives at `/admin-dashboard/restaurant-reports`; daily, weekly, and monthly reports should show zeros for empty periods and disable PDF download when there is no activity.
 - Restaurant operations overview lives at `/admin-dashboard/operations` and uses `/api/restaurant/operations` to summarize active order stages, kitchen capacity, restaurant open/paused/closing status, courier availability, today revenue, unpaid/canceled counts, quick actions, and orders needing attention.
 - Delivery completion is double-confirmed: courier records handoff with the delivery PIN, then customer or restaurant admin finalizes completion.
