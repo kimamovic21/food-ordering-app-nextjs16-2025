@@ -13,7 +13,7 @@ vi.mock('@/libs/reviewSummary', () => ({
 vi.mock('@/models/restaurant', () => ({
   Restaurant: {
     find: vi.fn(),
-    countDocuments: vi.fn(),
+    distinct: vi.fn(),
   },
 }));
 
@@ -41,27 +41,14 @@ const createRestaurant = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-const mockPaginatedFind = (restaurants: unknown[]) => {
-  const limit = vi.fn().mockReturnValue({
-    lean: vi.fn().mockResolvedValue(restaurants),
-  });
-  const skip = vi.fn().mockReturnValue({ limit });
-  const sort = vi.fn().mockReturnValue({ skip });
+const mockRestaurantFind = (restaurants: unknown[]) => {
+  const lean = vi.fn().mockResolvedValue(restaurants);
+  const sort = vi.fn().mockReturnValue({ lean });
   const select = vi.fn().mockReturnValue({ sort });
 
   vi.mocked(Restaurant.find).mockReturnValueOnce({ select } as never);
 
-  return { select, sort, skip, limit };
-};
-
-const mockDistanceFind = (restaurants: unknown[]) => {
-  const select = vi.fn().mockReturnValue({
-    lean: vi.fn().mockResolvedValue(restaurants),
-  });
-
-  vi.mocked(Restaurant.find).mockReturnValueOnce({ select } as never);
-
-  return { select };
+  return { lean, select, sort };
 };
 
 const mockRatingMap = (
@@ -73,20 +60,19 @@ const mockRatingMap = (
 describe('/api/restaurants public route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(Restaurant.countDocuments).mockResolvedValue(0 as never);
+    vi.mocked(Restaurant.distinct).mockResolvedValue([] as never);
     mockRatingMap([]);
   });
 
-  it('searches public restaurant fields and caps pagination limit at 30', async () => {
+  it('searches public restaurant fields and caps the response page size at 30', async () => {
     const restaurant = createRestaurant();
-    const query = mockPaginatedFind([restaurant]);
-    vi.mocked(Restaurant.countDocuments).mockResolvedValueOnce(1 as never);
+    mockRestaurantFind([restaurant]);
     vi.mocked(getRestaurantRatingSummaries).mockReset();
     mockRatingMap([[String(restaurant._id), { averageRating: 4.5, ratingCount: 12 }]]);
 
     const { GET } = await loadRestaurantsRoute();
     const res = await GET(
-      new Request('http://localhost/api/restaurants?q=Pizza.*&page=2&limit=100') as any
+      new Request('http://localhost/api/restaurants?q=Pizza.*&page=1&limit=100') as any
     );
     const body = await res.json();
 
@@ -101,23 +87,22 @@ describe('/api/restaurants public route', () => {
         { description: { $regex: 'Pizza\\.\\*', $options: 'i' } },
       ],
     });
-    expect(query.skip).toHaveBeenCalledWith(30);
-    expect(query.limit).toHaveBeenCalledWith(30);
     expect(body.restaurants[0]).toEqual(
       expect.objectContaining({
         name: restaurant.name,
         image: restaurant.images[0],
+        isAcceptingOrders: true,
         averageRating: 4.5,
         ratingCount: 12,
       })
     );
     expect(body.pagination).toEqual({
       total: 1,
-      page: 2,
+      page: 1,
       pageSize: 30,
       totalPages: 1,
       hasNextPage: false,
-      hasPreviousPage: true,
+      hasPreviousPage: false,
     });
     expect(mongoConnect).toHaveBeenCalled();
   });
@@ -135,8 +120,7 @@ describe('/api/restaurants public route', () => {
       latitude: 43.8564,
       longitude: 18.4132,
     });
-    mockDistanceFind([farRestaurant, nearRestaurant]);
-    vi.mocked(Restaurant.countDocuments).mockResolvedValueOnce(2 as never);
+    mockRestaurantFind([farRestaurant, nearRestaurant]);
     vi.mocked(getRestaurantRatingSummaries).mockReset();
     mockRatingMap([]);
 
@@ -158,8 +142,7 @@ describe('/api/restaurants public route', () => {
 
   it('falls back to normal pagination when coordinates are invalid', async () => {
     const restaurant = createRestaurant();
-    const query = mockPaginatedFind([restaurant]);
-    vi.mocked(Restaurant.countDocuments).mockResolvedValueOnce(1 as never);
+    const query = mockRestaurantFind([restaurant]);
     vi.mocked(getRestaurantRatingSummaries).mockReset();
     mockRatingMap([]);
 
@@ -171,8 +154,6 @@ describe('/api/restaurants public route', () => {
 
     expect(res.status).toBe(200);
     expect(query.sort).toHaveBeenCalledWith({ createdAt: -1 });
-    expect(query.skip).toHaveBeenCalledWith(0);
-    expect(query.limit).toHaveBeenCalledWith(9);
     expect(body.restaurants[0].distanceKm).toBeNull();
   });
 
@@ -194,8 +175,7 @@ describe('/api/restaurants public route', () => {
         },
       ],
     });
-    mockPaginatedFind([blockedToday, closedToday]);
-    vi.mocked(Restaurant.countDocuments).mockResolvedValueOnce(2 as never);
+    mockRestaurantFind([blockedToday, closedToday]);
     vi.mocked(getRestaurantRatingSummaries).mockReset();
     mockRatingMap([]);
 
@@ -210,5 +190,58 @@ describe('/api/restaurants public route', () => {
         expect.objectContaining({ name: 'Closed Today', isOpen: false }),
       ])
     );
+  });
+
+  it('filters by accepting status, rating, minimum order, and delivery radius before pagination', async () => {
+    const matchingRestaurant = createRestaurant({
+      _id: 'matching',
+      name: 'Matching Pizza',
+      latitude: 43.8564,
+      longitude: 18.4132,
+      minimumOrderAmount: 10,
+      deliveryRadiusKm: 15,
+    });
+    const pausedRestaurant = createRestaurant({
+      _id: 'paused',
+      name: 'Paused Pizza',
+      latitude: 43.8564,
+      longitude: 18.4132,
+      minimumOrderAmount: 10,
+      deliveryRadiusKm: 15,
+      isPaused: true,
+    });
+    const lowRatedRestaurant = createRestaurant({
+      _id: 'low-rated',
+      name: 'Low Rated Pizza',
+      latitude: 43.8564,
+      longitude: 18.4132,
+      minimumOrderAmount: 10,
+      deliveryRadiusKm: 15,
+    });
+    mockRestaurantFind([matchingRestaurant, pausedRestaurant, lowRatedRestaurant]);
+    vi.mocked(getRestaurantRatingSummaries).mockReset();
+    mockRatingMap([
+      ['matching', { averageRating: 4.6, ratingCount: 10 }],
+      ['paused', { averageRating: 4.8, ratingCount: 12 }],
+      ['low-rated', { averageRating: 3.5, ratingCount: 9 }],
+      ['expensive', { averageRating: 4.7, ratingCount: 4 }],
+    ]);
+
+    const { GET } = await loadRestaurantsRoute();
+    const res = await GET(
+      new Request(
+        'http://localhost/api/restaurants?status=accepting&minRating=4&maxMinimumOrder=20&delivery=to-me&latitude=43.8563&longitude=18.4131'
+      ) as any
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(Restaurant.find).toHaveBeenCalledWith(
+      expect.objectContaining({ minimumOrderAmount: { $lte: 20 } })
+    );
+    expect(body.restaurants.map((restaurant: any) => restaurant.name)).toEqual([
+      'Matching Pizza',
+    ]);
+    expect(body.pagination.total).toBe(1);
   });
 });

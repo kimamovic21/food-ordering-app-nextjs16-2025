@@ -18,6 +18,7 @@ import {
   Radar,
   ServerCog,
   Columns3,
+  Store,
   TicketPercent,
   ShoppingCart,
   SquareMenu,
@@ -169,6 +170,12 @@ const AdminDashboardClientLayout = ({ children }: { children: React.ReactNode })
       label: 'Restaurant',
       superAdminOnly: false,
       icon: Utensils,
+    },
+    {
+      href: '/admin-dashboard/restaurants',
+      label: 'Restaurants',
+      superAdminOnly: true,
+      icon: Store,
     },
     {
       href: '/admin-dashboard/operations',

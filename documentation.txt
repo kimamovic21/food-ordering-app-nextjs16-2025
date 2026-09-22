@@ -1185,3 +1185,5 @@ Centralize restaurant ordering capacity status
 Improve restaurant ordering UX with dynamic ETA
 
 Polish order lists with TanStack Query
+
+Add restaurant discovery filters and superadmin restaurant insights

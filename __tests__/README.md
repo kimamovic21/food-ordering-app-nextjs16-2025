@@ -22,6 +22,8 @@ This folder contains unit tests grouped by feature area.
 - `api/my-deliveries.route.test.ts`: validates courier delivery history, performance summaries, and assignment reliability metrics.
 - `api/realtime-streams.route.test.ts`: validates authenticated SSE streams for messages and notifications.
 - `api/restaurant.route.test.ts`: validates restaurant settings, ownership, and deletion behavior.
+- `api/restaurants-public.route.test.ts`: validates public restaurant discovery search, filters, sorting, distance ordering, and pagination.
+- `api/admin-restaurants-detail.route.test.ts`: validates superadmin-only restaurant detail access and operational summaries.
 - `api/restaurant-operations.route.test.ts`: validates restaurant operations overview API summaries and admin restaurant scoping.
 - `api/webhook.route.test.ts`: validates webhook signature/idempotency behavior.
 - `api/payment.test.ts`: validates payment-related helper logic and utility contracts.
