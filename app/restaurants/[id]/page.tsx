@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Clock3, Globe, Mail, MapPin, Phone, Users } from 'lucide-react';
 import { useParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
@@ -15,6 +16,8 @@ import RestaurantAvailabilityNotifyButton from '@/components/shared/RestaurantAv
 import RestaurantQuickReorderButton from '@/components/shared/RestaurantQuickReorderButton';
 import HeartRating from '@/components/shared/HeartRating';
 import useFavorites from '@/hooks/useFavorites';
+import { useRestaurantDetailQuery } from '@/hooks/useRestaurantDetailQuery';
+import { prefetchRestaurantMenuSummary } from '@/hooks/useRestaurantMenuQueries';
 import RestaurantDetailsLoading from './loading';
 
 const RestaurantLocation = dynamic(() => import('@/components/shared/RestaurantLocation'), {
@@ -30,7 +33,6 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { RestaurantDetails } from '@/types/restaurant';
 
 const formatDay = (day: string) => day.charAt(0).toUpperCase() + day.slice(1);
 
@@ -49,12 +51,10 @@ const calculateDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: num
 };
 
 const RestaurantDetailsPage = () => {
+  const queryClient = useQueryClient();
   const params = useParams();
   const id = params?.id as string;
 
-  const [restaurant, setRestaurant] = useState<RestaurantDetails | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activeImage, setActiveImage] = useState(0);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(
     null
@@ -62,42 +62,11 @@ const RestaurantDetailsPage = () => {
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
   const { data: favorites, setRestaurantFavorite } = useFavorites();
+  const restaurantQuery = useRestaurantDetailQuery(id, Boolean(id));
+  const restaurant = restaurantQuery.data?.restaurant || null;
 
   useEffect(() => {
-    if (!id) return;
-
-    const controller = new AbortController();
-
-    const fetchRestaurant = async () => {
-      try {
-        setLoading(true);
-        setError('');
-
-        const response = await fetch(`/api/restaurants/${id}`, { signal: controller.signal });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch restaurant details');
-        }
-
-        setRestaurant(data.restaurant || null);
-      } catch (fetchError) {
-        if (!(fetchError instanceof DOMException && fetchError.name === 'AbortError')) {
-          console.error('Error fetching restaurant details:', fetchError);
-          setError('Failed to load restaurant details');
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    fetchRestaurant();
-
-    return () => {
-      controller.abort();
-    };
+    setActiveImage(0);
   }, [id]);
 
   useEffect(() => {
@@ -135,19 +104,41 @@ const RestaurantDetailsPage = () => {
     );
   }, []);
 
-  if (loading) {
+  const handlePrefetchMenu = () => {
+    void prefetchRestaurantMenuSummary(queryClient, id);
+  };
+
+  if (restaurantQuery.isLoading) {
     return <RestaurantDetailsLoading />;
   }
 
-  if (error || !restaurant) {
+  if (restaurantQuery.isError || !restaurant) {
+    const errorMessage =
+      restaurantQuery.error instanceof Error
+        ? restaurantQuery.error.message
+        : 'Failed to load restaurant details';
+
     return (
       <section className='mt-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10'>
         <Card>
           <CardContent className='py-10 text-center'>
-            <p className='text-muted-foreground mb-5'>{error || 'Restaurant not found'}</p>
-            <Link href='/restaurants'>
-              <Button>Back to restaurants</Button>
-            </Link>
+            <p className='text-muted-foreground mb-5'>
+              {restaurantQuery.isError ? errorMessage : 'Restaurant not found'}
+            </p>
+            <div className='flex flex-col gap-3 sm:flex-row sm:justify-center'>
+              {restaurantQuery.isError && (
+                <Button
+                  type='button'
+                  variant='outline'
+                  onClick={() => void restaurantQuery.refetch()}
+                >
+                  Try again
+                </Button>
+              )}
+              <Link href='/restaurants'>
+                <Button>Back to restaurants</Button>
+              </Link>
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -254,8 +245,7 @@ const RestaurantDetailsPage = () => {
               restaurant.capacitySlotsRemaining <= 2 && (
                 <p className='mt-2 font-medium'>
                   {restaurant.capacitySlotsRemaining} active order{' '}
-                  {restaurant.capacitySlotsRemaining === 1 ? 'slot' : 'slots'} left before
-                  capacity.
+                  {restaurant.capacitySlotsRemaining === 1 ? 'slot' : 'slots'} left before capacity.
                 </p>
               )}
           </div>
@@ -416,7 +406,11 @@ const RestaurantDetailsPage = () => {
       </div>
 
       <div className='mt-8 flex flex-wrap gap-3'>
-        <Link href={`/restaurants/${id}/menu`}>
+        <Link
+          href={`/restaurants/${id}/menu`}
+          onFocus={handlePrefetchMenu}
+          onMouseEnter={handlePrefetchMenu}
+        >
           <Button>View restaurant menu</Button>
         </Link>
         <Link href='/restaurants'>

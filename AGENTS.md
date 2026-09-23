@@ -16,7 +16,7 @@ This repository is a full-stack food ordering app built with Next.js App Router,
 - Rate limiting: Upstash Redis stores short-lived counters for sensitive auth, checkout, support, and AI routes.
 - Background jobs: Upstash QStash schedules delayed order-maintenance checks for stale unpaid orders, unanswered courier assignments, and ready orders that cannot get a courier.
 - Sharing: `react-share` is used for social share actions.
-- Client data cache: TanStack Query powers shared profile data, favorite IDs/lists, notification/message sound settings, message inbox/thread views, and global message/notification unread state.
+- Client data cache: TanStack Query powers shared profile data, favorite IDs/lists, public restaurant discovery/detail/menu views, notification/message sound settings, message inbox/thread views, and global message/notification unread state.
 - Data tables: TanStack Table powers shared searchable, sortable, paginated table UI through `components/shared/TanStackDataTable.tsx`.
 - Dates: `date-fns` and `@date-fns/tz` are used through `libs/dateFormat.ts` for UI, email, and PDF date formatting in the app timezone.
 - Money and phone helpers: `currency.js` is wrapped by `libs/money.ts`, and `libphonenumber-js` is wrapped by `libs/phone.ts`.

@@ -79,6 +79,8 @@ flowchart LR
 
 `nuqs` is currently used where refreshed or shared URLs should preserve UI state: public menu filters, restaurant menu filters, public restaurant discovery filters, customer orders, customer reports, admin orders, admin users, admin restaurants, admin menu items, support ticket filters, and restaurant report period/date filters.
 
+TanStack Query is currently used for client-side server data that benefits from cache and refetch behavior: shared profile data, favorite IDs/lists, public restaurant discovery/detail/menu views, notification/message sound settings, message inbox/thread views, order lists/queues, and global message/notification unread state.
+
 TanStack Table is currently used for larger list views that benefit from client-side search, sorting, pagination, and column visibility controls: `/admin-dashboard/orders`, `/admin-dashboard/users`, `/admin-dashboard/menu-items`, `/admin-dashboard/audit-logs`, and `/my-orders`. Order detail item tables on `/admin-dashboard/orders/[id]` and `/my-orders/[id]` use a simple TanStack mode without toolbar or pagination so the read-only receipt-style layout stays quiet.
 
 ## Application Areas
@@ -399,7 +401,7 @@ sequenceDiagram
   API->>Mongo: Read source of truth
 ```
 
-SSE is used as an instant refresh signal, while MongoDB remains the source of truth. Shared profile data, favorite IDs/lists, notification/message sound settings, message inbox/thread views, and global message/notification unread state are cached through TanStack Query and refreshed by invalidating shared keys from `libs/queryKeys.ts`.
+SSE is used as an instant refresh signal, while MongoDB remains the source of truth. Shared profile data, favorite IDs/lists, public restaurant discovery/detail/menu views, notification/message sound settings, message inbox/thread views, and global message/notification unread state are cached through TanStack Query and refreshed by invalidating shared keys from `libs/queryKeys.ts`.
 
 Existing polling stays as fallback on notifications, messages, order details, admin order list/queue, and courier active delivery screens. When an SSE stream drops, active TanStack Query observers continue to poll their existing JSON endpoints.
 

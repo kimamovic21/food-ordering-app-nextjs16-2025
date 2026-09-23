@@ -42,6 +42,9 @@ This folder contains unit tests grouped by feature area.
 - `libs/restaurantOperations.test.ts`: validates operations overview stage counts, capacity, courier summary, revenue, and attention-order prioritization.
 - `components/OrderActivityLog.test.ts`: validates customer/admin order activity event status and cancellation behavior.
 - `hooks/useOrderListQueries.test.ts`: validates shared order-list fetchers, queue normalization, and status-aware query errors.
+- `hooks/useRestaurantDetailQuery.test.ts`: validates public restaurant detail response normalization and status-aware fetch errors.
+- `hooks/useRestaurantDiscoveryQuery.test.ts`: validates public restaurant discovery query params, response normalization, and status-aware fetch errors.
+- `hooks/useRestaurantMenuQueries.test.ts`: validates public restaurant menu query params, category/summary/result normalization, and status-aware fetch errors.
 - `hooks/useRestaurantOrderingGate.test.ts`: validates restaurant ordering-status prefetch caching for visible menu items.
 - `libs/realtimeClient.test.ts`: validates client-side realtime payload helpers.
 

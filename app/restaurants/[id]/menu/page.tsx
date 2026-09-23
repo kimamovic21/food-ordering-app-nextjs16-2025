@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import {
   parseAsArrayOf,
@@ -36,10 +36,15 @@ import MenuItem from './MenuItem';
 import SearchInput from './SearchInput';
 import MenuPageSkeleton from './MenuPageSkeleton';
 import { prefetchRestaurantOrderingStatuses } from '@/hooks/useRestaurantOrderingGate';
-import type { MenuCategorySummary, MenuItemCategory, MenuItemListItem } from '@/types/menu';
+import {
+  useRestaurantMenuCategoriesQuery,
+  useRestaurantMenuResultsQuery,
+  useRestaurantMenuSummaryQuery,
+  type RestaurantMenuSort,
+} from '@/hooks/useRestaurantMenuQueries';
 
 const SORT_OPTIONS = ['price_asc', 'price_desc', 'newest', 'oldest'] as const;
-type SortOption = (typeof SORT_OPTIONS)[number];
+type SortOption = RestaurantMenuSort;
 const DEFAULT_SORT: SortOption = 'newest';
 
 const toCategorySlug = (value: string) =>
@@ -75,13 +80,6 @@ const RestaurantMenuPage = () => {
     maxPrice: parseAsString.withDefault(''),
     page: parseAsInteger.withDefault(1),
   });
-  const [categories, setCategories] = useState<MenuItemCategory[]>([]);
-  const [categorySummaries, setCategorySummaries] = useState<MenuCategorySummary[]>([]);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
-  const [isResultsLoading, setIsResultsLoading] = useState(false);
-  const [results, setResults] = useState<MenuItemListItem[]>([]);
-  const [totalResults, setTotalResults] = useState(0);
   const page = Math.max(1, pageQuery);
   const activeSearch = searchQuery.trim();
   const minPrice = minPriceQuery.trim();
@@ -94,6 +92,8 @@ const RestaurantMenuPage = () => {
   const [pendingMaxPrice, setPendingMaxPrice] = useState('');
 
   const pageSize = 10;
+  const categoriesQuery = useRestaurantMenuCategoriesQuery(id, Boolean(id));
+  const categories = useMemo(() => categoriesQuery.data || [], [categoriesQuery.data]);
 
   const categoryNameBySlug = useMemo(() => {
     const entries = categories.map((category) => [toCategorySlug(category.name), category.name]);
@@ -133,18 +133,31 @@ const RestaurantMenuPage = () => {
     maxPrice.length > 0 ||
     sortBy !== DEFAULT_SORT;
 
-  const filterKey = useMemo(
-    () =>
-      JSON.stringify({
-        activeSearch,
-        selectedCategories: [...selectedCategoryValues].sort(),
-        minPrice,
-        maxPrice,
-        sortBy,
-      }),
-    [activeSearch, selectedCategoryValues, minPrice, maxPrice, sortBy]
+  const menuResultsParams = useMemo(
+    () => ({
+      categories: selectedCategoryValues,
+      maxPrice,
+      minPrice,
+      page: 1,
+      pageSize: pageSize * page,
+      q: activeSearch,
+      sort: sortBy,
+    }),
+    [activeSearch, maxPrice, minPrice, page, pageSize, selectedCategoryValues, sortBy]
   );
-  const lastFilterKeyRef = useRef(filterKey);
+  const summaryQuery = useRestaurantMenuSummaryQuery(id, 3, Boolean(id) && !isResultsView);
+  const resultsQuery = useRestaurantMenuResultsQuery(
+    id,
+    menuResultsParams,
+    Boolean(id) && isResultsView
+  );
+  const categorySummaries = summaryQuery.data?.categories || [];
+  const results = resultsQuery.data?.items || [];
+  const totalResults = resultsQuery.data?.total || 0;
+  const isResultsLoading = resultsQuery.isFetching;
+  const isUpdatingMenu =
+    (summaryQuery.isFetching && !summaryQuery.isLoading) ||
+    (resultsQuery.isFetching && !resultsQuery.isLoading);
 
   useEffect(() => {
     if (!id) {
@@ -153,29 +166,6 @@ const RestaurantMenuPage = () => {
 
     void prefetchRestaurantOrderingStatuses(queryClient, [id]);
   }, [id, queryClient]);
-
-  useEffect(() => {
-    if (!id) return;
-
-    const fetchCategories = async () => {
-      try {
-        const response = await fetch(`/api/restaurants/${id}/menu?groupBy=category&perCategory=1`);
-        const data = await response.json();
-        const summaries = Array.isArray(data?.categories) ? data.categories : [];
-        setCategories(
-          summaries.map((summary: MenuCategorySummary) => ({
-            _id: summary._id,
-            name: summary.name,
-          }))
-        );
-      } catch (error) {
-        console.error('Error fetching restaurant categories:', error);
-        setCategories([]);
-      }
-    };
-
-    fetchCategories();
-  }, [id]);
 
   useEffect(() => {
     setSearchInput(activeSearch);
@@ -190,87 +180,6 @@ const RestaurantMenuPage = () => {
       void setMenuQuery({ categories: selectedCategoryValues });
     }
   }, [categories.length, categoryQuery, selectedCategoryValues, setMenuQuery]);
-
-  useEffect(() => {
-    if (!isResultsView) {
-      setResults([]);
-      setTotalResults(0);
-      return;
-    }
-
-    if (lastFilterKeyRef.current !== filterKey) {
-      setResults([]);
-      setTotalResults(0);
-      lastFilterKeyRef.current = filterKey;
-    }
-  }, [filterKey, isResultsView]);
-
-  useEffect(() => {
-    if (!id || isResultsView) return;
-
-    const fetchSummary = async () => {
-      setIsSummaryLoading(true);
-      try {
-        const response = await fetch(`/api/restaurants/${id}/menu?groupBy=category&perCategory=3`);
-        const data = await response.json();
-        setCategorySummaries(Array.isArray(data?.categories) ? data.categories : []);
-      } catch (error) {
-        console.error('Error fetching restaurant menu summaries:', error);
-        setCategorySummaries([]);
-      } finally {
-        setIsSummaryLoading(false);
-        setIsInitialLoading(false);
-      }
-    };
-
-    fetchSummary();
-  }, [id, isResultsView]);
-
-  useEffect(() => {
-    if (!id || !isResultsView) return;
-
-    const controller = new AbortController();
-
-    const fetchResults = async () => {
-      setIsResultsLoading(true);
-
-      try {
-        const paramsState = new URLSearchParams();
-        paramsState.set('limit', String(pageSize));
-        paramsState.set('page', String(page));
-        paramsState.set('sort', sortBy);
-
-        if (activeSearch) paramsState.set('q', activeSearch);
-        if (selectedCategoryValues.length > 0) {
-          paramsState.set('categories', selectedCategoryValues.join(','));
-        }
-        if (minPrice) paramsState.set('minPrice', minPrice);
-        if (maxPrice) paramsState.set('maxPrice', maxPrice);
-
-        const response = await fetch(`/api/restaurants/${id}/menu?${paramsState.toString()}`, {
-          signal: controller.signal,
-        });
-        const data = await response.json();
-
-        const items = Array.isArray(data?.items) ? data.items : [];
-        const total = typeof data?.total === 'number' ? data.total : 0;
-
-        setTotalResults(total);
-        setResults((prev) => (page === 1 ? items : [...prev, ...items]));
-      } catch (error) {
-        if (!(error instanceof DOMException)) {
-          console.error('Error fetching restaurant menu results:', error);
-        }
-      } finally {
-        setIsResultsLoading(false);
-        setIsInitialLoading(false);
-      }
-    };
-
-    fetchResults();
-
-    return () => controller.abort();
-  }, [id, isResultsView, activeSearch, selectedCategoryValues, minPrice, maxPrice, sortBy, page]);
 
   const handleSearch = () => {
     const trimmedSearch = searchInput.trim();
@@ -358,15 +267,23 @@ const RestaurantMenuPage = () => {
     sortBy !== DEFAULT_SORT;
 
   const shouldShowSkeleton =
-    isInitialLoading ||
-    (isSummaryLoading && categorySummaries.length === 0) ||
-    (isResultsLoading && results.length === 0);
+    categoriesQuery.isLoading ||
+    (!isResultsView && summaryQuery.isLoading && categorySummaries.length === 0) ||
+    (isResultsView && resultsQuery.isLoading && results.length === 0);
+  const activeQueryError =
+    categoriesQuery.error || (isResultsView ? resultsQuery.error : summaryQuery.error);
+  const shouldShowError =
+    Boolean(activeQueryError) &&
+    (isResultsView ? results.length === 0 : categorySummaries.length === 0);
+  const retryMenu = () => {
+    void categoriesQuery.refetch();
 
-  useEffect(() => {
-    if (id) {
-      setIsInitialLoading(true);
+    if (isResultsView) {
+      void resultsQuery.refetch();
+    } else {
+      void summaryQuery.refetch();
     }
-  }, [id]);
+  };
 
   return (
     <main className='max-w-7xl mx-auto px-4 py-12'>
@@ -402,13 +319,32 @@ const RestaurantMenuPage = () => {
 
       {shouldShowSkeleton ? (
         <MenuPageSkeleton sectionCount={1} cardsPerSection={3} />
+      ) : shouldShowError ? (
+        <Card className='border-destructive/30 bg-destructive/10 p-8 text-center'>
+          <p className='text-sm text-destructive'>
+            {activeQueryError instanceof Error
+              ? activeQueryError.message
+              : 'Failed to load this restaurant menu.'}
+          </p>
+          <div className='mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center'>
+            <Button type='button' variant='outline' onClick={retryMenu}>
+              Try again
+            </Button>
+            <Link href={`/restaurants/${id}`}>
+              <Button type='button'>Back to restaurant details</Button>
+            </Link>
+          </div>
+        </Card>
       ) : (
         <>
           <div className='grid gap-8 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start'>
             <div className='space-y-10'>
               <div className='space-y-6'>
                 <header className='space-y-3'>
-                  <h1 className='text-4xl font-bold'>Restaurant Menu</h1>
+                  <div className='flex flex-wrap items-center gap-3'>
+                    <h1 className='text-4xl font-bold'>Restaurant Menu</h1>
+                    {isUpdatingMenu && <Badge variant='outline'>Updating</Badge>}
+                  </div>
                   <p className='text-muted-foreground'>
                     Browse food and drinks available in this restaurant.
                   </p>
@@ -420,7 +356,7 @@ const RestaurantMenuPage = () => {
                       value={searchInput}
                       onChange={setSearchInput}
                       onSearch={handleSearch}
-                      onClear={() => setSearchInput('')}
+                      onClear={handleResetSearch}
                       onKeyPress={handleKeyPress}
                     />
                   </div>
@@ -504,36 +440,46 @@ const RestaurantMenuPage = () => {
                   </section>
                 ) : (
                   <div className='space-y-10'>
-                    {categorySummaries.map((summary) => {
-                      if (summary.items.length === 0) return null;
+                    {categorySummaries.some((summary) => summary.items.length > 0) ? (
+                      categorySummaries.map((summary) => {
+                        if (summary.items.length === 0) return null;
 
-                      return (
-                        <section key={summary._id}>
-                          <div className='flex items-center justify-between mb-4'>
-                            <h2 className='text-2xl font-semibold capitalize'>{summary.name}</h2>
-                            <span className='text-sm text-muted-foreground'>
-                              {summary.total} items
-                            </span>
-                          </div>
-
-                          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                            {summary.items.map((item) => (
-                              <MenuItem key={item._id} item={item} />
-                            ))}
-                          </div>
-
-                          {summary.total > summary.items.length && (
-                            <div className='mt-4 flex justify-end'>
-                              <Button
-                                onClick={() => handleViewMoreCategory(toCategorySlug(summary.name))}
-                              >
-                                View more
-                              </Button>
+                        return (
+                          <section key={summary._id}>
+                            <div className='flex items-center justify-between mb-4'>
+                              <h2 className='text-2xl font-semibold capitalize'>{summary.name}</h2>
+                              <span className='text-sm text-muted-foreground'>
+                                {summary.total} items
+                              </span>
                             </div>
-                          )}
-                        </section>
-                      );
-                    })}
+
+                            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
+                              {summary.items.map((item) => (
+                                <MenuItem key={item._id} item={item} />
+                              ))}
+                            </div>
+
+                            {summary.total > summary.items.length && (
+                              <div className='mt-4 flex justify-end'>
+                                <Button
+                                  onClick={() =>
+                                    handleViewMoreCategory(toCategorySlug(summary.name))
+                                  }
+                                >
+                                  View more
+                                </Button>
+                              </div>
+                            )}
+                          </section>
+                        );
+                      })
+                    ) : (
+                      <div className='text-center py-10'>
+                        <p className='text-muted-foreground'>
+                          This restaurant does not have available menu items yet.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

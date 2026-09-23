@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { parseAsInteger, parseAsString, useQueryStates } from 'nuqs';
 import { MapPin, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -27,9 +27,9 @@ import FavoriteToggleButton from '@/components/shared/FavoriteToggleButton';
 import useFavorites from '@/hooks/useFavorites';
 import ShareActions from '@/components/shared/ShareActions';
 import HeartRating from '@/components/shared/HeartRating';
+import { useRestaurantDiscoveryQuery } from '@/hooks/useRestaurantDiscoveryQuery';
 import SearchInput from './SearchInput';
 import RestaurantsPageSkeleton from './RestaurantsPageSkeleton';
-import type { RestaurantFilterOptions, RestaurantListItem } from '@/types/restaurant';
 
 const PAGE_SIZE = 9;
 const ALL_FILTER_VALUE = 'all';
@@ -60,13 +60,6 @@ const RestaurantsPage = () => {
     status: parseAsString.withDefault('all'),
   });
 
-  const [restaurants, setRestaurants] = useState<RestaurantListItem[]>([]);
-  const [filterOptions, setFilterOptions] = useState<RestaurantFilterOptions>({
-    cities: [],
-    countries: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [totalPages, setTotalPages] = useState(1);
   const page = Math.max(1, pageQuery);
   const activeSearch = searchQuery.trim();
   const activeCity = cityQuery.trim();
@@ -83,108 +76,43 @@ const RestaurantsPage = () => {
   const [locationLoading, setLocationLoading] = useState(true);
   const [locationError, setLocationError] = useState<string | null>(null);
   const { data: favorites, setRestaurantFavorite } = useFavorites();
+  const restaurantQueryParams = useMemo(
+    () => ({
+      city: activeCity,
+      country: activeCountry,
+      delivery: activeDelivery,
+      latitude: userLocation?.latitude ?? null,
+      longitude: userLocation?.longitude ?? null,
+      maxMinimumOrder: activeMaxMinimumOrder,
+      minRating: activeMinRating,
+      page,
+      pageSize: PAGE_SIZE,
+      q: activeSearch,
+      sort: activeSort,
+      status: activeStatus,
+    }),
+    [
+      activeCity,
+      activeCountry,
+      activeDelivery,
+      activeMaxMinimumOrder,
+      activeMinRating,
+      activeSearch,
+      activeSort,
+      activeStatus,
+      page,
+      userLocation?.latitude,
+      userLocation?.longitude,
+    ]
+  );
+  const restaurantsQuery = useRestaurantDiscoveryQuery(restaurantQueryParams, !locationLoading);
+  const restaurants = restaurantsQuery.data?.restaurants || [];
+  const filterOptions = restaurantsQuery.data?.filterOptions || { cities: [], countries: [] };
+  const totalPages = restaurantsQuery.data?.pagination.totalPages || 1;
 
   useEffect(() => {
     setSearchInput(activeSearch);
   }, [activeSearch]);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    const fetchRestaurants = async () => {
-      if (locationLoading) {
-        return;
-      }
-
-      try {
-        setLoading(true);
-        const params = new URLSearchParams();
-        params.set('limit', String(PAGE_SIZE));
-        params.set('page', String(page));
-
-        if (activeSearch) {
-          params.set('q', activeSearch);
-        }
-
-        if (activeCity) {
-          params.set('city', activeCity);
-        }
-
-        if (activeCountry) {
-          params.set('country', activeCountry);
-        }
-
-        if (activeStatus !== 'all') {
-          params.set('status', activeStatus);
-        }
-
-        if (activeSort !== 'smart') {
-          params.set('sort', activeSort);
-        }
-
-        if (activeDelivery !== 'all') {
-          params.set('delivery', activeDelivery);
-        }
-
-        if (activeMinRating) {
-          params.set('minRating', activeMinRating);
-        }
-
-        if (activeMaxMinimumOrder) {
-          params.set('maxMinimumOrder', activeMaxMinimumOrder);
-        }
-
-        if (userLocation) {
-          params.set('latitude', String(userLocation.latitude));
-          params.set('longitude', String(userLocation.longitude));
-        }
-
-        const response = await fetch(`/api/restaurants?${params.toString()}`, {
-          signal: controller.signal,
-        });
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch restaurants');
-        }
-
-        setRestaurants(Array.isArray(data.restaurants) ? data.restaurants : []);
-        setFilterOptions({
-          cities: Array.isArray(data?.filterOptions?.cities) ? data.filterOptions.cities : [],
-          countries: Array.isArray(data?.filterOptions?.countries)
-            ? data.filterOptions.countries
-            : [],
-        });
-        setTotalPages(Math.max(1, Number(data?.pagination?.totalPages || 1)));
-      } catch (error) {
-        if (!(error instanceof DOMException && error.name === 'AbortError')) {
-          console.error('Error fetching restaurants:', error);
-          setRestaurants([]);
-          setTotalPages(1);
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRestaurants();
-
-    return () => {
-      controller.abort();
-    };
-  }, [
-    page,
-    activeCity,
-    activeCountry,
-    activeDelivery,
-    activeMaxMinimumOrder,
-    activeMinRating,
-    activeSearch,
-    activeSort,
-    activeStatus,
-    userLocation,
-    locationLoading,
-  ]);
 
   useEffect(() => {
     if (!navigator.geolocation) {
@@ -305,7 +233,10 @@ const RestaurantsPage = () => {
     void setRestaurantQuery({ page: validPage });
   };
 
-  const shouldShowLoading = loading || (locationLoading && restaurants.length === 0);
+  const shouldShowLoading =
+    locationLoading || (restaurantsQuery.isLoading && restaurants.length === 0);
+  const shouldShowError = restaurantsQuery.isError && restaurants.length === 0;
+  const shouldShowRefreshWarning = restaurantsQuery.isError && restaurants.length > 0;
   const activeFiltersCount = [
     activeSearch,
     activeCity,
@@ -355,6 +286,9 @@ const RestaurantsPage = () => {
               {activeFiltersCount > 0 && (
                 <Badge variant='secondary'>{activeFiltersCount} active</Badge>
               )}
+              {restaurantsQuery.isFetching && !restaurantsQuery.isLoading && (
+                <Badge variant='outline'>Updating</Badge>
+              )}
             </div>
             <Button
               type='button'
@@ -386,7 +320,10 @@ const RestaurantsPage = () => {
               </SelectContent>
             </Select>
 
-            <Select value={activeCity || 'all'} onValueChange={(value) => handleFilterChange('city', value)}>
+            <Select
+              value={activeCity || 'all'}
+              onValueChange={(value) => handleFilterChange('city', value)}
+            >
               <SelectTrigger className='h-10 w-full rounded-full'>
                 <SelectValue placeholder='City' />
               </SelectTrigger>
@@ -482,97 +419,135 @@ const RestaurantsPage = () => {
       </div>
 
       {/* Loaded - Restaurant Cards or No Results */}
-      {restaurants.length === 0 ? (
+      {shouldShowError ? (
+        <Card className='border-destructive/30 bg-destructive/10'>
+          <CardContent className='py-10 text-center text-destructive'>
+            <p>
+              {restaurantsQuery.error instanceof Error
+                ? restaurantsQuery.error.message
+                : 'Failed to load restaurants.'}
+            </p>
+            <Button
+              type='button'
+              variant='outline'
+              className='mt-4'
+              onClick={() => void restaurantsQuery.refetch()}
+            >
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : restaurants.length === 0 ? (
         <Card>
           <CardContent className='py-10 text-center text-muted-foreground'>
             No restaurants found for your search.
           </CardContent>
         </Card>
       ) : (
-        <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
-          {restaurants.map((restaurant) => (
-            <Card
-              key={restaurant._id}
-              className='h-full overflow-hidden border-border/80 hover:shadow-md transition-shadow'
-            >
-              <Link href={`/restaurants/${restaurant._id}`}>
-                <div className='relative h-48 w-full bg-muted'>
-                  {restaurant.image ? (
-                    <Image
-                      src={restaurant.image}
-                      alt={restaurant.name}
-                      fill
-                      className='object-cover'
-                      sizes='(max-width: 1024px) 100vw, 33vw'
-                    />
-                  ) : (
-                    <div className='h-full w-full flex items-center justify-center text-muted-foreground text-sm'>
-                      No image available
-                    </div>
-                  )}
-                </div>
-              </Link>
-              <CardHeader className='space-y-2'>
-                <div className='flex items-start justify-between gap-3'>
-                  <CardTitle className='text-xl'>
-                    <Link href={`/restaurants/${restaurant._id}`}>{restaurant.name}</Link>
-                  </CardTitle>
-                  <FavoriteToggleButton
-                    type='restaurant'
-                    targetId={restaurant._id}
-                    isFavorite={favorites.favoriteRestaurantIds.includes(restaurant._id)}
-                    onChanged={(nextIsFavorite) =>
-                      setRestaurantFavorite(restaurant._id, nextIsFavorite)
-                    }
-                  />
-                </div>
-                <Badge
-                  variant={
-                    restaurant.isAcceptingOrders
-                      ? 'default'
-                      : restaurant.isPaused
-                        ? 'destructive'
-                        : 'secondary'
-                  }
+        <>
+          {shouldShowRefreshWarning && (
+            <Card className='mb-4 border-amber-500/30 bg-amber-500/10'>
+              <CardContent className='flex flex-col gap-3 py-4 text-sm text-amber-100 sm:flex-row sm:items-center sm:justify-between'>
+                <span>Could not refresh restaurants. Showing the last loaded results for now.</span>
+                <Button
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  onClick={() => void restaurantsQuery.refetch()}
                 >
-                  {restaurant.isAcceptingOrders
-                    ? 'Accepting orders'
-                    : restaurant.isPaused
-                      ? 'Paused'
-                      : restaurant.isOpen
-                        ? 'Open'
-                        : 'Closed'}
-                </Badge>
-                <HeartRating rating={restaurant.averageRating} ratingCount={restaurant.ratingCount} />
-                <p className='text-sm text-muted-foreground flex items-center gap-1'>
-                  <MapPin className='h-4 w-4' />
-                  {restaurant.city}, {restaurant.country}
-                </p>
-                {typeof restaurant.distanceKm === 'number' && (
-                  <p className='text-xs text-muted-foreground'>
-                    {restaurant.distanceKm.toFixed(1)} km away
-                  </p>
-                )}
-                <p className='text-xs text-muted-foreground'>
-                  Min. order ${restaurant.minimumOrderAmount.toFixed(2)} • Delivery radius{' '}
-                  {restaurant.deliveryRadiusKm} km
-                </p>
-              </CardHeader>
-              <CardContent className='space-y-3'>
-                <p className='text-sm text-muted-foreground'>{restaurant.street}</p>
-                <p className='text-sm text-foreground/90'>
-                  {restaurant.description.length > 110
-                    ? `${restaurant.description.slice(0, 110)}...`
-                    : restaurant.description}
-                </p>
-                <ShareActions
-                  url={`${typeof window !== 'undefined' ? window.location.origin : ''}/restaurants/${restaurant._id}`}
-                  title={`Check out this restaurant: ${restaurant.name}`}
-                />
+                  Retry
+                </Button>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          )}
+          <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6'>
+            {restaurants.map((restaurant) => (
+              <Card
+                key={restaurant._id}
+                className='h-full overflow-hidden border-border/80 hover:shadow-md transition-shadow'
+              >
+                <Link href={`/restaurants/${restaurant._id}`}>
+                  <div className='relative h-48 w-full bg-muted'>
+                    {restaurant.image ? (
+                      <Image
+                        src={restaurant.image}
+                        alt={restaurant.name}
+                        fill
+                        className='object-cover'
+                        sizes='(max-width: 1024px) 100vw, 33vw'
+                      />
+                    ) : (
+                      <div className='h-full w-full flex items-center justify-center text-muted-foreground text-sm'>
+                        No image available
+                      </div>
+                    )}
+                  </div>
+                </Link>
+                <CardHeader className='space-y-2'>
+                  <div className='flex items-start justify-between gap-3'>
+                    <CardTitle className='text-xl'>
+                      <Link href={`/restaurants/${restaurant._id}`}>{restaurant.name}</Link>
+                    </CardTitle>
+                    <FavoriteToggleButton
+                      type='restaurant'
+                      targetId={restaurant._id}
+                      isFavorite={favorites.favoriteRestaurantIds.includes(restaurant._id)}
+                      onChanged={(nextIsFavorite) =>
+                        setRestaurantFavorite(restaurant._id, nextIsFavorite)
+                      }
+                    />
+                  </div>
+                  <Badge
+                    variant={
+                      restaurant.isAcceptingOrders
+                        ? 'default'
+                        : restaurant.isPaused
+                          ? 'destructive'
+                          : 'secondary'
+                    }
+                  >
+                    {restaurant.isAcceptingOrders
+                      ? 'Accepting orders'
+                      : restaurant.isPaused
+                        ? 'Paused'
+                        : restaurant.isOpen
+                          ? 'Open'
+                          : 'Closed'}
+                  </Badge>
+                  <HeartRating
+                    rating={restaurant.averageRating}
+                    ratingCount={restaurant.ratingCount}
+                  />
+                  <p className='text-sm text-muted-foreground flex items-center gap-1'>
+                    <MapPin className='h-4 w-4' />
+                    {restaurant.city}, {restaurant.country}
+                  </p>
+                  {typeof restaurant.distanceKm === 'number' && (
+                    <p className='text-xs text-muted-foreground'>
+                      {restaurant.distanceKm.toFixed(1)} km away
+                    </p>
+                  )}
+                  <p className='text-xs text-muted-foreground'>
+                    Min. order ${restaurant.minimumOrderAmount.toFixed(2)} • Delivery radius{' '}
+                    {restaurant.deliveryRadiusKm} km
+                  </p>
+                </CardHeader>
+                <CardContent className='space-y-3'>
+                  <p className='text-sm text-muted-foreground'>{restaurant.street}</p>
+                  <p className='text-sm text-foreground/90'>
+                    {restaurant.description.length > 110
+                      ? `${restaurant.description.slice(0, 110)}...`
+                      : restaurant.description}
+                  </p>
+                  <ShareActions
+                    url={`${typeof window !== 'undefined' ? window.location.origin : ''}/restaurants/${restaurant._id}`}
+                    title={`Check out this restaurant: ${restaurant.name}`}
+                  />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
 
       {restaurants.length > 0 && (

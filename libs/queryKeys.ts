@@ -35,6 +35,14 @@ export const queryKeys = {
     all: ['restaurants'] as const,
     publicList: (params: Record<string, unknown>) =>
       [...queryKeys.restaurants.all, 'public-list', params] as const,
+    publicDetail: (restaurantId: string) =>
+      [...queryKeys.restaurants.all, 'public-detail', restaurantId] as const,
+    publicMenuCategories: (restaurantId: string) =>
+      [...queryKeys.restaurants.all, 'public-menu-categories', restaurantId] as const,
+    publicMenuSummary: (restaurantId: string, perCategory: number) =>
+      [...queryKeys.restaurants.all, 'public-menu-summary', restaurantId, perCategory] as const,
+    publicMenuResults: (restaurantId: string, params: Record<string, unknown>) =>
+      [...queryKeys.restaurants.all, 'public-menu-results', restaurantId, params] as const,
     adminList: (params: Record<string, unknown>) =>
       [...queryKeys.restaurants.all, 'admin-list', params] as const,
     adminDetail: (restaurantId: string) =>
