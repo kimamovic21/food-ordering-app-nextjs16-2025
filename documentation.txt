@@ -1187,3 +1187,5 @@ Improve restaurant ordering UX with dynamic ETA
 Polish order lists with TanStack Query
 
 Add restaurant discovery filters and superadmin restaurant insights
+
+Polish restaurant discovery and menu queries
