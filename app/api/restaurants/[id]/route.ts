@@ -25,7 +25,10 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
+    const orderingStatus = await getRestaurantOrderingCapacityStatus({
+      restaurant,
+      includeCourierReadiness: true,
+    });
     const ratingMap = await getRestaurantRatingSummaries([restaurant._id]);
     const rating = ratingMap.get(String(restaurant._id));
 
@@ -51,15 +54,21 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
           activeKitchenOrders: orderingStatus.activeKitchenOrders,
           capacityMessage: orderingStatus.capacityMessage,
           capacitySlotsRemaining: orderingStatus.capacitySlotsRemaining,
+          availableCouriers: orderingStatus.availableCouriers,
+          courierReadinessDelayMinutes: orderingStatus.courierReadinessDelayMinutes,
+          courierReadinessMessage: orderingStatus.courierReadinessMessage,
+          courierReadinessTone: orderingStatus.courierReadinessTone,
           estimatedPreparationMinutes: orderingStatus.estimatedPreparationMinutes,
           estimatedDeliveryMinutes: orderingStatus.estimatedDeliveryMinutes,
           estimatedTotalMinutes: orderingStatus.estimatedTotalMinutes,
           etaDelayMinutes: orderingStatus.etaDelayMinutes,
           etaMessage: orderingStatus.etaMessage,
           etaTone: orderingStatus.etaTone,
+          isCourierReady: orderingStatus.isCourierReady,
           isBusy: orderingStatus.isBusy,
           isNearCapacity: orderingStatus.isNearCapacity,
           orderingMessage: orderingStatus.orderingMessage,
+          totalCouriers: orderingStatus.totalCouriers,
           averageRating: rating?.averageRating ?? 0,
           ratingCount: rating?.ratingCount ?? 0,
         },

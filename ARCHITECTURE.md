@@ -186,7 +186,7 @@ flowchart LR
 
 ## Checkout And Payment Flow
 
-Checkout is intentionally server-authoritative. The cart can show warnings, but `/api/cart/validate` and `/api/checkout` share `libs/cartValidation.ts` so cart preflight and final Stripe checkout use the same menu, restaurant, radius, minimum-order, busy-capacity, and quantity-limit rules before creating a Stripe session. Restaurant open/paused/radius state plus active kitchen capacity are centralized in `libs/restaurantOrderingStatus.ts`, with pure capacity math in `libs/restaurantCapacity.ts` and load-adjusted timing in `libs/restaurantEta.ts`, so cart validation, public restaurant status checks, restaurant detail payloads, availability alerts, checkout order estimates, and admin operations summaries do not drift apart.
+Checkout is intentionally server-authoritative. The cart can show warnings, but `/api/cart/validate` and `/api/checkout` share `libs/cartValidation.ts` so cart preflight and final Stripe checkout use the same menu, restaurant, radius, minimum-order, busy-capacity, delivery-readiness, and quantity-limit rules before creating a Stripe session. Restaurant open/paused/radius state plus active kitchen capacity are centralized in `libs/restaurantOrderingStatus.ts`, with pure capacity math in `libs/restaurantCapacity.ts`, courier coverage in `libs/courierReadiness.ts`, and load-adjusted timing in `libs/restaurantEta.ts`, so cart validation, public restaurant status checks, restaurant detail payloads, availability alerts, checkout order estimates, and admin operations summaries do not drift apart.
 
 Key checks:
 
@@ -199,7 +199,7 @@ Key checks:
 - Public menu surfaces can call `/api/restaurants/[id]/ordering-status` before adding an item to the cart, so users get early feedback before checkout.
 - Restaurant must currently accept orders based on working hours, the 60-minute-before-closing checkout cutoff, pause state, blocked dates, delivery radius, and active kitchen capacity.
 - Restaurant active kitchen order count must be below `activeOrderLimit`.
-- Restaurant preparation estimates can increase with active kitchen load; the adjusted preparation/delivery/total estimates are returned to cart/restaurant UI and saved on the order at checkout.
+- Restaurant preparation estimates can increase with active kitchen load, and delivery estimates can increase when courier availability is unavailable or tight; the adjusted preparation/delivery/total estimates are returned to cart/restaurant UI and saved on the order at checkout.
 - Total cart quantity must be at or below `Restaurant.maxItemsPerOrder`, and repeated quantities for the same menu item across sizes must stay at or below `MenuItem.maxQuantityPerOrder`.
 - Coupon and loyalty discounts are validated server-side.
 - Best coupon suggestions shown in cart are revalidated at checkout before Stripe is created.

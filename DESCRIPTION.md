@@ -46,7 +46,7 @@ Important customer rules:
 - Customers cannot add unavailable menu items to cart or checkout with them.
 - Customers cannot add items from restaurants that are closed, paused, closing soon, blocked by date, outside radius, or at active kitchen capacity.
 - Customers cannot checkout from restaurants that are closed, paused, outside delivery radius, blocked by date, inside the final 60 minutes before closing, or at active kitchen capacity.
-- Customers see load-adjusted restaurant ETA messaging before checkout, including when kitchen load adds preparation time or when only a few active order slots remain.
+- Customers see load-adjusted restaurant ETA messaging before checkout, including when kitchen load adds preparation time, courier availability adds delivery delay, or only a few active order slots remain.
 - Saved delivery addresses require complete address fields and confirmed latitude/longitude; duplicate saved-address attempts reuse the existing address, and checkout still revalidates the selected delivery location server-side.
 - Checkout and profile updates validate phone numbers and store valid values in E.164 format.
 - Customers can only message contacts allowed by their order flow.

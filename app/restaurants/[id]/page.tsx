@@ -166,6 +166,9 @@ const RestaurantDetailsPage = () => {
     typeof restaurant.estimatedDeliveryMinutes === 'number' &&
     typeof restaurant.estimatedTotalMinutes === 'number';
   const isBusyEta = restaurant.etaTone === 'busy' || restaurant.etaTone === 'moderate';
+  const hasCourierReadinessWarning =
+    restaurant.courierReadinessTone === 'limited' ||
+    restaurant.courierReadinessTone === 'unavailable';
 
   return (
     <section className='mt-8 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-10'>
@@ -241,6 +244,12 @@ const RestaurantDetailsPage = () => {
               {isBusyEta ? 'Kitchen is busy but accepting orders' : 'Ordering is available'}
             </p>
             <p className='mt-1 opacity-90'>{restaurant.etaMessage}</p>
+            {hasCourierReadinessWarning && (
+              <p className='mt-2 font-medium'>
+                {restaurant.availableCouriers ?? 0} of {restaurant.totalCouriers ?? 0} couriers
+                available right now.
+              </p>
+            )}
             {typeof restaurant.capacitySlotsRemaining === 'number' &&
               restaurant.capacitySlotsRemaining <= 2 && (
                 <p className='mt-2 font-medium'>

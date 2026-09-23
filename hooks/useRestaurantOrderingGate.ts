@@ -12,8 +12,12 @@ export type RestaurantOrderingStatus = {
   restaurantName: string;
   activeKitchenOrders?: number;
   activeOrderLimit?: number;
+  availableCouriers?: number;
   capacityMessage?: string | null;
   capacitySlotsRemaining?: number;
+  courierReadinessDelayMinutes?: number;
+  courierReadinessMessage?: string;
+  courierReadinessTone?: 'healthy' | 'limited' | 'unavailable' | 'unknown';
   estimatedDeliveryMinutes?: number;
   estimatedPreparationMinutes?: number;
   estimatedTotalMinutes?: number;
@@ -22,9 +26,11 @@ export type RestaurantOrderingStatus = {
   etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity';
   isAcceptingOrders: boolean;
   isBusy?: boolean;
+  isCourierReady?: boolean;
   maxItemsPerOrder?: number;
   orderingMessage?: string;
   reason?: string | null;
+  totalCouriers?: number;
 };
 
 export const fetchRestaurantOrderingStatus = async (

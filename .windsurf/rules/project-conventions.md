@@ -22,7 +22,7 @@ description: Project rules for this Next.js food ordering app. Use when editing 
 - Validate API inputs and keep response shapes stable unless a change is requested.
 - Preserve role checks for admin, courier, and user flows.
 - Saved customer delivery addresses live on `User.deliveryAddresses`, are capped at five, require complete delivery fields plus confirmed latitude/longitude, dedupe duplicate saves by normalized address/phone/coordinates, and should be loaded/mutated through `/api/profile/delivery-addresses`.
-- Preserve checkout checks before Stripe session creation: working hours, 60-minute closing-soon cutoff, pause state, blocked dates, delivery radius, active kitchen capacity, item availability, coupons, loyalty, and duplicate unpaid checkout recovery.
+- Preserve checkout checks before Stripe session creation: working hours, 60-minute closing-soon cutoff, pause state, blocked dates, delivery radius, active kitchen capacity, courier delivery readiness, item availability, coupons, loyalty, and duplicate unpaid checkout recovery.
 - Cart validation should keep unavailable/deleted/invalid items as hard checkout blockers, while price changes stay non-blocking and should be shown clearly before checkout.
 - Public add-to-cart surfaces should prefetch visible restaurant ordering status where possible, check `/api/restaurants/[id]/ordering-status` before changing the cart, and still keep checkout as the server-authoritative source of truth.
 - Active customer order quick access should use `/api/my-orders/active`, apply stale-order maintenance before returning data, and stay customer-only.

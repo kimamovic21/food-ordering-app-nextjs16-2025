@@ -221,7 +221,8 @@ Cart:
 - Cart validates the latest server state before checkout.
 - It checks deleted items, unavailable items, price changes, restaurant status, delivery radius, minimum order amount, busy capacity, and courier-safe order quantity limits.
 - Restaurant open/paused/radius/capacity checks are centralized server-side so the menu, cart, checkout, restaurant pages, availability alerts, and admin operations views report the same ordering state.
-- Cart and restaurant pages show dynamic prep/delivery ETA messaging that reflects current kitchen load instead of only static restaurant averages.
+- Cart and restaurant pages show dynamic prep/delivery ETA messaging that reflects current kitchen load and courier availability instead of only static restaurant averages.
+- If no courier is available, or courier coverage is tight compared with active kitchen demand, the UI shows a delivery-readiness warning and increases the delivery ETA before Stripe Checkout.
 - Price changes are shown clearly and can be refreshed.
 - Deleted, unavailable, invalid, cross-restaurant, or blocked restaurant states prevent checkout.
 - The cart can show a "checking restaurant status" state so closed/open messages do not flicker during loading.

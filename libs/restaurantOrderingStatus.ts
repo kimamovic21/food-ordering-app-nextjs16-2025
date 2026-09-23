@@ -5,10 +5,15 @@ import {
   buildRestaurantCapacitySnapshot,
   normalizeMinimumOrderAmount,
 } from '@/libs/restaurantCapacity';
+import {
+  DEFAULT_COURIER_READINESS_STATUS,
+  resolveCourierReadinessStatus,
+} from '@/libs/courierReadiness';
 import { getRestaurantOrderingStatus } from '@/libs/restaurantAvailability';
 import { buildRestaurantDynamicEta } from '@/libs/restaurantEta';
 import { Order } from '@/models/order';
 import type { CartValidationRestaurantStatus } from '@/types/cart';
+import type { CourierReadinessStatus, CourierReadinessTone } from '@/types/courier';
 
 export const ACTIVE_KITCHEN_ORDER_STATUSES = ['placed', 'processing', 'ready'] as const;
 export const RESTAURANT_BUSY_MESSAGE =
@@ -48,30 +53,59 @@ export type RestaurantOrderingCapacityStatus = ReturnType<typeof getRestaurantOr
   ReturnType<typeof buildRestaurantCapacitySnapshot> & {
     baseDeliveryMinutes: number;
     basePreparationMinutes: number;
+    availableCouriers: number;
     capacityMessage: string | null;
     capacitySlotsRemaining: number;
+    courierReadinessDelayMinutes: number;
+    courierReadinessMessage: string;
+    courierReadinessTone: CourierReadinessTone;
     estimatedDeliveryMinutes: number;
     estimatedPreparationMinutes: number;
     estimatedTotalMinutes: number;
     etaDelayMinutes: number;
     etaMessage: string;
     etaTone: 'normal' | 'moderate' | 'busy' | 'at_capacity';
+    isCourierReady: boolean;
     maxItemsPerOrder: number;
     minimumOrderAmount: number;
     orderingMessage: string;
+    totalCouriers: number;
   };
+
+const getDeliveryReadinessEtaTone = (
+  etaTone: RestaurantOrderingCapacityStatus['etaTone'],
+  courierReadinessTone: CourierReadinessTone
+): RestaurantOrderingCapacityStatus['etaTone'] => {
+  if (etaTone === 'at_capacity' || etaTone === 'busy') {
+    return etaTone;
+  }
+
+  if (courierReadinessTone === 'unavailable') {
+    return 'busy';
+  }
+
+  if (courierReadinessTone === 'limited' && etaTone === 'normal') {
+    return 'moderate';
+  }
+
+  return etaTone;
+};
 
 export const getRestaurantOrderingCapacityStatus = async ({
   restaurant,
   deliveryLatitude,
   deliveryLongitude,
   activeKitchenOrders,
+  courierReadiness,
+  includeCourierReadiness = false,
   now = new Date(),
 }: {
   restaurant: RestaurantLike;
   deliveryLatitude?: number | null;
   deliveryLongitude?: number | null;
   activeKitchenOrders?: number;
+  courierReadiness?: CourierReadinessStatus;
+  includeCourierReadiness?: boolean;
   now?: Date;
 }): Promise<RestaurantOrderingCapacityStatus> => {
   const orderingStatus = getRestaurantOrderingStatus({
@@ -93,6 +127,23 @@ export const getRestaurantOrderingCapacityStatus = async ({
     activeKitchenOrders: capacity.activeKitchenOrders,
     activeOrderLimit: capacity.activeOrderLimit,
   });
+  const resolvedCourierReadiness =
+    courierReadiness ??
+    (includeCourierReadiness
+      ? await resolveCourierReadinessStatus({
+          activeKitchenOrders: capacity.activeKitchenOrders,
+          now,
+        })
+      : DEFAULT_COURIER_READINESS_STATUS);
+  const courierDelayMinutes = resolvedCourierReadiness.courierReadinessDelayMinutes;
+  const estimatedDeliveryMinutes = eta.estimatedDeliveryMinutes + courierDelayMinutes;
+  const estimatedTotalMinutes = eta.estimatedTotalMinutes + courierDelayMinutes;
+  const etaDelayMinutes = eta.etaDelayMinutes + courierDelayMinutes;
+  const etaTone = getDeliveryReadinessEtaTone(eta.etaTone, resolvedCourierReadiness.courierReadinessTone);
+  const etaMessage =
+    courierDelayMinutes > 0
+      ? `${eta.etaMessage} ${resolvedCourierReadiness.courierReadinessMessage}`
+      : eta.etaMessage;
   const reason = capacity.isBusy
     ? `${RESTAURANT_BUSY_MESSAGE} ${eta.capacityMessage || ''}`.trim()
     : orderingStatus.reason;
@@ -101,10 +152,21 @@ export const getRestaurantOrderingCapacityStatus = async ({
     ...orderingStatus,
     ...capacity,
     ...eta,
+    ...resolvedCourierReadiness,
+    estimatedDeliveryMinutes,
+    estimatedTotalMinutes,
+    etaDelayMinutes,
+    etaMessage,
+    etaTone,
     isAcceptingOrders: orderingStatus.isAcceptingOrders && !capacity.isBusy,
     maxItemsPerOrder: normalizeItemsPerOrderLimit(restaurant?.maxItemsPerOrder),
     minimumOrderAmount: normalizeMinimumOrderAmount(restaurant?.minimumOrderAmount),
-    orderingMessage: reason || eta.etaMessage,
+    orderingMessage:
+      reason ||
+      (resolvedCourierReadiness.courierReadinessTone === 'limited' ||
+      resolvedCourierReadiness.courierReadinessTone === 'unavailable'
+        ? resolvedCourierReadiness.courierReadinessMessage
+        : etaMessage),
     reason,
   };
 };

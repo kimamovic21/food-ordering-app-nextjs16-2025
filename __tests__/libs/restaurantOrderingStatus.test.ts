@@ -1,4 +1,5 @@
 import { Order } from '@/models/order';
+import { buildCourierReadinessSnapshot } from '@/libs/courierReadiness';
 import {
   getRestaurantActiveKitchenOrdersQuery,
   getRestaurantCartValidationMessage,
@@ -113,5 +114,43 @@ describe('restaurant ordering capacity status', () => {
         totalCartQuantity: 1,
       })
     ).toBe('below_minimum');
+  });
+
+  it('adds courier readiness delay to delivery ETA without blocking checkout', async () => {
+    const orderingStatus = await getRestaurantOrderingCapacityStatus({
+      restaurant: createRestaurant(),
+      activeKitchenOrders: 0,
+      courierReadiness: buildCourierReadinessSnapshot({
+        activeKitchenOrders: 0,
+        availableCouriers: 0,
+        totalCouriers: 2,
+      }),
+      deliveryLatitude: 43.01,
+      deliveryLongitude: 18.01,
+      now: new Date('2026-09-14T12:00:00.000Z'),
+    });
+
+    expect(orderingStatus).toEqual(
+      expect.objectContaining({
+        availableCouriers: 0,
+        courierReadinessDelayMinutes: 15,
+        courierReadinessTone: 'unavailable',
+        estimatedDeliveryMinutes: 35,
+        estimatedTotalMinutes: 60,
+        etaDelayMinutes: 15,
+        etaTone: 'busy',
+        isAcceptingOrders: true,
+        isCourierReady: false,
+        totalCouriers: 2,
+      })
+    );
+    expect(orderingStatus.etaMessage).toContain('No courier is currently available');
+    expect(
+      getRestaurantCartValidationStatus({
+        orderingStatus,
+        subtotal: 30,
+        totalCartQuantity: 1,
+      })
+    ).toBe('valid');
   });
 });

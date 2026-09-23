@@ -82,15 +82,21 @@ export type RestaurantDetails = RestaurantSummary & {
   isNearCapacity?: boolean;
   activeKitchenOrders?: number;
   activeOrderLimit?: number;
+  availableCouriers?: number;
   capacityMessage?: string | null;
   capacitySlotsRemaining?: number;
+  courierReadinessDelayMinutes?: number;
+  courierReadinessMessage?: string;
+  courierReadinessTone?: 'healthy' | 'limited' | 'unavailable' | 'unknown';
   estimatedPreparationMinutes?: number;
   estimatedDeliveryMinutes?: number;
   estimatedTotalMinutes?: number;
   etaDelayMinutes?: number;
   etaMessage?: string;
   etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity';
+  isCourierReady?: boolean;
   orderingMessage?: string;
+  totalCouriers?: number;
   averageRating: number;
   ratingCount: number;
 };
@@ -168,9 +174,14 @@ export type AdminRestaurantOwnerSummary = {
 export type AdminRestaurantOperationalSummary = {
   activeKitchenOrders: number;
   activeOrderLimit: number;
+  availableCouriers: number;
   capacitySlotsRemaining: number;
+  courierReadinessDelayMinutes: number;
+  courierReadinessMessage: string;
+  courierReadinessTone: 'healthy' | 'limited' | 'unavailable' | 'unknown';
   isAtCapacity: boolean;
   isBusy: boolean;
+  isCourierReady: boolean;
   isNearCapacity: boolean;
   shouldSuggestPause: boolean;
   capacityMessage: string;
@@ -182,6 +193,7 @@ export type AdminRestaurantOperationalSummary = {
   etaTone: 'normal' | 'moderate' | 'busy' | 'at_capacity';
   orderingMessage: string;
   orderingUnavailableReason: string | null;
+  totalCouriers: number;
 };
 
 export type AdminRestaurantMenuSummary = {

@@ -148,10 +148,12 @@ export async function validateCartForOrder({
   cartItems,
   deliveryLatitude,
   deliveryLongitude,
+  includeCourierReadiness = false,
 }: {
   cartItems: CartValidationRequestItem[];
   deliveryLatitude?: unknown;
   deliveryLongitude?: unknown;
+  includeCourierReadiness?: boolean;
 }): Promise<CartOrderValidationResult> {
   if (cartItems.length === 0) {
     return {
@@ -362,6 +364,7 @@ export async function validateCartForOrder({
             restaurant,
             deliveryLatitude: normalizedDeliveryLatitude,
             deliveryLongitude: normalizedDeliveryLongitude,
+            includeCourierReadiness,
           });
           const subtotal = roundMoney(
             items.reduce((sum, item) => {
@@ -387,8 +390,12 @@ export async function validateCartForOrder({
           restaurantValidation = {
             activeKitchenOrders: orderingStatus.activeKitchenOrders,
             activeOrderLimit: orderingStatus.activeOrderLimit,
+            availableCouriers: orderingStatus.availableCouriers,
             capacityMessage: orderingStatus.capacityMessage,
             capacitySlotsRemaining: orderingStatus.capacitySlotsRemaining,
+            courierReadinessDelayMinutes: orderingStatus.courierReadinessDelayMinutes,
+            courierReadinessMessage: orderingStatus.courierReadinessMessage,
+            courierReadinessTone: orderingStatus.courierReadinessTone,
             canCheckout: restaurantStatus === 'valid',
             deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
             distanceKm: orderingStatus.distanceKm,
@@ -400,6 +407,7 @@ export async function validateCartForOrder({
             etaTone: orderingStatus.etaTone,
             isAcceptingOrders: orderingStatus.isAcceptingOrders,
             isBusy: orderingStatus.isBusy,
+            isCourierReady: orderingStatus.isCourierReady,
             isOpen: orderingStatus.isOpen,
             isPaused: orderingStatus.isPaused,
             maxItemsPerOrder: orderingStatus.maxItemsPerOrder,
@@ -410,6 +418,7 @@ export async function validateCartForOrder({
             restaurantName: String((restaurant as any).name || 'The restaurant'),
             status: restaurantStatus,
             subtotal,
+            totalCouriers: orderingStatus.totalCouriers,
             totalCartQuantity,
           };
         }

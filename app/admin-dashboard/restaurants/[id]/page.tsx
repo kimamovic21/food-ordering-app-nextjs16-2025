@@ -19,6 +19,7 @@ import {
   Store,
   TicketPercent,
   Timer,
+  Truck,
   Users,
   Utensils,
 } from 'lucide-react';
@@ -241,7 +242,7 @@ const AdminRestaurantDetailsPage = () => {
         </div>
       </div>
 
-      <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
+      <div className='grid gap-4 md:grid-cols-2 xl:grid-cols-5'>
         <MetricCard
           icon={ReceiptText}
           label='Total revenue'
@@ -255,6 +256,12 @@ const AdminRestaurantDetailsPage = () => {
           tone={operationalSummary.isAtCapacity ? 'red' : operationalSummary.isNearCapacity ? 'amber' : 'default'}
         />
         <MetricCard icon={Utensils} label='Menu items' value={menuSummary.total} />
+        <MetricCard
+          icon={Truck}
+          label='Couriers ready'
+          value={`${operationalSummary.availableCouriers}/${operationalSummary.totalCouriers}`}
+          tone={operationalSummary.isCourierReady ? 'green' : 'amber'}
+        />
         <MetricCard icon={TicketPercent} label='Active coupons' value={couponSummary.active} />
       </div>
 
@@ -422,6 +429,13 @@ const AdminRestaurantDetailsPage = () => {
                 </p>
               </div>
               <div className='rounded-xl border border-white/10 p-3'>
+                <p className='text-muted-foreground'>Couriers</p>
+                <p className='mt-1 font-semibold'>
+                  {operationalSummary.availableCouriers}/{operationalSummary.totalCouriers}{' '}
+                  available
+                </p>
+              </div>
+              <div className='rounded-xl border border-white/10 p-3'>
                 <p className='text-muted-foreground'>Total ETA</p>
                 <p className='mt-1 font-semibold'>{operationalSummary.estimatedTotalMinutes} min</p>
               </div>
@@ -430,6 +444,12 @@ const AdminRestaurantDetailsPage = () => {
                 <p className='mt-1 font-semibold'>{operationalSummary.capacitySlotsRemaining}</p>
               </div>
             </div>
+            {operationalSummary.courierReadinessTone !== 'healthy' &&
+              operationalSummary.courierReadinessTone !== 'unknown' && (
+                <p className='rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-amber-100'>
+                  {operationalSummary.courierReadinessMessage}
+                </p>
+              )}
           </CardContent>
         </Card>
       </div>

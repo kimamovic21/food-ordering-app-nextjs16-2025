@@ -455,6 +455,7 @@ export async function POST(req: Request) {
     cartItems,
     deliveryLatitude,
     deliveryLongitude,
+    includeCourierReadiness: true,
   });
   const restaurantId = cartValidation.currentRestaurantId;
 
