@@ -155,8 +155,12 @@ const restaurantFixture = {
 const orderingStatusFixture = {
   activeKitchenOrders: 3,
   activeOrderLimit: 10,
+  availableCouriers: 2,
   capacityMessage: '7 active order slots available.',
   capacitySlotsRemaining: 7,
+  courierReadinessDelayMinutes: 0,
+  courierReadinessMessage: 'Courier coverage looks good right now.',
+  courierReadinessTone: 'healthy',
   estimatedDeliveryMinutes: 20,
   estimatedPreparationMinutes: 30,
   estimatedTotalMinutes: 50,
@@ -166,6 +170,7 @@ const orderingStatusFixture = {
   isAcceptingOrders: true,
   isAtCapacity: false,
   isBusy: false,
+  isCourierReady: true,
   isNearCapacity: true,
   isOpen: true,
   isPaused: false,
@@ -175,6 +180,7 @@ const orderingStatusFixture = {
   pauseReason: '',
   reason: null,
   shouldSuggestPause: false,
+  totalCouriers: 3,
 };
 
 describe('GET /api/admin/restaurants/[id]', () => {
@@ -295,6 +301,7 @@ describe('GET /api/admin/restaurants/[id]', () => {
       'name email phone image role city country createdAt'
     );
     expect(getRestaurantOrderingCapacityStatus).toHaveBeenCalledWith({
+      includeCourierReadiness: true,
       restaurant: restaurantFixture,
     });
     expect(body.restaurant).toEqual(
@@ -317,9 +324,11 @@ describe('GET /api/admin/restaurants/[id]', () => {
     expect(body.operationalSummary).toEqual(
       expect.objectContaining({
         activeKitchenOrders: 3,
+        availableCouriers: 2,
         capacitySlotsRemaining: 7,
         estimatedTotalMinutes: 50,
         etaTone: 'moderate',
+        totalCouriers: 3,
       })
     );
     expect(body.menuSummary).toEqual({ available: 9, total: 12, unavailable: 3 });

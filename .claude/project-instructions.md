@@ -43,7 +43,7 @@
 
 - Secrets must remain server-side.
 - Treat auth, payments, and courier flows as sensitive paths.
-- Keep checkout accepting-order checks in place before Stripe sessions are created: working hours, the 60-minute-before-closing cutoff, pause state, blocked dates, delivery radius, active kitchen capacity, item availability, coupons, and loyalty.
+- Keep checkout accepting-order checks in place before Stripe sessions are created: working hours, the 60-minute-before-closing cutoff, pause state, blocked dates, delivery radius, active kitchen capacity, courier delivery readiness, item availability, coupons, and loyalty.
 - Public add-to-cart surfaces should prefetch visible restaurant ordering status where possible, check `/api/restaurants/[id]/ordering-status` before changing the cart, and still keep checkout as the server-authoritative source of truth.
 - Preserve checkout duplicate protection: recent identical unpaid `placed` attempts use `checkoutFingerprint` and should reuse or recover the existing Stripe Checkout session.
 - Cart validation should keep unavailable/deleted/invalid items as hard checkout blockers, while price changes stay non-blocking and should be shown clearly before checkout.

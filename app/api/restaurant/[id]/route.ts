@@ -21,7 +21,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 });
     }
 
-    const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
+    const orderingStatus = await getRestaurantOrderingCapacityStatus({
+      restaurant,
+      includeCourierReadiness: true,
+    });
     const ratingMap = await getRestaurantRatingSummaries([restaurant._id]);
     const rating = ratingMap.get(String(restaurant._id));
 
@@ -56,14 +59,19 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
           maxItemsPerOrder: orderingStatus.maxItemsPerOrder,
           deliveryRadiusKm: orderingStatus.deliveryRadiusKm,
           activeKitchenOrders: orderingStatus.activeKitchenOrders,
+          availableCouriers: orderingStatus.availableCouriers,
           capacityMessage: orderingStatus.capacityMessage,
           capacitySlotsRemaining: orderingStatus.capacitySlotsRemaining,
+          courierReadinessDelayMinutes: orderingStatus.courierReadinessDelayMinutes,
+          courierReadinessMessage: orderingStatus.courierReadinessMessage,
+          courierReadinessTone: orderingStatus.courierReadinessTone,
           estimatedPreparationMinutes: orderingStatus.estimatedPreparationMinutes,
           estimatedDeliveryMinutes: orderingStatus.estimatedDeliveryMinutes,
           estimatedTotalMinutes: orderingStatus.estimatedTotalMinutes,
           etaDelayMinutes: orderingStatus.etaDelayMinutes,
           etaMessage: orderingStatus.etaMessage,
           etaTone: orderingStatus.etaTone,
+          isCourierReady: orderingStatus.isCourierReady,
           isBusy: orderingStatus.isBusy,
           isNearCapacity: orderingStatus.isNearCapacity,
           isPaused: orderingStatus.isPaused,
@@ -71,6 +79,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
           isAcceptingOrders: orderingStatus.isAcceptingOrders,
           orderingMessage: orderingStatus.orderingMessage,
           orderingUnavailableReason: orderingStatus.reason,
+          totalCouriers: orderingStatus.totalCouriers,
           workingHours: restaurant.workingHours,
           blockedDates: restaurant.blockedDates,
           isOpen: orderingStatus.isOpen,

@@ -174,7 +174,10 @@ export async function GET() {
       );
     }
 
-    const orderingStatus = await getRestaurantOrderingCapacityStatus({ restaurant });
+    const orderingStatus = await getRestaurantOrderingCapacityStatus({
+      restaurant,
+      includeCourierReadiness: true,
+    });
 
     return NextResponse.json(
       {
@@ -182,15 +185,21 @@ export async function GET() {
         orderingLoad: {
           activeKitchenOrders: orderingStatus.activeKitchenOrders,
           activeOrderLimit: orderingStatus.activeOrderLimit,
+          availableCouriers: orderingStatus.availableCouriers,
           capacitySlotsRemaining: orderingStatus.capacitySlotsRemaining,
+          courierReadinessDelayMinutes: orderingStatus.courierReadinessDelayMinutes,
+          courierReadinessMessage: orderingStatus.courierReadinessMessage,
+          courierReadinessTone: orderingStatus.courierReadinessTone,
           estimatedPreparationMinutes: orderingStatus.estimatedPreparationMinutes,
           estimatedDeliveryMinutes: orderingStatus.estimatedDeliveryMinutes,
           estimatedTotalMinutes: orderingStatus.estimatedTotalMinutes,
           etaDelayMinutes: orderingStatus.etaDelayMinutes,
           etaMessage: orderingStatus.etaMessage,
           etaTone: orderingStatus.etaTone,
+          isCourierReady: orderingStatus.isCourierReady,
           shouldSuggestPause: orderingStatus.shouldSuggestPause,
           isAtCapacity: orderingStatus.isAtCapacity,
+          totalCouriers: orderingStatus.totalCouriers,
         },
       },
       { status: 200 }

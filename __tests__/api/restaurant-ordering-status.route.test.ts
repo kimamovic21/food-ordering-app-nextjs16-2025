@@ -85,6 +85,7 @@ describe('/api/restaurants/[id]/ordering-status route', () => {
       expect.objectContaining({
         restaurantId: 'restaurant-1',
         restaurantName: 'Pizza Hub',
+        courierReadinessTone: 'unknown',
         isAcceptingOrders: true,
         isBusy: false,
       })

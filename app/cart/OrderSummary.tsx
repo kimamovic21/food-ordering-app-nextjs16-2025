@@ -45,6 +45,9 @@ interface OrderSummaryProps {
   etaDelayMinutes?: number | null;
   etaMessage?: string | null;
   etaTone?: 'normal' | 'moderate' | 'busy' | 'at_capacity' | string;
+  courierReadinessDelayMinutes?: number | null;
+  courierReadinessMessage?: string | null;
+  courierReadinessTone?: 'healthy' | 'limited' | 'unavailable' | 'unknown' | string;
   capacitySlotsRemaining?: number | null;
 }
 
@@ -89,6 +92,9 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   etaDelayMinutes = null,
   etaMessage = null,
   etaTone = 'normal',
+  courierReadinessDelayMinutes = null,
+  courierReadinessMessage = null,
+  courierReadinessTone = 'unknown',
   capacitySlotsRemaining = null,
 }) => {
   const subtotalAfterCoupon = Math.max(0, subtotal - couponDiscount);
@@ -102,6 +108,16 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
     etaTone === 'busy' || etaTone === 'moderate'
       ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100'
       : 'border-green-300 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/30 dark:text-green-100';
+  const deliveryReadinessDelay =
+    typeof courierReadinessDelayMinutes === 'number' && courierReadinessDelayMinutes > 0
+      ? courierReadinessDelayMinutes
+      : 0;
+  const kitchenDelayMinutes =
+    typeof etaDelayMinutes === 'number'
+      ? Math.max(0, etaDelayMinutes - deliveryReadinessDelay)
+      : 0;
+  const showCourierReadinessWarning =
+    courierReadinessTone === 'limited' || courierReadinessTone === 'unavailable';
 
   return (
     <div className='bg-card border rounded-xl p-4 sm:p-6 space-y-3 sm:space-y-4'>
@@ -153,9 +169,17 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
               <strong>{estimatedTotalMinutes} min</strong>
             </div>
           </div>
-          {typeof etaDelayMinutes === 'number' && etaDelayMinutes > 0 && (
+          {kitchenDelayMinutes > 0 && (
             <p className='mt-2 text-xs font-medium'>
-              Current kitchen load adds about {etaDelayMinutes} min to preparation.
+              Current kitchen load adds about {kitchenDelayMinutes} min to preparation.
+            </p>
+          )}
+          {showCourierReadinessWarning && courierReadinessMessage && (
+            <p className='mt-2 text-xs font-medium'>{courierReadinessMessage}</p>
+          )}
+          {deliveryReadinessDelay > 0 && (
+            <p className='mt-1 text-xs font-medium'>
+              Courier availability adds about {deliveryReadinessDelay} min to delivery.
             </p>
           )}
           {typeof capacitySlotsRemaining === 'number' && capacitySlotsRemaining <= 2 && (

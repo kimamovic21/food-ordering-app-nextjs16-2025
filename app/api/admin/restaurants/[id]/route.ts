@@ -88,7 +88,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       activeCoupons,
       publicCoupons,
     ] = await Promise.all([
-      getRestaurantOrderingCapacityStatus({ restaurant }),
+      getRestaurantOrderingCapacityStatus({ restaurant, includeCourierReadiness: true }),
       getRestaurantRatingSummaries([restaurant._id]),
       MenuItem.countDocuments({ restaurantId: restaurantObjectId }),
       MenuItem.countDocuments({ restaurantId: restaurantObjectId, isAvailable: true }),
@@ -169,9 +169,14 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
       operationalSummary: {
         activeKitchenOrders: orderingStatus.activeKitchenOrders,
         activeOrderLimit: orderingStatus.activeOrderLimit,
+        availableCouriers: orderingStatus.availableCouriers,
         capacitySlotsRemaining: orderingStatus.capacitySlotsRemaining,
+        courierReadinessDelayMinutes: orderingStatus.courierReadinessDelayMinutes,
+        courierReadinessMessage: orderingStatus.courierReadinessMessage,
+        courierReadinessTone: orderingStatus.courierReadinessTone,
         isAtCapacity: orderingStatus.isAtCapacity,
         isBusy: orderingStatus.isBusy,
+        isCourierReady: orderingStatus.isCourierReady,
         isNearCapacity: orderingStatus.isNearCapacity,
         shouldSuggestPause: orderingStatus.shouldSuggestPause,
         capacityMessage: orderingStatus.capacityMessage,
@@ -183,6 +188,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
         etaTone: orderingStatus.etaTone,
         orderingMessage: orderingStatus.orderingMessage,
         orderingUnavailableReason: orderingStatus.reason,
+        totalCouriers: orderingStatus.totalCouriers,
       },
       menuSummary: {
         total: totalMenuItems,

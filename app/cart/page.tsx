@@ -625,6 +625,20 @@ const CartPage = () => {
     return typeof restaurant?.etaTone === 'string' ? restaurant.etaTone : 'normal';
   };
 
+  const getRestaurantCourierReadinessMessage = () => {
+    const restaurant = getCartRestaurant();
+    return typeof restaurant?.courierReadinessMessage === 'string'
+      ? restaurant.courierReadinessMessage
+      : null;
+  };
+
+  const getRestaurantCourierReadinessTone = () => {
+    const restaurant = getCartRestaurant();
+    return typeof restaurant?.courierReadinessTone === 'string'
+      ? restaurant.courierReadinessTone
+      : 'unknown';
+  };
+
   const getRestaurantCapacityMessage = () => {
     const restaurant = getCartRestaurant();
     return typeof restaurant?.capacityMessage === 'string' ? restaurant.capacityMessage : null;
@@ -1201,11 +1215,14 @@ const CartPage = () => {
   const maxItemsPerOrder = getMaxItemsPerOrder();
   const restaurantEtaMessage = getRestaurantEtaMessage();
   const restaurantEtaTone = getRestaurantEtaTone();
+  const courierReadinessMessage = getRestaurantCourierReadinessMessage();
+  const courierReadinessTone = getRestaurantCourierReadinessTone();
   const restaurantCapacityMessage = getRestaurantCapacityMessage();
   const estimatedPreparationMinutes = getRestaurantNumberField('estimatedPreparationMinutes');
   const estimatedDeliveryMinutes = getRestaurantNumberField('estimatedDeliveryMinutes');
   const estimatedTotalMinutes = getRestaurantNumberField('estimatedTotalMinutes');
   const etaDelayMinutes = getRestaurantNumberField('etaDelayMinutes');
+  const courierReadinessDelayMinutes = getRestaurantNumberField('courierReadinessDelayMinutes');
   const capacitySlotsRemaining = getRestaurantNumberField('capacitySlotsRemaining');
   const cartTotalQuantity = getCartTotalQuantity(cartItems);
   const exceedsMaxItemsPerOrder =
@@ -1615,6 +1632,9 @@ const CartPage = () => {
             etaDelayMinutes={etaDelayMinutes}
             etaMessage={restaurantEtaMessage}
             etaTone={restaurantEtaTone}
+            courierReadinessDelayMinutes={courierReadinessDelayMinutes}
+            courierReadinessMessage={courierReadinessMessage}
+            courierReadinessTone={courierReadinessTone}
             capacitySlotsRemaining={capacitySlotsRemaining}
           />
         </div>

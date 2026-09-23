@@ -1189,3 +1189,5 @@ Polish order lists with TanStack Query
 Add restaurant discovery filters and superadmin restaurant insights
 
 Polish restaurant discovery and menu queries
+
+Add courier availability readiness guard

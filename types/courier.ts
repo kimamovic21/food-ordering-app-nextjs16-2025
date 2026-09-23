@@ -8,6 +8,17 @@ export type CourierWorkingHour = {
   isUnavailable?: boolean;
 };
 
+export type CourierReadinessTone = 'healthy' | 'limited' | 'unavailable' | 'unknown';
+
+export type CourierReadinessStatus = {
+  availableCouriers: number;
+  courierReadinessDelayMinutes: number;
+  courierReadinessMessage: string;
+  courierReadinessTone: CourierReadinessTone;
+  isCourierReady: boolean;
+  totalCouriers: number;
+};
+
 export type CourierListItem = {
   _id: EntityId;
   name: string;

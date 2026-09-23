@@ -49,7 +49,7 @@ This file provides guidance for AI assistance in this repository.
 - Avoid breaking changes to API response shapes.
 - Preserve role-based access checks (admin/courier/user).
 - Preserve message access rules: no customer-to-customer chat, and order conversations must match the assigned courier or restaurant owner.
-- Preserve checkout accepting-order checks before Stripe session creation: working hours, the 60-minute-before-closing cutoff, pause state, blocked dates, delivery radius, active kitchen capacity, item availability, coupons, and loyalty.
+- Preserve checkout accepting-order checks before Stripe session creation: working hours, the 60-minute-before-closing cutoff, pause state, blocked dates, delivery radius, active kitchen capacity, courier delivery readiness, item availability, coupons, and loyalty.
 - Public add-to-cart surfaces should prefetch visible restaurant ordering status where possible, check `/api/restaurants/[id]/ordering-status` before changing the cart, and still keep checkout as the server-authoritative source of truth.
 - Preserve checkout duplicate protection: recent identical unpaid `placed` attempts use `checkoutFingerprint` and should reuse or recover the existing Stripe Checkout session.
 - Cart validation should keep unavailable/deleted/invalid items as hard checkout blockers, while price changes stay non-blocking and should be shown clearly before checkout.

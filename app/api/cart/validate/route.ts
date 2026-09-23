@@ -23,6 +23,7 @@ export async function POST(req: Request) {
     cartItems,
     deliveryLatitude: body?.deliveryLatitude,
     deliveryLongitude: body?.deliveryLongitude,
+    includeCourierReadiness: true,
   });
 
   return Response.json({
