@@ -34,6 +34,7 @@ const createOrderDocument = (overrides: Record<string, unknown> = {}): any => ({
   paid: false,
   paymentStatus: false,
   orderStatus: 'placed',
+  total: 24.5,
   courierId: null,
   courierAssignmentStatus: null,
   stripeSessionId: 'cs_test_order_auto_1',
@@ -110,6 +111,9 @@ describe('order auto cancellation', () => {
     expect(order.paid).toBe(false);
     expect(order.courierId).toBeNull();
     expect(order.cancellationReason).toContain('no courier accepted it');
+    expect(order.refundStatus).toBe('review_required');
+    expect(order.refundAmount).toBeGreaterThan(0);
+    expect(order.refundReason).toContain('automatically canceled');
     expect(expireOpenStripeCheckoutSession).not.toHaveBeenCalled();
   });
 

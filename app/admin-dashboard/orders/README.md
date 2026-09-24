@@ -6,6 +6,10 @@
 
 This folder owns admin-facing UI for `/admin-dashboard/orders`, including restaurant operations, platform management, and protected dashboard workflows.
 
+The list also surfaces refund readiness at a glance. When a canceled paid order is waiting on
+admin refund review or has been marked refunded, `OrdersTable.tsx` shows a dedicated refund badge
+so admins do not need to open every order detail page to find payment follow-up work.
+
 ## Route And Audience
 
 - App route/group: `/admin-dashboard/orders`
@@ -31,7 +35,7 @@ This folder owns admin-facing UI for `/admin-dashboard/orders`, including restau
 - `app/admin-dashboard/orders/[id]/page.tsx`: functions/components: `OrderDetailPage`, `getEditableStatus`, `loadServerOffsets`, `persistTimelineOffsets`, `handleTimelineOffsetIncrement`, `handleTimelineOffsetReset`, `fetchOrder`, `handleRealtimeOrderUpdate`, `fetchCouriers`, `handleStatusUpdate`, `handleAssignCourier`, `handleConfirmAssignment`, `handleAdminInternalNoteChange`, `handleSaveAdminInternalNote`, `handleHandoffToCourier`, `handleAdminConfirmDelivery`, `handleVerifyFailedDelivery`; API calls: `/api/dev/order-time-simulator`, `/api/dev/order-time-simulator?orderId=${encodeURIComponent(orderId)}`, `/api/orders?id=${orderId}`, `/api/reviews?orderId=${orderId}`, `/api/my-delivery?availableOnly=true&orderId=${order._id}`, `/api/orders`, `/api/my-delivery`; client component
 - `app/admin-dashboard/orders/layout.tsx`: functions/components: `AdminOrdersLayout`
 - `app/admin-dashboard/orders/loading.tsx`: functions/components: `OrdersLoading`
-- `app/admin-dashboard/orders/OrdersTable.tsx`: functions/components: `PaymentBadge`, `OrderStatusBadge`, `OrdersTable`; client component
+- `app/admin-dashboard/orders/OrdersTable.tsx`: functions/components: `PaymentBadge`, `OrderStatusBadge`, `RefundStatusBadge`, `OrdersTable`; client component
 - `app/admin-dashboard/orders/page.tsx`: functions/components: `OrdersPage`, `handleRealtimeOrderUpdate`, `OrdersPageWithSuspense`; client component
 
 ## API/Data Connections
@@ -63,6 +67,8 @@ This folder owns admin-facing UI for `/admin-dashboard/orders`, including restau
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Keep the refund badge quiet for `not_required` orders and visually obvious for `review_required`
+  or `refunded` orders. The actual refund action still belongs on `/admin-dashboard/orders/[id]`.
 
 ## How To Explain This In A Presentation
 

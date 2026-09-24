@@ -10,6 +10,7 @@ export type NotificationType =
   | 'courier_assigned'
   | 'order_completed'
   | 'order_canceled'
+  | 'order_refunded'
   | 'restaurant_available'
   | 'support_ticket'
   | 'late_order';

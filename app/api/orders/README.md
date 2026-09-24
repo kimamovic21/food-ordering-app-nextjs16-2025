@@ -14,12 +14,23 @@
 
 Handles get/patch work for the order operations area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
 
+Paid cancellation/refund readiness is also owned here. Because this project uses Stripe test
+checkout cards, `/api/orders` does not call a real Stripe refund endpoint. Instead, eligible paid
+cancellations are marked with `refundStatus: "review_required"`, and an admin/super-admin can run
+the guarded `simulate-refund` action to record a realistic refund completion trail.
+
 ## What Happens In This File
 
 - The route receives GET/PATCH requests and converts request/session data into server-side business checks.
 - It uses `order`, `user` for persistence.
 - It delegates shared logic to `auditLog`, `authOptions`, `courierAssignmentTimeout`, `devOrderTimeSimulatorStore`, `notifications`, `orderAutoCancellation`, `qstash`, `restaurantAvailabilityRequests` so behavior stays consistent across the app.
 - Detected local functions/handlers: `normalizeOrder`, `getSuperAdminEmail`, `isSuperAdminUser`, `skip`, `normalizedOrders`.
+- Supported PATCH actions include `update-admin-note`, `handoff-to-courier`,
+  `verify-failed-delivery`, and `simulate-refund`.
+- `simulate-refund` is allowed only after the order is already `canceled`, has
+  `refundStatus: "review_required"`, and has a positive `refundAmount`.
+- Failed-delivery verification and paid ready-without-courier auto-cancel paths can move a paid
+  cancellation into refund review. Healthy active orders cannot be refunded from this route.
 
 ## Request Inputs
 
@@ -31,6 +42,9 @@ Handles get/patch work for the order operations area. The route keeps the local 
 - `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
 - `mongoose` + MongoDB models: keep users, restaurants, menu items, orders, coupons, reviews, and audit data server-authoritative.
 - `@upstash/qstash`: schedules signed background checks for unpaid orders, courier assignment timeouts, and order maintenance.
+- Stripe is used for checkout/payment state, but the refund completion in this app is simulated
+  and stored in MongoDB with `refundProvider: "simulated_stripe"` and a generated
+  `refundSimulationId`.
 
 ## Auth, Role, And Safety Checks
 
@@ -38,6 +52,10 @@ Handles get/patch work for the order operations area. The route keeps the local 
 - Uses shared `authOptions`, so role/session behavior follows the global auth setup.
 - Checks the configured super-admin email before allowing elevated platform access.
 - Checks the `admin` role before allowing restaurant/admin operations.
+- Restaurant admins can only access orders for their own restaurant; super-admin can inspect
+  platform orders.
+- Refund simulation is intentionally not a general cancel button. The order must already be
+  canceled by an approved problem path before the action can run.
 
 ## Edge Cases Covered
 
@@ -88,6 +106,8 @@ Handles get/patch work for the order operations area. The route keeps the local 
 
 - Schedules or handles delayed QStash jobs.
 - Writes or reads audit-log records.
+- Emits customer notification when a simulated refund is marked complete.
+- Writes refund audit metadata for `order.refund_simulated`.
 
 ## Response Behavior
 
@@ -104,3 +124,6 @@ Open this file when someone asks what `/api/orders` does. Explain that it belong
 - If you change request/response fields, update shared types in `types/`, UI consumers, and focused tests.
 - Preserve auth, role, ownership, rate-limit, payment, and data-integrity guards unless a task explicitly changes them.
 - For checkout, payment, order, courier, notification, QStash, or audit routes, run the related focused tests before finishing.
+- When changing cancellation rules, also check `libs/orderRefund.ts`,
+  `libs/orderAutoCancellation.ts`, admin order details, customer order details, and
+  `OrderActivityLog`.

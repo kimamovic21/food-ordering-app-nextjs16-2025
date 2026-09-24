@@ -102,8 +102,10 @@ const OrderDetailPage = () => {
   const [handingToCourier, setHandingToCourier] = useState(false);
   const [confirmingDelivery, setConfirmingDelivery] = useState(false);
   const [verifyingFailedDelivery, setVerifyingFailedDelivery] = useState(false);
+  const [simulatingRefund, setSimulatingRefund] = useState(false);
   const [showCourierSelect, setShowCourierSelect] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showRefundConfirmModal, setShowRefundConfirmModal] = useState(false);
   const [timelineOffsets, setTimelineOffsets] = useState<OrderPhaseDurationOffsets>({});
   const mapRef = useRef<OrderMapHandle>(null);
   const { data: profileData, loading: profileLoading } = useProfile();
@@ -602,6 +604,46 @@ const OrderDetailPage = () => {
     }
   };
 
+  const handleSimulateRefund = async () => {
+    if (!order) return;
+
+    try {
+      setSimulatingRefund(true);
+      const res = await fetch('/api/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: order._id, action: 'simulate-refund' }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        sonnerToast.error(data.error || 'Failed to mark simulated refund complete');
+        return;
+      }
+
+      setOrder((current) =>
+        current ? { ...current, ...data.order, courierId: current.courierId } : data.order
+      );
+      setShowRefundConfirmModal(false);
+      sonnerToast.success('Simulated refund marked complete.', {
+        style: {
+          background: '#22c55e',
+          color: 'white',
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      sonnerToast.error('Failed to mark simulated refund complete', {
+        style: {
+          background: '#ef4444',
+          color: 'white',
+        },
+      });
+    } finally {
+      setSimulatingRefund(false);
+    }
+  };
+
   if (profileLoading || (loading && !order)) {
     return (
       <section className='mt-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10'>
@@ -764,6 +806,11 @@ const OrderDetailPage = () => {
   const hasSelectedStatusChanged = selectedStatus !== getEditableStatus(order.orderStatus);
   const isStatusSaveDisabled =
     statusUpdating || !order.paymentStatus || isStatusLocked || !hasSelectedStatusChanged;
+  const refundStatus = order.refundStatus || 'not_required';
+  const refundAmount = Number(order.refundAmount || 0);
+  const canSimulateRefund =
+    order.orderStatus === 'canceled' && refundStatus === 'review_required' && refundAmount > 0;
+  const showRefundCard = refundStatus !== 'not_required';
 
   return (
     <section className='mt-8 max-w-7xl mx-auto px-4 sm:px-6 lg:px-10'>
@@ -1023,6 +1070,86 @@ const OrderDetailPage = () => {
                 <p className='text-muted-foreground'>
                   Failed delivery verified at {formatAppDateTime(order.failedDeliveryVerifiedAt)}.
                 </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {showRefundCard && (
+          <Card
+            className={
+              refundStatus === 'refunded'
+                ? 'border-green-500/30 bg-green-500/5'
+                : refundStatus === 'review_required'
+                  ? 'border-amber-500/30 bg-amber-500/5'
+                  : 'border-red-500/30 bg-red-500/5'
+            }
+          >
+            <CardHeader>
+              <CardTitle>
+                {refundStatus === 'refunded'
+                  ? 'Simulated Refund Completed'
+                  : refundStatus === 'review_required'
+                    ? 'Refund Review Required'
+                    : 'Refund Needs Attention'}
+              </CardTitle>
+              <CardDescription>
+                This app uses Stripe test cards, so the refund action records a realistic simulated
+                refund workflow instead of moving real money.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-4 text-sm'>
+              <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+                <div className='rounded-lg border bg-background/80 p-3'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>Amount</p>
+                  <p className='mt-1 font-semibold'>${refundAmount.toFixed(2)}</p>
+                </div>
+                <div className='rounded-lg border bg-background/80 p-3'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>Status</p>
+                  <p className='mt-1 font-semibold capitalize'>
+                    {refundStatus.replaceAll('_', ' ')}
+                  </p>
+                </div>
+                <div className='rounded-lg border bg-background/80 p-3'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>Requested</p>
+                  <p className='mt-1 font-semibold'>
+                    {order.refundRequestedAt
+                      ? formatAppDateTime(order.refundRequestedAt)
+                      : 'Not recorded'}
+                  </p>
+                </div>
+                <div className='rounded-lg border bg-background/80 p-3'>
+                  <p className='text-xs uppercase tracking-wide text-muted-foreground'>Processed</p>
+                  <p className='mt-1 font-semibold'>
+                    {order.refundProcessedAt
+                      ? formatAppDateTime(order.refundProcessedAt)
+                      : 'Pending'}
+                  </p>
+                </div>
+              </div>
+              {order.refundReason?.trim() && (
+                <div className='rounded-lg border bg-background/80 p-4'>
+                  <p className='font-semibold text-foreground'>Refund reason</p>
+                  <p className='mt-1 whitespace-pre-wrap text-muted-foreground'>
+                    {order.refundReason}
+                  </p>
+                </div>
+              )}
+              {order.refundSimulationId && (
+                <p className='font-mono text-xs text-muted-foreground'>
+                  Simulation ID: {order.refundSimulationId}
+                </p>
+              )}
+              {canSimulateRefund && (
+                <Button
+                  type='button'
+                  variant='destructive'
+                  onClick={() => setShowRefundConfirmModal(true)}
+                  disabled={simulatingRefund}
+                  className='w-full sm:w-auto'
+                >
+                  {simulatingRefund ? 'Marking refund...' : 'Mark simulated refund complete'}
+                </Button>
               )}
             </CardContent>
           </Card>
@@ -1360,6 +1487,38 @@ const OrderDetailPage = () => {
               <AlertDialogCancel disabled={assigningCourier}>Cancel</AlertDialogCancel>
               <AlertDialogAction onClick={handleAssignCourier} disabled={assigningCourier}>
                 {assigningCourier ? 'Assigning...' : 'Yes, Assign Courier'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog
+          open={showRefundConfirmModal}
+          onOpenChange={(open) => {
+            if (!simulatingRefund) {
+              setShowRefundConfirmModal(open);
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Mark this refund complete?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will close the refund review for this canceled paid order and record a
+                simulated Stripe refund for ${refundAmount.toFixed(2)}. Use this only after you
+                have verified that the cancellation should be refunded.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={simulatingRefund}>Keep pending</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(event) => {
+                  event.preventDefault();
+                  void handleSimulateRefund();
+                }}
+                disabled={simulatingRefund}
+              >
+                {simulatingRefund ? 'Processing...' : 'Yes, mark refunded'}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

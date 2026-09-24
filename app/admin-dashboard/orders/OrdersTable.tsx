@@ -10,7 +10,7 @@ import {
 } from '@/components/shared/TanStackDataTable';
 import { Badge } from '@/components/ui/badge';
 import { formatAppDateTime } from '@/libs/dateFormat';
-import type { OrderListItem } from '@/types/order';
+import type { OrderListItem, OrderRefundStatus } from '@/types/order';
 
 type OrdersTableProps = {
   orders: OrderListItem[];
@@ -48,6 +48,45 @@ function OrderStatusBadge({ status }: { status: OrderListItem['orderStatus'] }) 
     <Badge variant='secondary' className={`${statusClassName} capitalize`}>
       {status}
     </Badge>
+  );
+}
+
+function RefundStatusBadge({
+  amount,
+  status,
+}: {
+  amount?: number;
+  status?: OrderRefundStatus;
+}) {
+  if (!status || status === 'not_required') {
+    return <span className='text-sm text-muted-foreground'>-</span>;
+  }
+
+  const refundAmount = Number(amount || 0);
+  const label =
+    status === 'review_required'
+      ? 'Refund review'
+      : status === 'refunded'
+        ? 'Refunded'
+        : 'Refund issue';
+  const statusClassName =
+    status === 'review_required'
+      ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 hover:bg-amber-500/10 dark:text-amber-300'
+      : status === 'refunded'
+        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300'
+        : 'border-red-500/30 bg-red-500/10 text-red-700 hover:bg-red-500/10 dark:text-red-300';
+
+  return (
+    <div className='flex flex-col items-start gap-1'>
+      <Badge variant='outline' className={`whitespace-nowrap ${statusClassName}`}>
+        {label}
+      </Badge>
+      {refundAmount > 0 && (
+        <span className='text-xs font-medium text-muted-foreground'>
+          ${refundAmount.toFixed(2)}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -90,6 +129,16 @@ const ordersTableColumns = columnHelper.columns([
     header: 'Order Status',
     cell: ({ row }) => <OrderStatusBadge status={row.original.orderStatus} />,
   }),
+  columnHelper.accessor((order) => order.refundStatus || 'not_required', {
+    id: 'refundStatus',
+    header: 'Refund',
+    cell: ({ row }) => (
+      <RefundStatusBadge
+        amount={row.original.refundAmount}
+        status={row.original.refundStatus}
+      />
+    ),
+  }),
   columnHelper.display({
     id: 'actions',
     header: 'Action',
@@ -115,6 +164,7 @@ const orderColumnLabels = {
   orderId: 'Order ID',
   orderStatus: 'Order Status',
   paymentStatus: 'Payment',
+  refundStatus: 'Refund',
   total: 'Total',
 };
 
@@ -128,10 +178,10 @@ const OrdersTable = ({ orders, loading }: OrdersTableProps) => {
       columns={ordersTableColumns}
       data={orders}
       tableKey='admin-orders'
-      searchPlaceholder='Search orders by ID, email, status, or payment...'
+      searchPlaceholder='Search orders by ID, email, status, payment, or refund...'
       emptyMessage='No orders found.'
       initialSorting={[{ id: 'createdAt', desc: true }]}
-      minWidthClassName='min-w-[900px]'
+      minWidthClassName='min-w-[1000px]'
       columnLabels={orderColumnLabels}
     />
   );

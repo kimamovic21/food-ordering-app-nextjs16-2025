@@ -6,11 +6,17 @@ import {
   notifyFailedDeliveryCancellationVerified,
   notifyUserAboutOrderCompletion,
   notifyUserAboutOrderStatusChange,
+  notifyUserAboutSimulatedRefund,
 } from '@/libs/notifications';
 import { createAuditLog } from '@/libs/auditLog';
 import { getDevOrderTimeSimulatorOffsets } from '@/libs/devOrderTimeSimulatorStore';
 import { applyCourierAssignmentTimeout } from '@/libs/courierAssignmentTimeout';
 import { applyOrderAutoCancellation } from '@/libs/orderAutoCancellation';
+import {
+  getOrderRefundReadiness,
+  markOrderRefundReviewRequired,
+  simulateOrderRefund,
+} from '@/libs/orderRefund';
 import { scheduleReadyWithoutCourierAutoCancellationCheck } from '@/libs/qstash';
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
 import mongoose from 'mongoose';
@@ -20,6 +26,8 @@ const normalizeOrder = (order: any) => ({
   ...order,
   paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
   orderStatus: order.orderStatus || 'placed',
+  refundStatus: order.refundStatus || 'not_required',
+  refundAmount: Number(order.refundAmount) || 0,
 });
 
 const getSuperAdminEmail = () =>
@@ -138,7 +146,12 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'Invalid order ID' }, { status: 400 });
   }
 
-  const allowedActions = ['handoff-to-courier', 'verify-failed-delivery', 'update-admin-note'];
+  const allowedActions = [
+    'handoff-to-courier',
+    'verify-failed-delivery',
+    'update-admin-note',
+    'simulate-refund',
+  ];
   if (action && !allowedActions.includes(action)) {
     return Response.json({ error: 'Invalid order action' }, { status: 400 });
   }
@@ -209,6 +222,49 @@ export async function PATCH(request: Request) {
   const hasPaid = Boolean(
     (order as any).orderPaid ?? (order as any).paymentStatus ?? (order as any).paid
   );
+
+  if (action === 'simulate-refund') {
+    const readiness = getOrderRefundReadiness(order);
+
+    if (!readiness.canRefund) {
+      return Response.json({ error: readiness.reason }, { status: 400 });
+    }
+
+    const refundResult = simulateOrderRefund(order, { actorId: user._id });
+    if (!refundResult.canRefund) {
+      return Response.json({ error: refundResult.reason }, { status: 400 });
+    }
+
+    const savedOrder = await order.save();
+
+    await createAuditLog({
+      actor: user,
+      action: 'order.refund_simulated',
+      entityType: 'order',
+      entityId: order._id,
+      restaurantId: order.restaurantId,
+      orderId: order._id,
+      metadata: {
+        refundAmount: refundResult.refundAmount,
+        refundSimulationId: refundResult.simulationId,
+        refundProvider: 'simulated_stripe',
+      },
+    });
+
+    if (order.userId) {
+      try {
+        await notifyUserAboutSimulatedRefund({
+          userId: order.userId,
+          orderId: order._id,
+          amount: refundResult.refundAmount || 0,
+        });
+      } catch (notificationError) {
+        console.error('Failed to create simulated refund notification:', notificationError);
+      }
+    }
+
+    return Response.json({ order: normalizeOrder(savedOrder.toObject()) });
+  }
 
   if (previousStatus === 'canceled') {
     return Response.json({ error: 'Canceled orders cannot be updated' }, { status: 400 });
@@ -282,6 +338,16 @@ export async function PATCH(request: Request) {
     const verifiedBy = isSuperAdmin ? 'super_admin' : 'restaurant_owner';
     const courierId = order.courierId;
 
+    markOrderRefundReviewRequired(order, {
+      reason:
+        order.failedDeliveryReason?.trim() ||
+        'Paid order was canceled after failed delivery verification.',
+      now,
+      wasPaid: hasPaid,
+    });
+    order.cancellationReason =
+      order.failedDeliveryReason?.trim() ||
+      'Failed delivery cancellation verified by restaurant/admin.';
     (order as any).orderPaid = false;
     (order as any).paid = false;
     (order as any).paymentStatus = false;

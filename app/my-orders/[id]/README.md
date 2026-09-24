@@ -6,6 +6,10 @@
 
 This folder owns customer order history/detail flows, active-order visibility, invoice/reorder actions, delivery confirmation, and post-order support/review actions.
 
+It also explains paid-cancellation refund status to the customer. If an order was canceled after a
+paid fulfillment problem, the customer sees whether the refund is still under admin review or has
+been marked complete in the simulated Stripe test-card workflow.
+
 ## Route And Audience
 
 - App route/group: `/my-orders/[id]`
@@ -32,7 +36,7 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - `app/my-orders/[id]/OrderInfoCard.tsx`: functions/components: `OrderInfoCard`
 - `app/my-orders/[id]/OrderItemsCard.tsx`: functions/components: `OrderItemsCard`
 - `app/my-orders/[id]/OrderStatusBanner.tsx`: functions/components: `formatEstimate`, `OrderStatusBanner`
-- `app/my-orders/[id]/page.tsx`: functions/components: `MyOrderDetailPage`, `loadTimelineOffsets`, `loadServerOffsets`, `handleStorageChange`, `fetchOrder`, `handleRealtimeOrderUpdate`, `handleConfirmDelivery`, `handleCancelOrder`, `handleReorder`, `handleFinishPayment`, `json`; API calls: `/api/my-orders?id=${orderId}`, `/api/reviews?orderId=${orderId}`, `/api/courier-reviews?orderId=${orderId}`, `/api/my-orders`, `/api/my-orders/reorder`, `/api/payment-link?orderId=${order._id}`; client component
+- `app/my-orders/[id]/page.tsx`: functions/components: `MyOrderDetailPage`, `loadTimelineOffsets`, `loadServerOffsets`, `handleStorageChange`, `fetchOrder`, `handleRealtimeOrderUpdate`, `handleConfirmDelivery`, `handleCancelOrder`, `handleReorder`, `handleFinishPayment`, `json`; API calls: `/api/my-orders?id=${orderId}`, `/api/reviews?orderId=${orderId}`, `/api/courier-reviews?orderId=${orderId}`, `/api/my-orders`, `/api/my-orders/reorder`, `/api/payment-link?orderId=${order._id}`; client component; displays read-only refund status when the API returns refund metadata
 
 ## API/Data Connections
 
@@ -51,6 +55,9 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
 - `react` and `react-dom`: provide client component state, effects, event handlers, and rendering for interactive UI.
 - `stripe`: creates Checkout sessions, verifies webhooks, reuses open payment links, and records payment session ids on orders.
+- Refund completion is simulated in this project because checkout uses Stripe test cards. Customer
+  UI should phrase this as a test checkout/refund workflow and should not promise that real money
+  moved to a real card.
 - `sonner`: shows success/error/loading toast feedback for user-facing mutations.
 - `lucide-react`: provides the icon set used in buttons, status indicators, and dashboard actions.
 - `radix-ui` and local `components/ui`: provide accessible primitives and shadcn-style form/table/dialog controls.
@@ -62,10 +69,14 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Customers can cancel only unpaid placed orders here. Paid refund review is controlled by
+  restaurant/admin workflows after the order has failed or been canceled by system/admin rules.
+- Show refund information read-only. Customers should not be able to self-trigger a refund for paid
+  orders from this screen.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `customer` UI for `/my-orders/[id]`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `customer` UI for `/my-orders/[id]`; it shows the live order state, payment recovery for unpaid placed orders, delivery confirmation, problem reporting, review actions, reorder support, and read-only refund status for paid cancellations. Sensitive decisions still happen in API routes so the customer cannot fake payment, completion, cancellation, or refund state from the browser.
 
 ## Maintenance Notes For Future Work
 

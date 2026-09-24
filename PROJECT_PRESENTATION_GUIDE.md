@@ -250,6 +250,9 @@ Payment:
 - Payment is idempotent, so repeated webhook events should not duplicate side effects.
 - If the user leaves Stripe and comes back later, the payment-link endpoint can recover or recreate the hosted checkout link when valid.
 - Old expired or canceled payment flows are blocked from incorrectly marking canceled orders as paid.
+- Refund completion is represented with a simulated refund workflow because the project uses Stripe
+  test cards. The app records refund readiness and completion in MongoDB instead of moving real
+  money to a real card.
 
 Order tracking:
 
@@ -258,6 +261,8 @@ Order tracking:
 - The order timeline displays estimated prep, estimated delivery, estimated total, and actual phase durations.
 - Active order quick access in the header helps customers finish payment or continue tracking.
 - Delay warnings appear when an active order exceeds the estimated total plus grace time.
+- Canceled paid orders can show refund status when the order failed through an eligible problem
+  path. Customers see whether refund review is pending or marked complete.
 - Completed orders can be reordered after the current menu state is revalidated.
 
 Reviews:
@@ -401,6 +406,8 @@ Important transition rules:
 - Courier can only operate on assigned orders.
 - Courier delivery does not automatically complete the order. Customer or admin confirmation finishes it.
 - Canceled orders cannot continue through the normal lifecycle.
+- Refund simulation is not a normal lifecycle transition. Admins can trigger it only after the
+  server has already marked a canceled paid order as refund-review required.
 
 Order timeline:
 
@@ -413,6 +420,24 @@ Order timeline:
 - `courierDeliveredAt` marks courier PIN handoff.
 - `customerConfirmedDeliveryAt` or `adminConfirmedDeliveryAt` marks completion confirmation.
 - `completedAt` marks final order completion.
+- `refundRequestedAt` marks when a canceled paid order became eligible for refund review.
+- `refundProcessedAt` marks when an admin/super-admin recorded the simulated refund completion.
+
+Refund readiness:
+
+- `refundStatus` starts as `not_required`.
+- Paid failed-delivery cancellations and paid ready-without-courier auto-cancellations can move the
+  order to `review_required`.
+- Admin order details show the refund amount, reason, requested time, processed time, and simulated
+  provider metadata.
+- The confirm modal calls `/api/orders` with `action: "simulate-refund"`.
+- The API verifies that the order is already `canceled`, has `refundStatus: "review_required"`,
+  and has a positive `refundAmount`.
+- When accepted, the app writes `refundStatus: "refunded"`, `refundProvider:
+  "simulated_stripe"`, and a generated `refundSimulationId`, then writes an audit log and customer
+  notification.
+- Healthy active orders, completed orders, unpaid customer cancellations, and unrelated canceled
+  orders cannot be refunded from the admin UI.
 
 Development-only time simulator:
 
@@ -449,6 +474,8 @@ Ready without courier:
 - A ready order with no courier can show a warning after it waits too long.
 - If no courier accepts within 60 minutes after ready time, the order can auto-cancel.
 - The order is marked canceled and unpaid.
+- If the order had already been paid, the cancellation is marked `refundStatus:
+  "review_required"` so an admin can close the simulated refund workflow after review.
 - A system cancellation reason is stored.
 - Customer/admin notifications and audit logs are created.
 

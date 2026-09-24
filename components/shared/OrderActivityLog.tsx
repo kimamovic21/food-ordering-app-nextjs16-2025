@@ -17,7 +17,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { formatAppDateTime } from '@/libs/dateFormat';
 import { cn } from '@/libs/utils';
 import type { EntityId, ISODateString } from '@/types/common';
-import type { DeliveryCompletedBy, OrderCanceledBy, OrderStatus } from '@/types/order';
+import type {
+  DeliveryCompletedBy,
+  OrderCanceledBy,
+  OrderRefundStatus,
+  OrderStatus,
+} from '@/types/order';
 import type { UserSummary } from '@/types/user';
 
 type OrderActivityStatus = 'done' | 'current' | 'pending' | 'warning' | 'danger';
@@ -58,6 +63,12 @@ type OrderActivityLogOrder = {
   canceledAt?: ISODateString | Date | null;
   canceledBy?: OrderCanceledBy;
   cancellationReason?: string | null;
+  refundStatus?: OrderRefundStatus;
+  refundReason?: string | null;
+  refundAmount?: number | null;
+  refundRequestedAt?: ISODateString | Date | null;
+  refundProcessedAt?: ISODateString | Date | null;
+  refundSimulationId?: string | null;
   completedAt?: ISODateString | Date | null;
   courierId?: UserSummary | EntityId | null;
   courier?: UserSummary | null;
@@ -317,6 +328,35 @@ export const buildOrderActivityEvents = (
       timestamp: order.canceledAt,
       status: 'danger',
       Icon: XCircle,
+    });
+  }
+
+  if (order.refundStatus === 'review_required') {
+    const amount = Number(order.refundAmount || 0);
+
+    events.push({
+      id: 'refund-review',
+      title: 'Refund review required',
+      description: `This paid cancellation needs admin refund review${amount > 0 ? ` for $${amount.toFixed(2)}` : ''}.`,
+      timestamp: order.refundRequestedAt,
+      status: 'warning',
+      Icon: CreditCard,
+    });
+  }
+
+  if (order.refundStatus === 'refunded') {
+    const amount = Number(order.refundAmount || 0);
+    const simulationId = order.refundSimulationId
+      ? ` Simulation ID: ${order.refundSimulationId}.`
+      : '';
+
+    events.push({
+      id: 'refund-complete',
+      title: 'Refund marked complete',
+      description: `Admin recorded a simulated Stripe refund${amount > 0 ? ` for $${amount.toFixed(2)}` : ''}.${simulationId}`,
+      timestamp: order.refundProcessedAt || order.refundRequestedAt,
+      status: 'done',
+      Icon: CreditCard,
     });
   }
 
