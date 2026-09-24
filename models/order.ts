@@ -248,6 +248,35 @@ const OrderSchema = new Schema(
       maxlength: 300,
     },
     canceledAt: { type: Date, default: null },
+    refundStatus: {
+      type: String,
+      enum: ['not_required', 'review_required', 'refunded', 'failed'],
+      default: 'not_required',
+    },
+    refundReason: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 500,
+    },
+    refundAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    refundRequestedAt: { type: Date, default: null },
+    refundProcessedAt: { type: Date, default: null },
+    refundProcessedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+    refundProvider: {
+      type: String,
+      enum: ['simulated_stripe', null],
+      default: null,
+    },
+    refundSimulationId: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     completedAt: { type: Date, default: null },
   },
   { timestamps: true }
@@ -260,6 +289,7 @@ OrderSchema.index({ restaurantId: 1, orderPaid: 1, orderStatus: 1, createdAt: -1
 OrderSchema.index({ userId: 1, restaurantId: 1, checkoutFingerprint: 1, createdAt: -1 });
 OrderSchema.index({ courierAssignmentStatus: 1, courierAssignedAt: 1 });
 OrderSchema.index({ orderStatus: 1, readyAt: 1, courierId: 1 });
+OrderSchema.index({ refundStatus: 1, orderStatus: 1, createdAt: -1 });
 OrderSchema.index({ createdAt: -1 });
 
 // In dev, Next.js hot-reloads can retain old models. Ensure schema updates take effect.

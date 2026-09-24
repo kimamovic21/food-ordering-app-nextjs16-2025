@@ -7,6 +7,7 @@ import {
   UNPAID_ORDER_AUTO_CANCEL_MINUTES,
 } from '@/libs/orderMaintenanceConfig';
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
+import { markOrderRefundReviewRequired } from '@/libs/orderRefund';
 import { expireOpenStripeCheckoutSession } from '@/libs/stripeCheckoutSession';
 import type { OrderPhaseDurationOffsets } from '@/types/order-timeline';
 
@@ -39,6 +40,12 @@ const markOrderCanceledBySystem = async (order: OrderDocument, reason: string) =
   order.canceledBy = 'system';
   order.canceledAt = now;
   order.cancellationReason = reason;
+
+  markOrderRefundReviewRequired(order, {
+    reason: `Paid order was automatically canceled. ${reason}`,
+    now,
+    wasPaid: wasPaidBeforeCancellation,
+  });
 
   const stripeCheckoutExpiration = wasPaidBeforeCancellation
     ? null

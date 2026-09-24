@@ -6,6 +6,11 @@
 
 This folder owns admin-facing UI for `/admin-dashboard/orders/[id]`, including restaurant operations, platform management, and protected dashboard workflows.
 
+It also owns paid-cancellation refund readiness in the admin UI. Admins do not get a blanket
+refund/cancel button while an order is healthy. A refund panel appears only when the server has
+already marked a canceled paid order as `refundStatus: "review_required"` after a real problem path
+such as verified failed delivery or ready-without-courier auto-cancel.
+
 ## Route And Audience
 
 - App route/group: `/admin-dashboard/orders/[id]`
@@ -28,7 +33,7 @@ This folder owns admin-facing UI for `/admin-dashboard/orders/[id]`, including r
 - `app/admin-dashboard/orders/[id]/loading.tsx`: functions/components: `OrderLoading`
 - `app/admin-dashboard/orders/[id]/OrderInfoCard.tsx`: functions/components: `OrderInfoCard`
 - `app/admin-dashboard/orders/[id]/OrderItemsCard.tsx`: functions/components: `OrderItemsCard`
-- `app/admin-dashboard/orders/[id]/page.tsx`: functions/components: `OrderDetailPage`, `getEditableStatus`, `loadServerOffsets`, `persistTimelineOffsets`, `handleTimelineOffsetIncrement`, `handleTimelineOffsetReset`, `fetchOrder`, `handleRealtimeOrderUpdate`, `fetchCouriers`, `handleStatusUpdate`, `handleAssignCourier`, `handleConfirmAssignment`, `handleAdminInternalNoteChange`, `handleSaveAdminInternalNote`, `handleHandoffToCourier`, `handleAdminConfirmDelivery`, `handleVerifyFailedDelivery`; API calls: `/api/dev/order-time-simulator`, `/api/dev/order-time-simulator?orderId=${encodeURIComponent(orderId)}`, `/api/orders?id=${orderId}`, `/api/reviews?orderId=${orderId}`, `/api/my-delivery?availableOnly=true&orderId=${order._id}`, `/api/orders`, `/api/my-delivery`; client component
+- `app/admin-dashboard/orders/[id]/page.tsx`: functions/components: `OrderDetailPage`, `getEditableStatus`, `loadServerOffsets`, `persistTimelineOffsets`, `handleTimelineOffsetIncrement`, `handleTimelineOffsetReset`, `fetchOrder`, `handleRealtimeOrderUpdate`, `fetchCouriers`, `handleStatusUpdate`, `handleAssignCourier`, `handleConfirmAssignment`, `handleAdminInternalNoteChange`, `handleSaveAdminInternalNote`, `handleHandoffToCourier`, `handleAdminConfirmDelivery`, `handleVerifyFailedDelivery`, `handleSimulateRefund`; API calls: `/api/dev/order-time-simulator`, `/api/dev/order-time-simulator?orderId=${encodeURIComponent(orderId)}`, `/api/orders?id=${orderId}`, `/api/reviews?orderId=${orderId}`, `/api/my-delivery?availableOnly=true&orderId=${order._id}`, `/api/orders`, `/api/my-delivery`; client component
 
 ## API/Data Connections
 
@@ -45,6 +50,9 @@ This folder owns admin-facing UI for `/admin-dashboard/orders/[id]`, including r
 - `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
 - `react` and `react-dom`: provide client component state, effects, event handlers, and rendering for interactive UI.
 - `stripe`: creates Checkout sessions, verifies webhooks, reuses open payment links, and records payment session ids on orders.
+- Refund completion is simulated for the test-card workflow. The UI must call `/api/orders` with
+  `action: "simulate-refund"` and display the stored `refundStatus`, `refundAmount`,
+  `refundReason`, and `refundSimulationId` instead of pretending a real card refund happened.
 - `sonner`: shows success/error/loading toast feedback for user-facing mutations.
 - `lucide-react`: provides the icon set used in buttons, status indicators, and dashboard actions.
 - `radix-ui` and local `components/ui`: provide accessible primitives and shadcn-style form/table/dialog controls.
@@ -56,10 +64,14 @@ This folder owns admin-facing UI for `/admin-dashboard/orders/[id]`, including r
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Do not show refund controls for active orders, completed orders, unpaid customer cancellations,
+  or canceled orders that are not marked `review_required` by the API.
+- The confirmation modal must remain in front of the refund action because this is a financial
+  workflow even though the current app records a simulated Stripe refund.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `admin`, `super admin` UI for `/admin-dashboard/orders/[id]`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `admin`, `super admin` UI for `/admin-dashboard/orders/[id]`; it lets the restaurant move paid orders through kitchen/courier states, assign couriers, verify failed delivery cancellations, save internal notes, and close eligible paid cancellations with a simulated refund record. The browser explains the state and asks for confirmation, but `/api/orders` decides whether an action is allowed.
 
 ## Maintenance Notes For Future Work
 

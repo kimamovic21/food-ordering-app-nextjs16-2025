@@ -96,10 +96,10 @@ const OrdersPage = () => {
         <div className='mt-8 flex-1 w-full'>
           <Card className='border border-border bg-card text-card-foreground shadow-sm'>
             <div className='overflow-x-auto'>
-              <Table className='w-full min-w-[900px] table-fixed'>
+              <Table className='w-full min-w-[1000px] table-fixed'>
                 <TableHeader>
                   <TableRow>
-                    {[...Array(7)].map((_, idx) => (
+                    {[...Array(8)].map((_, idx) => (
                       <TableHead key={idx} className='p-3'>
                         <Skeleton className='h-4 w-24' />
                       </TableHead>
@@ -109,7 +109,7 @@ const OrdersPage = () => {
                 <TableBody>
                   {[...Array(5)].map((_, rowIdx) => (
                     <TableRow key={rowIdx}>
-                      {[...Array(6)].map((_, cellIdx) => (
+                      {[...Array(8)].map((_, cellIdx) => (
                         <TableCell key={cellIdx} className='p-3'>
                           <Skeleton className='h-4 w-full' />
                         </TableCell>
@@ -197,10 +197,10 @@ const OrdersPage = () => {
             {!error && !noRestaurant && loadingOrders && (
               <Card className='border border-border bg-card text-card-foreground shadow-sm'>
                 <div className='overflow-x-auto'>
-                  <Table className='w-full min-w-[900px] table-fixed'>
+                  <Table className='w-full min-w-[1000px] table-fixed'>
                     <TableHeader>
                       <TableRow>
-                        {[...Array(7)].map((_, idx) => (
+                        {[...Array(8)].map((_, idx) => (
                           <TableHead key={idx} className='p-3'>
                             <Skeleton className='h-4 w-24' />
                           </TableHead>
@@ -210,7 +210,7 @@ const OrdersPage = () => {
                     <TableBody>
                       {[...Array(5)].map((_, rowIdx) => (
                         <TableRow key={rowIdx}>
-                          {[...Array(6)].map((_, cellIdx) => (
+                          {[...Array(8)].map((_, cellIdx) => (
                             <TableCell key={cellIdx} className='p-3'>
                               <Skeleton className='h-4 w-full' />
                             </TableCell>

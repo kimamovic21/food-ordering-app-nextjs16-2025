@@ -10,6 +10,7 @@ export type CourierAssignmentStatus = 'pending' | 'accepted' | 'declined' | 'exp
 export type DeliveryCompletedBy = 'customer' | 'admin' | null;
 export type OrderCanceledBy = 'customer' | 'restaurant_owner' | 'super_admin' | 'system' | null;
 export type FailedDeliveryVerifiedByRole = 'restaurant_owner' | 'super_admin' | null;
+export type OrderRefundStatus = 'not_required' | 'review_required' | 'refunded' | 'failed';
 
 export type OrderListItem = {
   _id: EntityId;
@@ -17,6 +18,8 @@ export type OrderListItem = {
   total: number;
   paymentStatus: boolean;
   orderStatus: OrderStatus;
+  refundStatus?: OrderRefundStatus;
+  refundAmount?: number;
   createdAt: ISODateString;
 };
 
@@ -68,6 +71,14 @@ export type OrderDetails = OrderListItem & {
   canceledBy?: OrderCanceledBy;
   cancellationReason?: string | null;
   canceledAt?: ISODateString | null;
+  refundStatus?: OrderRefundStatus;
+  refundReason?: string | null;
+  refundAmount?: number;
+  refundRequestedAt?: ISODateString | null;
+  refundProcessedAt?: ISODateString | null;
+  refundProcessedBy?: EntityId | null;
+  refundProvider?: 'simulated_stripe' | null;
+  refundSimulationId?: string | null;
   completedAt?: ISODateString | null;
   stripeSessionId?: string;
   taxPercentage?: number;

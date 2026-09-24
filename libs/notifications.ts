@@ -398,6 +398,27 @@ export const notifyFailedDeliveryCancellationVerified = async (params: {
   ]);
 };
 
+export const notifyUserAboutSimulatedRefund = async (params: {
+  userId: string | mongoose.Types.ObjectId;
+  orderId: string | mongoose.Types.ObjectId;
+  amount: number;
+}) => {
+  const orderNumber = params.orderId.toString().slice(-6);
+
+  await createNotifications({
+    recipientUserIds: [params.userId],
+    type: 'order_refunded',
+    title: 'Refund marked complete',
+    message: `Order #${orderNumber} was marked as refunded in this test checkout flow for $${Number(params.amount || 0).toFixed(2)}.`,
+    orderId: params.orderId,
+    metadata: {
+      refundStatus: 'refunded',
+      simulatedRefund: true,
+      amount: Number(params.amount || 0),
+    },
+  });
+};
+
 export const notifyUserAboutOrderCompletion = async (params: {
   userId: string | mongoose.Types.ObjectId;
   orderId: string | mongoose.Types.ObjectId;

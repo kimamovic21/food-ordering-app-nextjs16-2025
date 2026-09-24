@@ -12,6 +12,7 @@ import {
   notifyRestaurantAdminsAboutCanceledOrder,
   notifyUserAboutOrderCompletion,
   notifyUserAboutOrderStatusChange,
+  notifyUserAboutSimulatedRefund,
 } from '@/libs/notifications';
 import { expireOpenStripeCheckoutSession } from '@/libs/stripeCheckoutSession';
 
@@ -59,6 +60,7 @@ vi.mock('@/libs/notifications', () => ({
   notifyRestaurantAdminsAboutCanceledOrder: vi.fn(),
   notifyUserAboutOrderCompletion: vi.fn(),
   notifyUserAboutOrderStatusChange: vi.fn(),
+  notifyUserAboutSimulatedRefund: vi.fn(),
 }));
 
 vi.mock('@/libs/auditLog', () => ({
@@ -375,6 +377,11 @@ describe('high-priority order, review, and payment-link routes', () => {
           failedDeliveryVerifiedByRole: this.failedDeliveryVerifiedByRole,
           canceledBy: this.canceledBy,
           canceledAt: this.canceledAt,
+          cancellationReason: this.cancellationReason,
+          refundStatus: this.refundStatus,
+          refundReason: this.refundReason,
+          refundAmount: this.refundAmount,
+          refundRequestedAt: this.refundRequestedAt,
         };
       },
     };
@@ -393,6 +400,9 @@ describe('high-priority order, review, and payment-link routes', () => {
     expect(res.status).toBe(200);
     expect(body.order.orderStatus).toBe('canceled');
     expect(body.order.canceledBy).toBe('restaurant_owner');
+    expect(body.order.refundStatus).toBe('review_required');
+    expect(body.order.refundAmount).toBe(29.99);
+    expect(body.order.refundReason).toContain('failed delivery');
     expect(failedDeliveryOrderDoc.orderPaid).toBe(false);
     expect(failedDeliveryOrderDoc.paid).toBe(false);
     expect(courierDoc.takenOrder).toBeNull();
@@ -406,6 +416,93 @@ describe('high-priority order, review, and payment-link routes', () => {
         verifiedBy: 'restaurant_owner',
       })
     );
+  });
+
+  it('lets restaurant admins complete a simulated refund only after refund review is required', async () => {
+    const canceledRefundOrderDoc = {
+      ...paidOrderDoc,
+      orderPaid: false,
+      paid: false,
+      paymentStatus: false,
+      orderStatus: 'canceled',
+      canceledBy: 'system',
+      canceledAt: new Date('2026-07-10T10:30:00.000Z'),
+      refundStatus: 'review_required',
+      refundReason: 'Paid order was automatically canceled because no courier accepted it.',
+      refundAmount: 29.99,
+      refundRequestedAt: new Date('2026-07-10T10:30:00.000Z'),
+      save: vi.fn(async function save(this: any) {
+        return this;
+      }),
+      toObject() {
+        return {
+          _id: this._id,
+          userId: this.userId,
+          restaurantId: this.restaurantId,
+          orderPaid: this.orderPaid,
+          paid: this.paid,
+          paymentStatus: this.paymentStatus,
+          orderStatus: this.orderStatus,
+          refundStatus: this.refundStatus,
+          refundAmount: this.refundAmount,
+          refundProcessedAt: this.refundProcessedAt,
+          refundProcessedBy: this.refundProcessedBy,
+          refundProvider: this.refundProvider,
+          refundSimulationId: this.refundSimulationId,
+        };
+      },
+    };
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({ user: { email: admin.email } } as never);
+    vi.mocked(User.findOne).mockReturnValueOnce({
+      lean: vi.fn().mockResolvedValue(admin),
+    } as never);
+    vi.mocked(Order.findOne).mockResolvedValueOnce(canceledRefundOrderDoc as never);
+
+    const { PATCH } = await import('@/app/api/orders/route');
+    const res = await PATCH(jsonRequest({ id: 'order-1', action: 'simulate-refund' }));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.order.refundStatus).toBe('refunded');
+    expect(body.order.refundProvider).toBe('simulated_stripe');
+    expect(body.order.refundSimulationId).toContain('sim_ref_');
+    expect(canceledRefundOrderDoc.save).toHaveBeenCalled();
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'order.refund_simulated',
+        metadata: expect.objectContaining({
+          refundAmount: 29.99,
+          refundProvider: 'simulated_stripe',
+        }),
+      })
+    );
+    expect(notifyUserAboutSimulatedRefund).toHaveBeenCalledWith({
+      userId: canceledRefundOrderDoc.userId,
+      orderId: canceledRefundOrderDoc._id,
+      amount: 29.99,
+    });
+  });
+
+  it('blocks simulated refunds for active orders', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({ user: { email: admin.email } } as never);
+    vi.mocked(User.findOne).mockReturnValueOnce({
+      lean: vi.fn().mockResolvedValue(admin),
+    } as never);
+    vi.mocked(Order.findOne).mockResolvedValueOnce({
+      ...paidOrderDoc,
+      orderStatus: 'processing',
+      refundStatus: 'review_required',
+      refundAmount: 29.99,
+    } as never);
+
+    const { PATCH } = await import('@/app/api/orders/route');
+    const res = await PATCH(jsonRequest({ id: 'order-1', action: 'simulate-refund' }));
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('Only canceled orders can be reviewed for a simulated refund.');
+    expect(notifyUserAboutSimulatedRefund).not.toHaveBeenCalled();
   });
 
   it('lets super admin verify failed delivery cancellation without restaurant ownership', async () => {

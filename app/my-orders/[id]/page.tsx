@@ -56,6 +56,7 @@ import {
   getNotificationRealtimePayload,
   isOrderRelatedRealtimePayload,
 } from '@/libs/realtimeClient';
+import { formatAppDateTime } from '@/libs/dateFormat';
 import type { CustomerOrderDetails, OrderReview } from '@/types/order';
 
 // Map loads client-side only because Leaflet touches window during module init
@@ -606,6 +607,40 @@ const MyOrderDetailPage = () => {
                 <p className='text-sm text-muted-foreground'>{order.cancellationReason}</p>
               </CardContent>
             )}
+          </Card>
+        )}
+
+        {order.refundStatus && order.refundStatus !== 'not_required' && (
+          <Card
+            className={
+              order.refundStatus === 'refunded'
+                ? 'mb-6 border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/30'
+                : 'mb-6 border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30'
+            }
+          >
+            <CardHeader>
+              <CardTitle>
+                {order.refundStatus === 'refunded'
+                  ? 'Refund marked complete'
+                  : 'Refund under review'}
+              </CardTitle>
+              <CardDescription>
+                {order.refundStatus === 'refunded'
+                  ? 'The restaurant/admin marked this canceled paid order as refunded in the test checkout workflow.'
+                  : 'This canceled paid order is waiting for admin refund review in the test checkout workflow.'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className='space-y-2 text-sm text-muted-foreground'>
+              <p>
+                Amount: <span className='font-semibold'>${Number(order.refundAmount || 0).toFixed(2)}</span>
+              </p>
+              {order.refundProcessedAt && (
+                <p>Processed at: {formatAppDateTime(order.refundProcessedAt)}</p>
+              )}
+              {order.refundSimulationId && (
+                <p className='font-mono text-xs'>Simulation ID: {order.refundSimulationId}</p>
+              )}
+            </CardContent>
           </Card>
         )}
 
