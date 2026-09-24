@@ -11,6 +11,7 @@ description: Project rules for this Next.js food ordering app. Use when editing 
 - Keep changes small and incremental.
 - Before implementing a new feature or non-trivial app logic, create or switch to a dedicated local feature branch from `main` unless the user explicitly asks to work on the current branch.
 - Follow existing patterns in app/, libs/, models/, components/, contexts/, and types/.
+- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
 - Prefer TypeScript-safe code and avoid implicit any.
 - Do not add new dependencies unless explicitly requested.
 - Keep reusable domain, DTO, and API response types in `types/`.

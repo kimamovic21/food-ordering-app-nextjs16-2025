@@ -79,6 +79,7 @@ See `example.env`. Variables currently used in the project include:
 - Keep reusable domain, DTO, and API response types in `types/` using lowercase feature filenames and PascalCase exported type names. Small one-off component prop types can stay colocated with their component.
 - Keep components small and focused; prefer composition from shared components.
 - Before implementing a new feature or non-trivial app logic, create or switch to a dedicated local feature branch from `main` unless the user explicitly asks to work on the current branch. Keep `main` as the stable baseline.
+- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
 - API route handlers should validate inputs and use models/ for data access.
 - Keep secrets in server-side code only (Stripe, Cloudinary, Resend, OpenAI keys).
 - Do not hardcode personal addresses, phone numbers, or private receiver emails; use neutral fixtures or env vars such as `RESEND_RECEIVER_EMAIL`.

@@ -42,6 +42,7 @@ This file provides guidance for AI assistance in this repository.
 - Keep server secrets in server-only code (route handlers, libs), including OpenAI keys.
 - Validate API inputs and return clear error responses.
 - Use existing utility helpers when possible (libs/).
+- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
 - Store timestamps as MongoDB `Date` values, return ISO/raw date fields from APIs, and format user-facing dates through `libs/dateFormat.ts` (`dd/MM/yyyy`, `dd/MM/yyyy HH:mm`).
 - Use `libs/money.ts` for business money calculations; avoid hand-rolled floating-point arithmetic in checkout, coupons, earnings, and reports.
 - Use `libs/phone.ts` before saving phone values; local Bosnia and Herzegovina numbers are accepted and normalized to E.164.
