@@ -92,7 +92,9 @@ It includes:
 
 - [ARCHITECTURE.md](./ARCHITECTURE.md): technical architecture, diagrams, data model map, and major workflow diagrams.
 - [DESCRIPTION.md](./DESCRIPTION.md): role-by-role feature description and business logic overview.
+- [CODEBASE_DOCUMENTATION_GUIDE.md](./CODEBASE_DOCUMENTATION_GUIDE.md): explains the generated API/app/component README maps and how to use them before editing code.
 - [PROJECT_PRESENTATION_GUIDE.md](./PROJECT_PRESENTATION_GUIDE.md): detailed presentation guide covering product flows, roles, routes, integrations, and edge cases.
+- [ROOT_CONFIGURATION_GUIDE.md](./ROOT_CONFIGURATION_GUIDE.md): root-level config guide for Next.js, testing, Sentry, Vercel, linting, formatting, and environment templates.
 - [TESTING.md](./TESTING.md): unit, integration, and e2e testing strategy and commands.
 
 ## Documentation Maintenance
@@ -102,6 +104,8 @@ When a meaningful feature or integration changes, update the docs in the same br
 - Use `README.md` for setup, packages, environment variables, public routes, and high-level capabilities.
 - Use `DESCRIPTION.md` for role behavior, business rules, checkout/order/courier/support/messaging flows, and user-facing logic.
 - Use `ARCHITECTURE.md` for data model, lifecycle, background job, realtime, integration, and system-flow changes.
+- Use generated folder `README.md` files before editing API routes, app folders, or component folders, and update them when the local workflow changes.
+- Use `ROOT_CONFIGURATION_GUIDE.md` before changing root tooling, build, test, deployment, Sentry, or env-template behavior.
 - Use `TESTING.md`, `__tests__/README.md`, and `e2e/README.md` when test scope, commands, fixtures, or coverage strategy changes.
 - Keep AI guidance aligned in `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/project-instructions.md`, `.gemini/project-instructions.md`, `.cursor/rules/project-conventions.mdc`, and `.windsurf/rules/project-conventions.md` when workflow-critical rules change.
 - Use `.github/pull_request_template.md` as the final reminder for validation and docs ownership before merging.

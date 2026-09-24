@@ -1191,3 +1191,5 @@ Add restaurant discovery filters and superadmin restaurant insights
 Polish restaurant discovery and menu queries
 
 Add courier availability readiness guard
+
+Document package and service workflows

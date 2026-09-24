@@ -13,6 +13,7 @@ alwaysApply: true
 - Prefer small, incremental changes.
 - Before implementing a new feature or non-trivial app logic, create or switch to a dedicated local feature branch from `main` unless the user explicitly asks to work on the current branch.
 - Follow existing patterns in `app/`, `libs/`, `models/`, `components/`, and `contexts/`.
+- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
 - Keep reusable domain, DTO, and API response types in `types/` using lowercase feature filenames and PascalCase exported names. Keep one-off component props colocated with the component.
 - Avoid introducing new dependencies unless explicitly requested.
 
@@ -25,7 +26,7 @@ alwaysApply: true
 - Store timestamps as MongoDB `Date` values, return ISO/raw date fields from APIs, and format user-facing dates through `libs/dateFormat.ts`.
 - Use `libs/money.ts` for business money calculations and `libs/phone.ts` before saving phone numbers.
 - Saved customer delivery addresses live on `User.deliveryAddresses`, are capped at five, require complete delivery fields plus confirmed latitude/longitude, dedupe duplicate saves by normalized address/phone/coordinates, and should be loaded/mutated through `/api/profile/delivery-addresses`.
-- Preserve restaurant accepting-order logic in checkout: working hours, the 60-minute-before-closing cutoff, pause state, blocked dates, delivery radius, paid active kitchen orders, item availability, coupons, and loyalty must be checked before Stripe sessions are created.
+- Preserve restaurant accepting-order logic in checkout: working hours, the 60-minute-before-closing cutoff, pause state, blocked dates, delivery radius, paid active kitchen orders, courier delivery readiness, item availability, coupons, and loyalty must be checked before Stripe sessions are created.
 - Public add-to-cart surfaces should prefetch visible restaurant ordering status where possible, check `/api/restaurants/[id]/ordering-status` before changing the cart, and still keep checkout as the server-authoritative source of truth.
 - Preserve checkout duplicate protection: recent identical unpaid `placed` attempts use `checkoutFingerprint` and should reuse or recover the existing Stripe Checkout session.
 - Cart validation should keep unavailable/deleted/invalid items as hard checkout blockers, while price changes stay non-blocking and should be shown clearly before checkout.
