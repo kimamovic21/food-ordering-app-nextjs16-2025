@@ -18,7 +18,7 @@ This folder owns the `/` UI area. It may include pages, loading states, nested r
 - Start from `page.tsx` for the route shell and data loading shape.
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
-- This folder talks to `/api/menu-items`. Keep API response shapes aligned.
+- This folder talks to `/api/menu-items` and `/api/restaurants/map`. Keep API response shapes aligned.
 
 ## Important Files
 
@@ -31,11 +31,14 @@ This folder owns the `/` UI area. It may include pages, loading states, nested r
 - `app/(home)/loading.tsx`: functions/components: `HomePageLoading`
 - `app/(home)/MenuItem.tsx`: functions/components: `MenuItem`, `getPrice`, `handleAddToCart`; client component
 - `app/(home)/page.tsx`: functions/components: `HomePage`
+- `app/(home)/RestaurantLocationsMap.tsx`: functions/components: `RestaurantLocationsMap`, `RestaurantMapBounds`, `getStatusLabel`, `getStatusClassName`; client-only Leaflet map for public restaurant pins
+- `app/(home)/RestaurantLocationsSection.tsx`: functions/components: `RestaurantLocationsSection`, `RestaurantMapSkeleton`, `fetchRestaurants`; API calls: `/api/restaurants/map`; client component
 - `app/(home)/Testimonials.tsx`: functions/components: `Testimonials`
 
 ## API/Data Connections
 
 - Calls `/api/menu-items`; inspect the matching API README/source before changing its response shape.
+- Calls `/api/restaurants/map`; inspect the matching API README/source before changing its response shape.
 
 ## Packages And Services Used
 
@@ -45,6 +48,8 @@ This folder owns the `/` UI area. It may include pages, loading states, nested r
 - `cloudinary`: stores and serves uploaded user, restaurant, category, and menu-item images; upload APIs handle cleanup of replaced or deleted assets by public id.
 - `sonner`: shows success/error/loading toast feedback for user-facing mutations.
 - `lucide-react`: provides the icon set used in buttons, status indicators, and dashboard actions.
+- `leaflet` and `react-leaflet`: render the home restaurant location map. The map component must
+  stay client-only/dynamically imported because Leaflet touches browser globals.
 - `radix-ui` and local `components/ui`: provide accessible primitives and shadcn-style form/table/dialog controls.
 
 ## Edge Cases And UX Rules
@@ -53,10 +58,13 @@ This folder owns the `/` UI area. It may include pages, loading states, nested r
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Keep the restaurant location map separate from `OrderMap`. The home map only shows restaurant
+  pins; courier tracking and delivery routes belong to order/delivery screens.
+- Keep `scrollWheelZoom` disabled on the home map so the map does not trap normal page scrolling.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `public visitor` UI for `/`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `public visitor` UI for `/`; it shows the hero, featured menu, feature blocks, testimonials, a public map of restaurant locations, and the registration CTA. It delegates menu and restaurant location data to API routes instead of hard-coding public data in the page.
 
 ## Maintenance Notes For Future Work
 

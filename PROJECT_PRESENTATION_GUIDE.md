@@ -202,6 +202,8 @@ Main customer routes:
 Customer discovery:
 
 - Customers can browse all menu items.
+- The home page includes a public restaurant location map powered by Leaflet and `/api/restaurants/map`.
+  It shows restaurant pins only, separate from courier tracking and delivery routes.
 - Public menu and restaurant pages support filtering, search, sorting, pagination, and shareable URL params.
 - Public restaurant discovery can filter by accepting/open/closed/paused status, city, country, rating, minimum order, and delivery-to-me when the customer shares location.
 - Menu cards show availability and restaurant ordering status.

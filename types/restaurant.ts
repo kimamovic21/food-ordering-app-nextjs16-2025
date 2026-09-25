@@ -53,6 +53,23 @@ export type RestaurantListResponse = {
   };
 };
 
+export type RestaurantMapPin = {
+  _id: EntityId;
+  name: string;
+  street: string;
+  city: string;
+  country: string;
+  latitude: number;
+  longitude: number;
+  isOpen: boolean;
+  isPaused: boolean;
+  isAcceptingOrders: boolean;
+};
+
+export type RestaurantMapResponse = {
+  restaurants: RestaurantMapPin[];
+};
+
 export type RestaurantSummary = {
   _id: EntityId;
   name: string;
