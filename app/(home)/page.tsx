@@ -2,6 +2,7 @@ import HeroWrapper from './HeroWrapper';
 import HomeMenu from './HomeMenu';
 import FeaturesSection from './FeaturesSection';
 import Testimonials from './Testimonials';
+import RestaurantLocationsSection from './RestaurantLocationsSection';
 import CallToAction from './CallToAction';
 
 const HomePage = () => {
@@ -11,6 +12,7 @@ const HomePage = () => {
       <HomeMenu />
       <FeaturesSection />
       <Testimonials />
+      <RestaurantLocationsSection />
       <CallToAction />
     </div>
   );

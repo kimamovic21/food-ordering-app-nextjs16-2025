@@ -200,3 +200,57 @@ div.tabs > *.active {
   animation-duration: 220ms;
   animation-timing-function: ease;
 }
+
+.restaurant-location-marker {
+  background: transparent;
+  border: 0;
+}
+
+.restaurant-location-marker__pin {
+  position: relative;
+  display: flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 999px;
+  background: var(--primary);
+  box-shadow:
+    0 12px 24px rgb(0 0 0 / 28%),
+    0 0 0 6px rgb(241 58 1 / 16%);
+}
+
+.restaurant-location-marker__pin::before,
+.restaurant-location-marker__pin::after {
+  position: absolute;
+  left: 50%;
+  content: '';
+  transform: translateX(-50%);
+}
+
+.restaurant-location-marker__pin::before {
+  bottom: -13px;
+  border-top: 15px solid white;
+  border-right: 10px solid transparent;
+  border-left: 10px solid transparent;
+}
+
+.restaurant-location-marker__pin::after {
+  bottom: -9px;
+  border-top: 12px solid var(--primary);
+  border-right: 8px solid transparent;
+  border-left: 8px solid transparent;
+}
+
+.restaurant-location-marker__dot {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: white;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px;
+}

@@ -1195,3 +1195,5 @@ Add courier availability readiness guard
 Document package and service workflows
 
 Add paid order refund readiness workflow
+
+Add home restaurant locations map
