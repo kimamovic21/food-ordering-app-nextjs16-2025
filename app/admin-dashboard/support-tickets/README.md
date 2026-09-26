@@ -4,20 +4,22 @@
 
 ## Purpose
 
-This folder owns admin-facing UI for `/admin-dashboard/support-tickets`, including restaurant operations, platform management, and protected dashboard workflows.
+This folder owns the super-admin support ticket console for `/admin-dashboard/support-tickets`. It is where platform support reviews customer, courier, restaurant, delivery, and app issue reports without exposing private admin notes to reporters.
 
 ## Route And Audience
 
 - App route/group: `/admin-dashboard/support-tickets`
 - Folder path: `app/admin-dashboard/support-tickets`
-- Main audience/roles: `admin`, `super admin`
-- Main interaction style: TanStack Query or query cache, toast feedback
+- Main audience/roles: `super admin`
+- Main interaction style: URL-synced filters, manual refresh, toast feedback, protected admin mutations
 
 ## What Happens Here
 
-- Start from `page.tsx` for the route shell and data loading shape.
-- Check colocated components for user interactions, forms, and mutations.
-- Check loading/error/empty states before changing UI because these are part of the user experience.
+- `page.tsx` verifies the current profile and redirects non-admin users away from the route.
+- Super admins can filter by `all`, `open`, `in_review`, `resolved`, or `rejected` status.
+- Each ticket card shows reporter contact, category, support target, linked order, the original description, a public response note, and a private internal handling note.
+- Public response notes are sent back through `/my-reports`; internal handling notes remain admin-only.
+- The page can move tickets to `in_review`, `resolved`, or `rejected`. Rejected tickets must include enough public context for the reporter.
 - This folder talks to `/api/support-tickets`, `/api/support-tickets?${params.toString()}`. Keep API response shapes aligned.
 
 ## Important Files
@@ -37,17 +39,20 @@ This folder owns admin-facing UI for `/admin-dashboard/support-tickets`, includi
 - `lucide-react`: provides the icon set used in buttons, status indicators, and dashboard actions.
 - `radix-ui` and local `components/ui`: provide accessible primitives and shadcn-style form/table/dialog controls.
 - `nuqs`: keeps filter/search/pagination state synchronized with URL query parameters.
+- `next-auth`/profile data through `useProfile`: protects the console so only the configured super admin can remain on this page.
 
 ## Edge Cases And UX Rules
 
 - Preserve route loading states so refreshes and slow network states look intentional.
 - Preserve empty/error states so users are not left with blank screens.
-- If forms exist, keep validation messages close to the field that failed.
+- Keep public response and internal note copy distinct. Reporters should never see the private internal note.
+- Keep rejected tickets visually distinct from resolved tickets; rejected means reviewed and closed without further action, not successfully fixed.
+- Do not remove the server-side access checks just because the client redirects non-super-admin users.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `admin`, `super admin` UI for `/admin-dashboard/support-tickets`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the super-admin support operations screen. It lets the platform owner review issue reports, check the linked order, write a public response for the reporter, keep a private internal handling note, and close the ticket as resolved or rejected. The UI is helpful, but the API still enforces role access, notification delivery, and audit logging.
 
 ## Maintenance Notes For Future Work
 

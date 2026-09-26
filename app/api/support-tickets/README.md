@@ -12,13 +12,16 @@
 
 ## Plain-English Summary
 
-Handles get/post/patch work for the support tickets area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Handles get/post/patch work for the support tickets area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs. Customers, couriers, and admins can create reports; admins can review restaurant-scoped reports; the super admin can review app-level and restaurant-level reports.
 
 ## What Happens In This File
 
 - The route receives GET/POST/PATCH requests and converts request/session data into server-side business checks.
 - It uses `order`, `supportTicket`, `user` for persistence.
-- It delegates shared logic to `authOptions`, `notifications`, `rateLimit` so behavior stays consistent across the app.
+- It delegates shared logic to `authOptions`, `notifications`, `rateLimit`, and `auditLog` so behavior stays consistent across the app.
+- `GET` returns tickets scoped by role. Customers/couriers see their own reports, restaurant admins see restaurant support tickets for their restaurant, and the super admin can inspect all support tickets.
+- `POST` creates a ticket after rate limiting, validating the optional order relationship, and checking that the reporter can access the order.
+- `PATCH` moves a ticket through `open`, `in_review`, `resolved`, or `rejected`, stores the reporter-facing `responseNote`, stores the private admin-only `internalNote`, sends a reporter notification for status changes, and writes an audit log.
 - Detected local functions/handlers: `getCurrentUser`, `isSuperAdminUser`, `canAccessOrder`, `populateTicketQuery`, `normalizeTicket`.
 
 ## Request Inputs
@@ -40,6 +43,9 @@ Handles get/post/patch work for the support tickets area. The route keeps the lo
 - Checks the `admin` role before allowing restaurant/admin operations.
 - Checks the `courier` role before allowing delivery operations.
 - Applies Upstash Redis-backed rate limiting.
+- Rejected tickets require a short public response note so the reporter is not left without context.
+- Restaurant admins cannot update app-support tickets or tickets owned by another restaurant.
+- Legacy `closed` tickets are normalized to `resolved` when returned to the UI.
 
 ## Edge Cases Covered
 
@@ -74,14 +80,16 @@ Handles get/post/patch work for the support tickets area. The route keeps the lo
 
 ## Data Dependencies
 
-- Models: `order`, `supportTicket`, `user`
-- Shared libs: `authOptions`, `notifications`, `rateLimit`
-- Shared types: None detected
+- Models: `order`, `supportTicket`, `user`, `auditLog`
+- Shared libs: `authOptions`, `notifications`, `rateLimit`, `auditLog`
+- Shared types: `types/support-ticket.ts`
 
 ## Side Effects
 
 - Creates MongoDB documents.
-- May send email or app notifications.
+- Updates support ticket workflow fields.
+- Creates in-app notifications for admins and reporters.
+- Writes audit log entries for admin ticket updates.
 
 ## Response Behavior
 
@@ -90,7 +98,7 @@ Handles get/post/patch work for the support tickets area. The route keeps the lo
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/support-tickets` does. Explain that it belongs to the support tickets workflow, serves `customer`, `admin`, `courier`, `super admin`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/support-tickets` does. Explain that it is the server-authoritative support workflow. A user can report an order, delivery, restaurant, courier, or app problem. The API checks ownership and role access, creates the ticket, notifies the right admins, and later lets authorized admins mark the report as in review, resolved, or rejected. Public `responseNote` text is shown to the reporter; private `internalNote` text stays in the admin workflow; every admin update is audit-logged.
 
 ## Maintenance Notes For Future Work
 

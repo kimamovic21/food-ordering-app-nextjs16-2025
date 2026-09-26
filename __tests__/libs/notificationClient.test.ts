@@ -47,4 +47,21 @@ describe('resolveNotificationTargetPath', () => {
       )
     ).toBe('/restaurants/6a2185248697d815fec54978');
   });
+
+  it('routes support ticket notifications by role', () => {
+    const notification = {
+      type: 'support_ticket',
+      orderId: '6a564350622d630bb92decbc',
+      metadata: {
+        ticketId: '6a564350622d630bb92decbd',
+      },
+    };
+
+    expect(resolveNotificationTargetPath(notification, 'admin')).toBe(
+      '/admin-dashboard/support-tickets?ticketId=6a564350622d630bb92decbd'
+    );
+    expect(resolveNotificationTargetPath(notification, 'user')).toBe(
+      '/my-reports?ticketId=6a564350622d630bb92decbd'
+    );
+  });
 });

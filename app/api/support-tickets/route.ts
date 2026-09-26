@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import mongoose from 'mongoose';
+import { createAuditLog } from '@/libs/auditLog';
 import { authOptions } from '@/libs/authOptions';
 import {
   notifySupportTicketCreated,
@@ -26,7 +27,7 @@ const validCategories = [
   'app_issue',
   'other',
 ] as const;
-const validStatuses = ['open', 'in_review', 'resolved'] as const;
+const validStatuses = ['open', 'in_review', 'resolved', 'rejected'] as const;
 const validPriorities = ['low', 'normal', 'high'] as const;
 
 const getCurrentUser = async () => {
@@ -242,6 +243,7 @@ export async function PATCH(request: Request) {
   const ticketId = typeof body.ticketId === 'string' ? body.ticketId : '';
   const status = typeof body.status === 'string' ? body.status : '';
   const responseNote = typeof body.responseNote === 'string' ? body.responseNote.trim() : '';
+  const internalNote = typeof body.internalNote === 'string' ? body.internalNote.trim() : '';
 
   if (!ticketId || !mongoose.Types.ObjectId.isValid(ticketId)) {
     return Response.json({ error: 'Invalid ticket ID' }, { status: 400 });
@@ -250,10 +252,25 @@ export async function PATCH(request: Request) {
   if (!validStatuses.includes(status as (typeof validStatuses)[number])) {
     return Response.json({ error: 'Invalid ticket status' }, { status: 400 });
   }
+  const nextStatus = status as (typeof validStatuses)[number];
 
   if (responseNote.length > 1000) {
     return Response.json(
       { error: 'Response note cannot be longer than 1000 characters' },
+      { status: 400 }
+    );
+  }
+
+  if (internalNote.length > 1500) {
+    return Response.json(
+      { error: 'Internal note cannot be longer than 1500 characters' },
+      { status: 400 }
+    );
+  }
+
+  if (nextStatus === 'rejected' && responseNote.length < 10) {
+    return Response.json(
+      { error: 'Rejected tickets need a short public response note for the reporter.' },
       { status: 400 }
     );
   }
@@ -274,10 +291,13 @@ export async function PATCH(request: Request) {
   }
 
   const previousStatus = ticket.status;
-  ticket.status = status;
+  const previousResponseNote = ticket.responseNote || '';
+  const previousInternalNote = ticket.internalNote || '';
+  ticket.status = nextStatus;
   ticket.responseNote = responseNote;
+  ticket.internalNote = internalNote;
 
-  if (status === 'resolved') {
+  if (nextStatus === 'resolved' || nextStatus === 'rejected') {
     ticket.resolvedBy = user._id;
     ticket.resolvedAt = new Date();
   } else {
@@ -287,14 +307,39 @@ export async function PATCH(request: Request) {
 
   await ticket.save();
 
-  if (status !== previousStatus && (status === 'in_review' || status === 'resolved')) {
+  const responseNoteChanged = responseNote !== previousResponseNote;
+  const internalNoteChanged = internalNote !== previousInternalNote;
+
+  await createAuditLog({
+    actor: user,
+    action: 'support_ticket.updated',
+    entityType: 'SupportTicket',
+    entityId: ticket._id,
+    restaurantId: ticket.restaurantId || null,
+    orderId: ticket.orderId || null,
+    metadata: {
+      previousStatus,
+      nextStatus,
+      target: ticket.target,
+      category: ticket.category,
+      priority: ticket.priority,
+      responseNoteChanged,
+      internalNoteChanged,
+    },
+  });
+
+  if (
+    status !== previousStatus &&
+    (nextStatus === 'in_review' || nextStatus === 'resolved' || nextStatus === 'rejected')
+  ) {
     try {
       await notifySupportTicketReporterAboutStatus({
         reporterId: ticket.reporterId,
         ticketId: ticket._id,
         orderId: ticket.orderId || null,
-        status,
+        status: nextStatus,
         subject: ticket.subject,
+        responseNote,
       });
     } catch (notificationError) {
       console.error('Failed to create support ticket reporter notification:', notificationError);

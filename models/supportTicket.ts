@@ -44,7 +44,7 @@ const SupportTicketSchema = new Schema(
     description: { type: String, required: true, trim: true, maxlength: 1000 },
     status: {
       type: String,
-      enum: ['open', 'in_review', 'resolved'],
+      enum: ['open', 'in_review', 'resolved', 'rejected'],
       default: 'open',
       index: true,
     },
@@ -54,6 +54,7 @@ const SupportTicketSchema = new Schema(
       default: 'normal',
     },
     responseNote: { type: String, default: '', trim: true, maxlength: 1000 },
+    internalNote: { type: String, default: '', trim: true, maxlength: 1500 },
     resolvedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     resolvedAt: { type: Date, default: null },
   },

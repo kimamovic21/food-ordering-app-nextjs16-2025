@@ -277,9 +277,10 @@ Reviews:
 Support:
 
 - Customers can report a problem from an order details page.
-- Support tickets show status such as open, in review, and resolved.
+- Support tickets show status such as open, in review, resolved, and rejected.
 - Restaurant-related issues route to the restaurant admin.
 - App-level issues route to super admin.
+- Admins can add a public response for the reporter and a private internal handling note.
 
 ## 7. Restaurant And Menu Management
 
@@ -722,8 +723,10 @@ Support-ticket behavior:
 
 - Customers and couriers can report problems.
 - Reports can be linked to orders.
-- Tickets can have statuses such as open, in review, and resolved.
-- Admin response notes can be displayed to the reporter.
+- Tickets can have statuses such as open, in review, resolved, and rejected.
+- Admin public response notes can be displayed to the reporter in `/my-reports`.
+- Admin internal notes stay private inside the support workflow.
+- Admin ticket updates write audit logs so support handling has operational history.
 - Restaurant-scoped tickets go to the restaurant owner.
 - App-support tickets go to super admin.
 - Rate limiting protects report creation from spam.

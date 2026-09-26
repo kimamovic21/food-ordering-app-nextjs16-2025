@@ -38,7 +38,9 @@ export const resolveNotificationTargetPath = (
         : '/admin-dashboard/support-tickets';
     }
 
-    return notification.orderId ? `/my-orders/${notification.orderId}` : '/notifications';
+    return notification.metadata?.ticketId
+      ? `/my-reports?ticketId=${notification.metadata.ticketId}`
+      : '/my-reports';
   }
 
   if (notification.type === 'restaurant_available' && notification.metadata?.restaurantId) {

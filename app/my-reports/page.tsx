@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { parseAsStringLiteral, useQueryState } from 'nuqs';
+import { parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
 import { AlertCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import Title from '@/components/shared/Title';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +25,7 @@ const statusLabels = {
   open: 'Open',
   in_review: 'In review',
   resolved: 'Resolved',
+  rejected: 'Rejected',
 };
 
 const statusFilterOptions = [
@@ -32,6 +33,7 @@ const statusFilterOptions = [
   'open',
   'in_review',
   'resolved',
+  'rejected',
 ] as const satisfies readonly SupportTicketStatusFilter[];
 
 const categoryLabels: Record<string, string> = {
@@ -54,8 +56,17 @@ const getStatusClass = (status: SupportTicket['status']) => {
     return 'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-100';
   }
 
+  if (status === 'rejected') {
+    return 'bg-slate-100 text-slate-800 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100';
+  }
+
   return 'bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950 dark:text-green-100';
 };
+
+const getResponseNoteClass = (status: SupportTicket['status']) =>
+  status === 'rejected'
+    ? 'border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100'
+    : 'border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/30 dark:text-green-100';
 
 const getId = (value: string | { _id: string } | null | undefined) =>
   typeof value === 'string' ? value : value?._id || '';
@@ -64,10 +75,11 @@ const MyReportsPage = () => {
   const { data: profileData, loading: profileLoading } = useProfile();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useQueryState(
-    'status',
-    parseAsStringLiteral(statusFilterOptions).withDefault('all')
-  );
+  const [{ status: statusFilter, ticketId }, setReportQuery] = useQueryStates({
+    status: parseAsStringLiteral(statusFilterOptions).withDefault('all'),
+    ticketId: parseAsString.withDefault(''),
+  });
+  const highlightedTicketId = ticketId.trim();
 
   const fetchTickets = useCallback(async () => {
     if (!profileData?.email) {
@@ -80,6 +92,9 @@ const MyReportsPage = () => {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') {
         params.set('status', statusFilter);
+      }
+      if (highlightedTicketId) {
+        params.set('ticketId', highlightedTicketId);
       }
 
       const response = await fetch(`/api/support-tickets?${params.toString()}`, {
@@ -97,7 +112,7 @@ const MyReportsPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [profileData?.email, statusFilter]);
+  }, [highlightedTicketId, profileData?.email, statusFilter]);
 
   useEffect(() => {
     if (!profileLoading) {
@@ -110,6 +125,7 @@ const MyReportsPage = () => {
       open: tickets.filter((ticket) => ticket.status === 'open').length,
       inReview: tickets.filter((ticket) => ticket.status === 'in_review').length,
       resolved: tickets.filter((ticket) => ticket.status === 'resolved').length,
+      rejected: tickets.filter((ticket) => ticket.status === 'rejected').length,
     }),
     [tickets]
   );
@@ -119,8 +135,8 @@ const MyReportsPage = () => {
       <section className='mx-auto max-w-6xl px-4 py-8'>
         <Skeleton className='mb-4 h-9 w-48' />
         <Skeleton className='mb-6 h-4 w-96 max-w-full' />
-        <div className='grid gap-4 md:grid-cols-3'>
-          {[...Array(3)].map((_, index) => (
+        <div className='grid gap-4 md:grid-cols-4'>
+          {[...Array(4)].map((_, index) => (
             <Skeleton key={index} className='h-24 rounded-xl' />
           ))}
         </div>
@@ -150,7 +166,7 @@ const MyReportsPage = () => {
           <Select
             value={statusFilter}
             onValueChange={(value) => {
-              void setStatusFilter(value as SupportTicketStatusFilter);
+              void setReportQuery({ status: value as SupportTicketStatusFilter });
             }}
           >
             <SelectTrigger className='w-[160px]'>
@@ -161,6 +177,7 @@ const MyReportsPage = () => {
               <SelectItem value='open'>Open</SelectItem>
               <SelectItem value='in_review'>In review</SelectItem>
               <SelectItem value='resolved'>Resolved</SelectItem>
+              <SelectItem value='rejected'>Rejected</SelectItem>
             </SelectContent>
           </Select>
           <Button type='button' variant='outline' onClick={() => fetchTickets()} className='gap-2'>
@@ -170,7 +187,7 @@ const MyReportsPage = () => {
         </div>
       </div>
 
-      <div className='mb-6 grid gap-4 md:grid-cols-3'>
+      <div className='mb-6 grid gap-4 md:grid-cols-4'>
         <Card>
           <CardHeader className='pb-2'>
             <CardDescription>Open</CardDescription>
@@ -187,6 +204,12 @@ const MyReportsPage = () => {
           <CardHeader className='pb-2'>
             <CardDescription>Resolved</CardDescription>
             <CardTitle>{ticketStats.resolved}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className='pb-2'>
+            <CardDescription>Rejected</CardDescription>
+            <CardTitle>{ticketStats.rejected}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -211,7 +234,10 @@ const MyReportsPage = () => {
                 : null;
 
             return (
-              <Card key={ticket._id}>
+              <Card
+                key={ticket._id}
+                className={highlightedTicketId === ticket._id ? 'border-primary shadow-md' : ''}
+              >
                 <CardHeader>
                   <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
                     <div className='space-y-2'>
@@ -267,13 +293,13 @@ const MyReportsPage = () => {
                   )}
 
                   {ticket.responseNote ? (
-                    <div className='rounded-lg border border-green-200 bg-green-50 p-4 text-sm dark:border-green-900 dark:bg-green-950/30'>
-                      <p className='mb-1 font-semibold text-green-800 dark:text-green-100'>
-                        Support response
-                      </p>
-                      <p className='whitespace-pre-wrap text-green-900 dark:text-green-100/90'>
-                        {ticket.responseNote}
-                      </p>
+                    <div
+                      className={`rounded-lg border p-4 text-sm ${getResponseNoteClass(
+                        ticket.status
+                      )}`}
+                    >
+                      <p className='mb-1 font-semibold'>Support response</p>
+                      <p className='whitespace-pre-wrap'>{ticket.responseNote}</p>
                     </div>
                   ) : (
                     <p className='text-sm text-muted-foreground'>
