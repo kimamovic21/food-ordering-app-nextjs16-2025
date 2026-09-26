@@ -1,4 +1,5 @@
 import { getServerSession } from 'next-auth/next';
+import { createAuditLog } from '@/libs/auditLog';
 import {
   notifySupportTicketCreated,
   notifySupportTicketReporterAboutStatus,
@@ -13,6 +14,10 @@ vi.mock('next-auth/next', () => ({
 
 vi.mock('@/libs/authOptions', () => ({
   authOptions: {},
+}));
+
+vi.mock('@/libs/auditLog', () => ({
+  createAuditLog: vi.fn(),
 }));
 
 vi.mock('mongoose', () => ({
@@ -302,6 +307,7 @@ describe('/api/support-tickets', () => {
       subject: 'Missing item',
       status: 'open',
       responseNote: '',
+      internalNote: '',
       resolvedBy: null,
       resolvedAt: null,
       save,
@@ -331,6 +337,7 @@ describe('/api/support-tickets', () => {
           ticketId: 'ticket-1',
           status: 'resolved',
           responseNote: 'We refunded the missing item manually.',
+          internalNote: 'Kitchen confirmed the missing item and manager approved compensation.',
         }),
       })
     );
@@ -340,15 +347,40 @@ describe('/api/support-tickets', () => {
     expect(body).toEqual({ ticket: updatedTicket });
     expect(ticket.status).toBe('resolved');
     expect(ticket.responseNote).toBe('We refunded the missing item manually.');
+    expect(ticket.internalNote).toBe(
+      'Kitchen confirmed the missing item and manager approved compensation.'
+    );
     expect(ticket.resolvedBy).toBe(adminId);
     expect(ticket.resolvedAt).toBeInstanceOf(Date);
     expect(save).toHaveBeenCalled();
+    expect(createAuditLog).toHaveBeenCalledWith({
+      actor: expect.objectContaining({
+        _id: adminId,
+        email: 'admin@example.com',
+        role: 'admin',
+      }),
+      action: 'support_ticket.updated',
+      entityType: 'SupportTicket',
+      entityId: ticket._id,
+      restaurantId,
+      orderId: ticket.orderId,
+      metadata: {
+        previousStatus: 'open',
+        nextStatus: 'resolved',
+        target: 'restaurant_support',
+        category: undefined,
+        priority: undefined,
+        responseNoteChanged: true,
+        internalNoteChanged: true,
+      },
+    });
     expect(notifySupportTicketReporterAboutStatus).toHaveBeenCalledWith({
       reporterId: ticket.reporterId,
       ticketId: ticket._id,
       orderId: ticket.orderId,
       status: 'resolved',
       subject: 'Missing item',
+      responseNote: 'We refunded the missing item manually.',
     });
   });
 
@@ -389,6 +421,116 @@ describe('/api/support-tickets', () => {
     expect(response.status).toBe(403);
     expect(body).toEqual({ error: 'You cannot update this ticket' });
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('rejects a ticket with a required reporter-facing response note', async () => {
+    const adminId = createObjectId('admin-1');
+    const restaurantId = createObjectId('restaurant-1');
+    const save = vi.fn().mockResolvedValue(undefined);
+    const ticket = {
+      _id: createObjectId('ticket-1'),
+      reporterId: createObjectId('user-1'),
+      orderId: createObjectId('order-1'),
+      target: 'restaurant_support',
+      restaurantId,
+      category: 'order_issue',
+      priority: 'normal',
+      subject: 'Already handled',
+      status: 'in_review',
+      responseNote: '',
+      internalNote: '',
+      resolvedBy: null,
+      resolvedAt: null,
+      save,
+    };
+    const updatedTicket = { _id: 'ticket-1', status: 'rejected' };
+    const query = createTicketQuery(updatedTicket);
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'admin@example.com' },
+    } as never);
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: adminId,
+      email: 'admin@example.com',
+      role: 'admin',
+      restaurantId,
+    } as never);
+    vi.mocked(SupportTicket.findById)
+      .mockResolvedValueOnce(ticket as never)
+      .mockReturnValueOnce(query as never);
+
+    const { PATCH } = await loadRoute();
+    const response = await PATCH(
+      new Request('http://localhost/api/support-tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: 'ticket-1',
+          status: 'rejected',
+          responseNote: 'We reviewed this report and no further action is needed.',
+          internalNote: 'Order record and delivery timeline were already consistent.',
+        }),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ ticket: updatedTicket });
+    expect(ticket.status).toBe('rejected');
+    expect(ticket.resolvedBy).toBe(adminId);
+    expect(ticket.resolvedAt).toBeInstanceOf(Date);
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'support_ticket.updated',
+        entityType: 'SupportTicket',
+        metadata: expect.objectContaining({
+          previousStatus: 'in_review',
+          nextStatus: 'rejected',
+          responseNoteChanged: true,
+          internalNoteChanged: true,
+        }),
+      })
+    );
+    expect(notifySupportTicketReporterAboutStatus).toHaveBeenCalledWith({
+      reporterId: ticket.reporterId,
+      ticketId: ticket._id,
+      orderId: ticket.orderId,
+      status: 'rejected',
+      subject: 'Already handled',
+      responseNote: 'We reviewed this report and no further action is needed.',
+    });
+  });
+
+  it('requires a public response note when rejecting a ticket', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'admin@example.com' },
+    } as never);
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: createObjectId('admin-1'),
+      email: 'admin@example.com',
+      role: 'admin',
+      restaurantId: createObjectId('restaurant-1'),
+    } as never);
+
+    const { PATCH } = await loadRoute();
+    const response = await PATCH(
+      new Request('http://localhost/api/support-tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ticketId: 'ticket-1',
+          status: 'rejected',
+          responseNote: 'No',
+        }),
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body).toEqual({
+      error: 'Rejected tickets need a short public response note for the reporter.',
+    });
+    expect(SupportTicket.findById).not.toHaveBeenCalled();
   });
 
   it('rejects closed as a support ticket status', async () => {

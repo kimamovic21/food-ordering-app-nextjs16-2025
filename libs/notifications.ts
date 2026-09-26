@@ -509,21 +509,35 @@ export const notifySupportTicketReporterAboutStatus = async (params: {
   reporterId: string | mongoose.Types.ObjectId;
   ticketId: string | mongoose.Types.ObjectId;
   orderId?: string | mongoose.Types.ObjectId | null;
-  status: 'in_review' | 'resolved';
+  status: 'in_review' | 'resolved' | 'rejected';
   subject: string;
+  responseNote?: string;
 }) => {
+  const copy = {
+    in_review: {
+      title: 'Problem report in review',
+      message: `Your report "${params.subject}" is now being reviewed.`,
+    },
+    resolved: {
+      title: 'Problem report resolved',
+      message: `Your report "${params.subject}" has been resolved.`,
+    },
+    rejected: {
+      title: 'Problem report closed',
+      message: `Your report "${params.subject}" was reviewed and closed without further action.`,
+    },
+  }[params.status];
+
   await createNotifications({
     recipientUserIds: [params.reporterId],
     type: 'support_ticket',
-    title: params.status === 'in_review' ? 'Problem report in review' : 'Problem report resolved',
-    message:
-      params.status === 'in_review'
-        ? `Your report "${params.subject}" is now being reviewed.`
-        : `Your report "${params.subject}" has been resolved.`,
+    title: copy.title,
+    message: copy.message,
     orderId: params.orderId || null,
     metadata: {
       ticketId: params.ticketId.toString(),
       supportTicketStatus: params.status,
+      responseNote: params.responseNote || '',
     },
   });
 };

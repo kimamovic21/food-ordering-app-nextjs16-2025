@@ -348,7 +348,9 @@ flowchart TD
   Target --> SuperAdmin[Super Admin]
   RestaurantOwner --> Dashboard[Support Ticket Dashboard]
   SuperAdmin --> Dashboard
-  Dashboard --> Status[Open / In Review / Resolved]
+  Dashboard --> Status[Open / In Review / Resolved / Rejected]
+  Dashboard --> Notes[Public Response + Internal Note]
+  Dashboard --> Audit[Audit Log]
 ```
 
 Rules:
@@ -356,6 +358,9 @@ Rules:
 - Restaurant support tickets are visible to the restaurant owner for the related restaurant.
 - App support tickets route to the super admin.
 - Ticket updates are admin-only.
+- Reporter-facing response notes are shown in `/my-reports`; internal handling notes stay admin-only.
+- Rejected tickets require a reporter-facing response note so the user understands why no further action is being taken.
+- Admin ticket updates write audit logs for operational history.
 
 ## Notifications And Messaging
 

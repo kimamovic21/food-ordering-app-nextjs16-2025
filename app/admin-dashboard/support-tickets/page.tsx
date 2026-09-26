@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { parseAsString, parseAsStringLiteral, useQueryStates } from 'nuqs';
-import { CheckCircle2, ExternalLink, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ExternalLink, RefreshCw, XCircle } from 'lucide-react';
 import Title from '@/components/shared/Title';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ const statusLabels = {
   open: 'Open',
   in_review: 'In review',
   resolved: 'Resolved',
+  rejected: 'Rejected',
 };
 
 const statusFilterOptions = [
@@ -34,6 +35,7 @@ const statusFilterOptions = [
   'open',
   'in_review',
   'resolved',
+  'rejected',
 ] as const satisfies readonly SupportTicketStatusFilter[];
 
 const categoryLabels: Record<string, string> = {
@@ -54,6 +56,9 @@ const getStatusClass = (status: SupportTicket['status']) => {
   if (status === 'in_review') {
     return 'bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-100';
   }
+  if (status === 'rejected') {
+    return 'bg-slate-100 text-slate-800 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-100';
+  }
   return 'bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950 dark:text-green-100';
 };
 
@@ -72,6 +77,7 @@ const SupportTicketsPage = () => {
   const [loading, setLoading] = useState(true);
   const [updatingTicketId, setUpdatingTicketId] = useState<string | null>(null);
   const [responseNotes, setResponseNotes] = useState<Record<string, string>>({});
+  const [internalNotes, setInternalNotes] = useState<Record<string, string>>({});
 
   const isAdmin = profileData?.role === 'admin';
   const isSuperAdmin = isAdmin && profileData?.email === process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
@@ -121,6 +127,11 @@ const SupportTicketsPage = () => {
           nextTickets.map((ticket: SupportTicket) => [ticket._id, ticket.responseNote || ''])
         )
       );
+      setInternalNotes(
+        Object.fromEntries(
+          nextTickets.map((ticket: SupportTicket) => [ticket._id, ticket.internalNote || ''])
+        )
+      );
     } catch (error) {
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to load support tickets');
     } finally {
@@ -139,6 +150,7 @@ const SupportTicketsPage = () => {
       open: tickets.filter((ticket) => ticket.status === 'open').length,
       inReview: tickets.filter((ticket) => ticket.status === 'in_review').length,
       resolved: tickets.filter((ticket) => ticket.status === 'resolved').length,
+      rejected: tickets.filter((ticket) => ticket.status === 'rejected').length,
     }),
     [tickets]
   );
@@ -154,6 +166,7 @@ const SupportTicketsPage = () => {
           ticketId,
           status,
           responseNote: responseNotes[ticketId] || '',
+          internalNote: internalNotes[ticketId] || '',
         }),
       });
       const json = await response.json();
@@ -177,8 +190,8 @@ const SupportTicketsPage = () => {
     return (
       <section className='space-y-6'>
         <Skeleton className='h-10 w-64' />
-        <div className='grid gap-4 md:grid-cols-3'>
-          {Array.from({ length: 3 }).map((_, index) => (
+        <div className='grid gap-4 md:grid-cols-4'>
+          {Array.from({ length: 4 }).map((_, index) => (
             <Skeleton key={index} className='h-28 rounded-lg' />
           ))}
         </div>
@@ -217,6 +230,7 @@ const SupportTicketsPage = () => {
               <SelectItem value='open'>Open</SelectItem>
               <SelectItem value='in_review'>In review</SelectItem>
               <SelectItem value='resolved'>Resolved</SelectItem>
+              <SelectItem value='rejected'>Rejected</SelectItem>
             </SelectContent>
           </Select>
           <Button type='button' variant='outline' onClick={() => fetchTickets()} className='gap-2'>
@@ -226,7 +240,7 @@ const SupportTicketsPage = () => {
         </div>
       </div>
 
-      <div className='grid gap-4 md:grid-cols-3'>
+      <div className='grid gap-4 md:grid-cols-4'>
         <Card>
           <CardHeader className='pb-2'>
             <CardDescription>Open</CardDescription>
@@ -243,6 +257,12 @@ const SupportTicketsPage = () => {
           <CardHeader className='pb-2'>
             <CardDescription>Resolved</CardDescription>
             <CardTitle>{ticketStats.resolved}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card>
+          <CardHeader className='pb-2'>
+            <CardDescription>Rejected</CardDescription>
+            <CardTitle>{ticketStats.rejected}</CardTitle>
           </CardHeader>
         </Card>
       </div>
@@ -328,7 +348,7 @@ const SupportTicketsPage = () => {
 
                   <div className='space-y-2'>
                     <label htmlFor={`response-note-${ticket._id}`} className='text-sm font-medium'>
-                      Internal response note
+                      Public response to reporter
                     </label>
                     <Textarea
                       id={`response-note-${ticket._id}`}
@@ -340,8 +360,32 @@ const SupportTicketsPage = () => {
                         }))
                       }
                       rows={3}
-                      placeholder='Add what was checked or how this was handled.'
+                      placeholder='Add the message the reporter should see when this ticket changes status.'
                     />
+                    <p className='text-xs text-muted-foreground'>
+                      This note is visible to the reporter in My Reports.
+                    </p>
+                  </div>
+
+                  <div className='space-y-2'>
+                    <label htmlFor={`internal-note-${ticket._id}`} className='text-sm font-medium'>
+                      Internal handling note
+                    </label>
+                    <Textarea
+                      id={`internal-note-${ticket._id}`}
+                      value={internalNotes[ticket._id] || ''}
+                      onChange={(event) =>
+                        setInternalNotes((current) => ({
+                          ...current,
+                          [ticket._id]: event.target.value,
+                        }))
+                      }
+                      rows={3}
+                      placeholder='Add private context for admins: what was checked, who was contacted, next steps.'
+                    />
+                    <p className='text-xs text-muted-foreground'>
+                      Internal notes stay in the admin workflow and are not shown to the reporter.
+                    </p>
                   </div>
 
                   <div className='flex flex-wrap gap-2'>
@@ -361,6 +405,16 @@ const SupportTicketsPage = () => {
                     >
                       <CheckCircle2 className='size-4' />
                       Resolve
+                    </Button>
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => updateTicket(ticket._id, 'rejected')}
+                      disabled={updatingTicketId === ticket._id || ticket.status === 'rejected'}
+                      className='gap-2 border-slate-500/40 text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-900'
+                    >
+                      <XCircle className='size-4' />
+                      Reject
                     </Button>
                   </div>
                 </CardContent>

@@ -4,7 +4,7 @@ import type { RestaurantSummary } from '@/types/restaurant';
 import type { UserRole, UserSummary } from '@/types/user';
 
 export type SupportTicketTarget = 'restaurant_support' | 'app_support';
-export type SupportTicketStatus = 'open' | 'in_review' | 'resolved';
+export type SupportTicketStatus = 'open' | 'in_review' | 'resolved' | 'rejected';
 export type SupportTicketPriority = 'low' | 'normal' | 'high';
 
 export type SupportTicketOrderSummary = {
@@ -32,6 +32,9 @@ export type SupportTicket = {
   status: SupportTicketStatus;
   priority: SupportTicketPriority;
   responseNote?: string;
+  internalNote?: string;
+  resolvedBy?: MaybePopulated<UserSummary> | null;
+  resolvedAt?: ISODateString | null;
   createdAt: ISODateString;
   updatedAt: ISODateString;
 };
