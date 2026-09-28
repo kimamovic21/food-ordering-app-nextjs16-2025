@@ -365,6 +365,11 @@ Loyalty:
 - Loyalty can reduce the delivery fee or order total depending on the app rules.
 - The order stores loyalty discount percentage, amount, and tier snapshot.
 - Loyalty history is visible on `/loyalty`.
+- The loyalty ledger records completed-order credits, applied loyalty discount snapshots, and
+  reversals, so a customer can understand why a reward exists or why it was removed after a refund
+  or cancellation edge case.
+- If older completed orders existed before the ledger feature, the route can show a legacy notice and
+  the maintenance backfill command can create the missing historical ledger rows.
 
 Reorder:
 
@@ -437,7 +442,7 @@ Refund readiness:
 - The API verifies that the order is already `canceled`, has `refundStatus: "review_required"`,
   and has a positive `refundAmount`.
 - When accepted, the app writes `refundStatus: "refunded"`, `refundProvider:
-  "simulated_stripe"`, and a generated `refundSimulationId`, then writes an audit log and customer
+"simulated_stripe"`, and a generated `refundSimulationId`, then writes an audit log and customer
   notification.
 - Healthy active orders, completed orders, unpaid customer cancellations, and unrelated canceled
   orders cannot be refunded from the admin UI.
@@ -478,7 +483,7 @@ Ready without courier:
 - If no courier accepts within 60 minutes after ready time, the order can auto-cancel.
 - The order is marked canceled and unpaid.
 - If the order had already been paid, the cancellation is marked `refundStatus:
-  "review_required"` so an admin can close the simulated refund workflow after review.
+"review_required"` so an admin can close the simulated refund workflow after review.
 - A system cancellation reason is stored.
 - Customer/admin notifications and audit logs are created.
 

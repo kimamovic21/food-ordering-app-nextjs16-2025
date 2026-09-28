@@ -1,14 +1,29 @@
 import { getServerSession } from 'next-auth/next';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { authOptions } from '@/libs/authOptions';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 import { LOYALTY_TIERS, calculateLoyaltyStatus } from '@/libs/loyaltyCalculator';
+import { getUserLoyaltyLedger } from '@/libs/loyaltyLedger';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, Gift, ShoppingBag, TrendingUp, ReceiptText } from 'lucide-react';
+import {
+  BadgeDollarSign,
+  CheckCircle2,
+  Gift,
+  Info,
+  Lock,
+  ReceiptText,
+  RotateCcw,
+  ShoppingBag,
+  TrendingUp,
+  Trophy,
+} from 'lucide-react';
 import { formatAppDateTime } from '@/libs/dateFormat';
+import { formatMoney } from '@/libs/money';
+import type { LoyaltyLedgerEntryType } from '@/types/loyalty';
 
 type LoyaltyOrderHistory = {
   _id: string;
@@ -21,6 +36,40 @@ type LoyaltyOrderHistory = {
   couponDiscountAmount?: number;
   completedAt?: Date | string | null;
   createdAt?: Date | string | null;
+};
+
+const LEDGER_LABELS: Record<LoyaltyLedgerEntryType, string> = {
+  order_completed: 'Order completed',
+  discount_applied: 'Reward applied',
+  reward_reversed: 'Reward reversed',
+};
+
+const getLedgerBadgeClassName = (type: LoyaltyLedgerEntryType, status: string) => {
+  if (status === 'reversed' || type === 'reward_reversed') {
+    return 'border-red-500/40 bg-red-500/10 text-red-600';
+  }
+
+  if (type === 'discount_applied') {
+    return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600';
+  }
+
+  return 'border-primary/40 bg-primary/10 text-primary';
+};
+
+const getLedgerValue = (entry: {
+  type: LoyaltyLedgerEntryType;
+  orderCountDelta: number;
+  discountAmount: number;
+}) => {
+  if (entry.type === 'discount_applied') {
+    return `Saved ${formatMoney(entry.discountAmount)}`;
+  }
+
+  if (entry.type === 'reward_reversed') {
+    return 'Reward reversed';
+  }
+
+  return entry.orderCountDelta > 0 ? '+1 completed order' : 'Order tracked';
 };
 
 export default async function LoyaltyPage() {
@@ -56,10 +105,10 @@ export default async function LoyaltyPage() {
     .lean()) as unknown as LoyaltyOrderHistory[];
 
   const loyaltyStatus = calculateLoyaltyStatus(completedOrderCount);
-  const totalLoyaltySavings = recentCompletedOrders.reduce(
-    (sum, order) => sum + (Number(order.loyaltyDiscount) || 0),
-    0
-  );
+  const loyaltyLedger = await getUserLoyaltyLedger(user._id, { limit: 10 });
+  const totalLoyaltySavings = loyaltyLedger.summary.totalDiscountApplied;
+  const totalReversedSavings = loyaltyLedger.summary.totalDiscountReversed;
+  const legacyLedgerGap = Math.max(0, completedOrderCount - loyaltyLedger.summary.earnedOrders);
   const totalCouponSavings = recentCompletedOrders.reduce(
     (sum, order) => sum + (Number(order.couponDiscountAmount) || 0),
     0
@@ -155,6 +204,105 @@ export default async function LoyaltyPage() {
         </CardContent>
       </Card>
 
+      <Card className='mb-6'>
+        <CardHeader>
+          <CardTitle className='flex items-center gap-2'>
+            <BadgeDollarSign className='h-5 w-5 text-primary' />
+            Rewards Ledger
+          </CardTitle>
+          <CardDescription>
+            A transparent history of loyalty rewards earned, applied, and reversed.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className='mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+            <div className='rounded-lg border bg-muted/30 p-3'>
+              <p className='text-xs text-muted-foreground'>Active reward orders</p>
+              <p className='text-xl font-semibold'>{loyaltyLedger.summary.earnedOrders}</p>
+            </div>
+            <div className='rounded-lg border bg-muted/30 p-3'>
+              <p className='text-xs text-muted-foreground'>Total loyalty savings</p>
+              <p className='text-xl font-semibold text-green-600'>
+                {formatMoney(totalLoyaltySavings)}
+              </p>
+            </div>
+            <div className='rounded-lg border bg-muted/30 p-3'>
+              <p className='text-xs text-muted-foreground'>Reversed rewards</p>
+              <p className='text-xl font-semibold text-red-600'>
+                {loyaltyLedger.summary.reversedOrders}
+              </p>
+            </div>
+            <div className='rounded-lg border bg-muted/30 p-3'>
+              <p className='text-xs text-muted-foreground'>Reversed savings</p>
+              <p className='text-xl font-semibold text-red-600'>
+                {formatMoney(totalReversedSavings)}
+              </p>
+            </div>
+          </div>
+
+          {legacyLedgerGap > 0 && (
+            <div className='mb-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300'>
+              <div className='flex gap-2'>
+                <Info className='mt-0.5 h-4 w-4 shrink-0' />
+                <div>
+                  <p className='font-semibold'>Legacy orders included</p>
+                  <p className='mt-1'>
+                    {legacyLedgerGap} older completed{' '}
+                    {legacyLedgerGap === 1 ? 'order counts' : 'orders count'} toward your tier but{' '}
+                    {legacyLedgerGap === 1 ? 'does' : 'do'} not have detailed ledger activity yet.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {loyaltyLedger.entries.length === 0 ? (
+            <p className='rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground'>
+              Complete your first paid order to start a loyalty ledger.
+            </p>
+          ) : (
+            <div className='space-y-3'>
+              {loyaltyLedger.entries.map((entry) => (
+                <div
+                  key={entry._id}
+                  className='flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between'
+                >
+                  <div className='min-w-0'>
+                    <div className='mb-2 flex flex-wrap items-center gap-2'>
+                      <Badge
+                        variant='outline'
+                        className={getLedgerBadgeClassName(entry.type, entry.status)}
+                      >
+                        {entry.type === 'reward_reversed' ? (
+                          <RotateCcw className='mr-1 h-3 w-3' />
+                        ) : (
+                          <CheckCircle2 className='mr-1 h-3 w-3' />
+                        )}
+                        {LEDGER_LABELS[entry.type]}
+                      </Badge>
+                      {entry.tierName && <Badge variant='secondary'>{entry.tierName}</Badge>}
+                    </div>
+                    <Link
+                      href={`/my-orders/${entry.orderId}`}
+                      className='font-semibold text-foreground hover:text-primary'
+                    >
+                      Order #{entry.orderId.slice(-6)}
+                    </Link>
+                    <p className='mt-1 text-sm text-muted-foreground'>{entry.description}</p>
+                    <p className='mt-1 text-xs text-muted-foreground'>
+                      {formatAppDateTime(entry.createdAt)}
+                    </p>
+                  </div>
+                  <div className='text-left text-sm font-semibold sm:text-right'>
+                    {getLedgerValue(entry)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* All Tiers */}
       <Card>
         <CardHeader>
@@ -166,6 +314,7 @@ export default async function LoyaltyPage() {
             {LOYALTY_TIERS.map((tier) => {
               const isUnlocked = completedOrderCount >= tier.ordersRequired;
               const isCurrent = loyaltyStatus.currentTier?.name === tier.name;
+              const TierIcon = isUnlocked ? CheckCircle2 : Lock;
 
               return (
                 <div
@@ -180,7 +329,15 @@ export default async function LoyaltyPage() {
                 >
                   <div className='flex items-center justify-between'>
                     <div className='flex items-center gap-3'>
-                      <div className={`text-2xl ${tier.color}`}>{isUnlocked ? '✓' : '🔒'}</div>
+                      <div
+                        className={`flex h-10 w-10 items-center justify-center rounded-full border ${
+                          isUnlocked
+                            ? 'border-green-500/40 bg-green-500/10 text-green-600'
+                            : 'border-muted-foreground/30 bg-muted text-muted-foreground'
+                        }`}
+                      >
+                        <TierIcon className='h-5 w-5' />
+                      </div>
                       <div>
                         <h3 className={`font-semibold ${tier.color}`}>
                           {tier.name} Tier
@@ -227,15 +384,15 @@ export default async function LoyaltyPage() {
               <p className='text-xl font-semibold'>{completedOrderCount}</p>
             </div>
             <div className='rounded-lg border bg-muted/30 p-3'>
-              <p className='text-xs text-muted-foreground'>Recent loyalty savings</p>
+              <p className='text-xs text-muted-foreground'>Ledger loyalty savings</p>
               <p className='text-xl font-semibold text-green-600'>
-                ${totalLoyaltySavings.toFixed(2)}
+                {formatMoney(totalLoyaltySavings)}
               </p>
             </div>
             <div className='rounded-lg border bg-muted/30 p-3'>
               <p className='text-xs text-muted-foreground'>Recent coupon savings</p>
               <p className='text-xl font-semibold text-green-600'>
-                ${totalCouponSavings.toFixed(2)}
+                {formatMoney(totalCouponSavings)}
               </p>
             </div>
           </div>
@@ -269,9 +426,9 @@ export default async function LoyaltyPage() {
                       </div>
                     </div>
                     <div className='text-left sm:text-right'>
-                      <p className='font-semibold'>${Number(order.total || 0).toFixed(2)}</p>
+                      <p className='font-semibold'>{formatMoney(Number(order.total || 0))}</p>
                       <p className='text-sm text-green-600'>
-                        Saved ${(loyaltyDiscount + couponDiscount).toFixed(2)}
+                        Saved {formatMoney(loyaltyDiscount + couponDiscount)}
                       </p>
                     </div>
                   </div>
@@ -284,11 +441,16 @@ export default async function LoyaltyPage() {
 
       <div className='mt-6 p-4 bg-muted rounded-lg'>
         <h3 className='font-semibold mb-2'>How it works</h3>
-        <ul className='space-y-1 text-sm text-muted-foreground'>
-          <li>• Complete orders to earn loyalty discounts</li>
-          <li>• Discounts are automatically applied to delivery fees at checkout</li>
-          <li>• Only completed and paid orders count towards your tier</li>
-          <li>• Discount applies to your delivery fee only (food prices unchanged)</li>
+        <ul className='list-disc space-y-1 pl-5 text-sm text-muted-foreground'>
+          <li>Complete paid orders to earn loyalty tier progress.</li>
+          <li>
+            Loyalty discounts are calculated at checkout from the eligible food subtotal after
+            coupon discounts.
+          </li>
+          <li>Each completed order stores the tier, percentage, and discount snapshot.</li>
+          <li>
+            Refund or cancellation edge cases can reverse ledger rewards without duplicating rows.
+          </li>
         </ul>
       </div>
     </section>

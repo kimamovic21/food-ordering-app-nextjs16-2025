@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth/next';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 import { calculateLoyaltyStatus } from '@/libs/loyaltyCalculator';
+import { getUserLoyaltyLedger } from '@/libs/loyaltyLedger';
 
 vi.mock('next-auth/next', () => ({
   getServerSession: vi.fn(),
@@ -23,11 +24,25 @@ vi.mock('@/libs/loyaltyCalculator', () => ({
   calculateLoyaltyStatus: vi.fn(),
 }));
 
+vi.mock('@/libs/loyaltyLedger', () => ({
+  getUserLoyaltyLedger: vi.fn(),
+}));
+
 const loadLoyaltyRoute = async () => import('@/app/api/loyalty/route');
 
 const user = {
   _id: 'user-1',
   email: 'loyal@example.com',
+};
+
+const emptyLedger = {
+  entries: [],
+  summary: {
+    earnedOrders: 0,
+    reversedOrders: 0,
+    totalDiscountApplied: 0,
+    totalDiscountReversed: 0,
+  },
 };
 
 describe('/api/loyalty route', () => {
@@ -40,6 +55,7 @@ describe('/api/loyalty route', () => {
       ordersToNextTier: 3,
       totalOrders: 0,
     } as never);
+    vi.mocked(getUserLoyaltyLedger).mockResolvedValue(emptyLedger);
   });
 
   it('returns 401 when session is missing', async () => {
@@ -53,6 +69,7 @@ describe('/api/loyalty route', () => {
     expect(body).toEqual({ error: 'Unauthorized' });
     expect(User.findOne).not.toHaveBeenCalled();
     expect(Order.countDocuments).not.toHaveBeenCalled();
+    expect(getUserLoyaltyLedger).not.toHaveBeenCalled();
   });
 
   it('returns 404 when the session user cannot be found', async () => {
@@ -68,6 +85,7 @@ describe('/api/loyalty route', () => {
     expect(res.status).toBe(404);
     expect(body).toEqual({ error: 'User not found' });
     expect(Order.countDocuments).not.toHaveBeenCalled();
+    expect(getUserLoyaltyLedger).not.toHaveBeenCalled();
   });
 
   it('counts only completed orders toward loyalty and returns frontend-safe shape', async () => {
@@ -93,12 +111,14 @@ describe('/api/loyalty route', () => {
       discountPercentage: 10,
       currentTier: 'Gold',
       totalOrders: 7,
+      ledger: emptyLedger,
     });
     expect(Order.countDocuments).toHaveBeenCalledWith({
       userId: user._id,
       orderStatus: 'completed',
     });
     expect(calculateLoyaltyStatus).toHaveBeenCalledWith(7);
+    expect(getUserLoyaltyLedger).toHaveBeenCalledWith(user._id, { limit: 12 });
   });
 
   it('returns null current tier when the user has no completed orders', async () => {
@@ -117,6 +137,7 @@ describe('/api/loyalty route', () => {
       discountPercentage: 0,
       currentTier: null,
       totalOrders: 0,
+      ledger: emptyLedger,
     });
   });
 });

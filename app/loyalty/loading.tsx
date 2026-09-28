@@ -32,6 +32,26 @@ export default function LoyaltyLoading() {
         </CardContent>
       </Card>
 
+      <Card className='mb-6'>
+        <CardHeader>
+          <Skeleton className='h-6 w-44 mb-2' />
+          <Skeleton className='h-4 w-72' />
+        </CardHeader>
+        <CardContent>
+          <div className='mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+            <Skeleton className='h-20 w-full' />
+            <Skeleton className='h-20 w-full' />
+            <Skeleton className='h-20 w-full' />
+            <Skeleton className='h-20 w-full' />
+          </div>
+          <div className='space-y-3'>
+            <Skeleton className='h-24 w-full' />
+            <Skeleton className='h-24 w-full' />
+            <Skeleton className='h-24 w-full' />
+          </div>
+        </CardContent>
+      </Card>
+
       {/* All Tiers */}
       <Card>
         <CardHeader>

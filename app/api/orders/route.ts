@@ -17,6 +17,7 @@ import {
   markOrderRefundReviewRequired,
   simulateOrderRefund,
 } from '@/libs/orderRefund';
+import { recordOrderLoyaltyCompletion, reverseOrderLoyaltyRewards } from '@/libs/loyaltyLedger';
 import { scheduleReadyWithoutCourierAutoCancellationCheck } from '@/libs/qstash';
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
 import mongoose from 'mongoose';
@@ -237,6 +238,15 @@ export async function PATCH(request: Request) {
 
     const savedOrder = await order.save();
 
+    try {
+      await reverseOrderLoyaltyRewards(savedOrder, {
+        reason: order.refundReason || 'Simulated refund processed for this order.',
+        actor: user,
+      });
+    } catch (loyaltyError) {
+      console.error('Failed to reverse loyalty ledger after simulated refund:', loyaltyError);
+    }
+
     await createAuditLog({
       actor: user,
       action: 'order.refund_simulated',
@@ -369,6 +379,18 @@ export async function PATCH(request: Request) {
     const savedOrder = await order.save();
     await notifyWaitingUsersIfRestaurantCanAcceptOrders(order.restaurantId);
 
+    try {
+      await reverseOrderLoyaltyRewards(savedOrder, {
+        reason: savedOrder.cancellationReason || 'Failed delivery cancellation verified.',
+        actor: user,
+      });
+    } catch (loyaltyError) {
+      console.error(
+        'Failed to reverse loyalty ledger after failed delivery cancellation:',
+        loyaltyError
+      );
+    }
+
     await createAuditLog({
       actor: user,
       action: 'order.failed_delivery_canceled',
@@ -427,6 +449,14 @@ export async function PATCH(request: Request) {
   }
 
   const savedOrder = await order.save();
+
+  if (previousStatus !== orderStatus && orderStatus === 'completed') {
+    try {
+      await recordOrderLoyaltyCompletion(savedOrder, { actor: user });
+    } catch (loyaltyError) {
+      console.error('Failed to record loyalty ledger for completed order:', loyaltyError);
+    }
+  }
 
   if (['completed', 'canceled'].includes(orderStatus)) {
     await notifyWaitingUsersIfRestaurantCanAcceptOrders(order.restaurantId);

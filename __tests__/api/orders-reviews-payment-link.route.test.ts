@@ -14,6 +14,7 @@ import {
   notifyUserAboutOrderStatusChange,
   notifyUserAboutSimulatedRefund,
 } from '@/libs/notifications';
+import { recordOrderLoyaltyCompletion, reverseOrderLoyaltyRewards } from '@/libs/loyaltyLedger';
 import { expireOpenStripeCheckoutSession } from '@/libs/stripeCheckoutSession';
 
 const stripeRetrieveSession = vi.fn();
@@ -65,6 +66,11 @@ vi.mock('@/libs/notifications', () => ({
 
 vi.mock('@/libs/auditLog', () => ({
   createAuditLog: vi.fn(),
+}));
+
+vi.mock('@/libs/loyaltyLedger', () => ({
+  recordOrderLoyaltyCompletion: vi.fn(),
+  reverseOrderLoyaltyRewards: vi.fn(),
 }));
 
 vi.mock('@/libs/stripeCheckoutSession', () => ({
@@ -468,6 +474,12 @@ describe('high-priority order, review, and payment-link routes', () => {
     expect(body.order.refundProvider).toBe('simulated_stripe');
     expect(body.order.refundSimulationId).toContain('sim_ref_');
     expect(canceledRefundOrderDoc.save).toHaveBeenCalled();
+    expect(reverseOrderLoyaltyRewards).toHaveBeenCalledWith(
+      canceledRefundOrderDoc,
+      expect.objectContaining({
+        actor: admin,
+      })
+    );
     expect(createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'order.refund_simulated',
@@ -541,6 +553,12 @@ describe('high-priority order, review, and payment-link routes', () => {
     expect(res.status).toBe(200);
     expect(body.order.canceledBy).toBe('super_admin');
     expect(Order.findOne).toHaveBeenCalledWith({ _id: 'order-1' });
+    expect(reverseOrderLoyaltyRewards).toHaveBeenCalledWith(
+      failedDeliveryOrderDoc,
+      expect.objectContaining({
+        actor: superAdmin,
+      })
+    );
   });
 
   it('allows customers to cancel their unpaid placed orders and notifies restaurant admins', async () => {
@@ -668,6 +686,9 @@ describe('high-priority order, review, and payment-link routes', () => {
     expect(body.order.customerConfirmedDeliveryAt).toEqual(expect.any(String));
     expect(body.order.completedAt).toEqual(expect.any(String));
     expect(deliveredOrderDoc.save).toHaveBeenCalled();
+    expect(recordOrderLoyaltyCompletion).toHaveBeenCalledWith(deliveredOrderDoc, {
+      actor: customer,
+    });
     expect(notifyUserAboutOrderCompletion).toHaveBeenCalledWith({
       userId: deliveredOrderDoc.userId,
       orderId: deliveredOrderDoc._id,

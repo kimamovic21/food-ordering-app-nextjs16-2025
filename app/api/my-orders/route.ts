@@ -11,6 +11,7 @@ import {
   notifyRestaurantAdminsAboutCanceledOrder,
   notifyUserAboutOrderCompletion,
 } from '@/libs/notifications';
+import { recordOrderLoyaltyCompletion } from '@/libs/loyaltyLedger';
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
 import { normalizeCustomerOrder } from '@/libs/orderNormalizer';
 import mongoose from 'mongoose';
@@ -247,6 +248,12 @@ export async function PATCH(request: Request) {
 
   await order.save();
   await notifyWaitingUsersIfRestaurantCanAcceptOrders(order.restaurantId);
+
+  try {
+    await recordOrderLoyaltyCompletion(order, { actor: user });
+  } catch (loyaltyError) {
+    console.error('Failed to record customer loyalty ledger for completed order:', loyaltyError);
+  }
 
   try {
     await notifyUserAboutOrderCompletion({
