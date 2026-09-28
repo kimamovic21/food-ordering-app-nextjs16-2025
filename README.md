@@ -12,7 +12,7 @@ It includes:
 - restaurant browsing with search/filter/sort/pagination and shareable URLs
 - favorites for meals and restaurants
 - restaurant ordering-status checks before add-to-cart plus availability alerts when checkout is blocked by closed, paused, closing-soon, or busy restaurants
-- loyalty rewards with delivery fee discounts and loyalty history
+- loyalty rewards with delivery fee discounts, tier progress, and an auditable rewards ledger
 - ratings and review flows
 - approved in-app messaging between customers, restaurant owners, admins, and couriers
 - notifications center with unread counts, mark-as-read actions, and role-aware routing
@@ -48,7 +48,7 @@ It includes:
 - Add-to-cart restaurant ordering checks, prefetched for visible menu items, so closed, paused, closing-soon, or busy restaurants are blocked before the cart is changed
 - Cart, checkout, best coupon suggestion, busy/closed/radius restaurant checks, restaurant availability alerts, active order quick access, and order tracking
 - Favorites for menu items and restaurants
-- Loyalty tiers and automatic delivery-fee discounts
+- Loyalty tiers, automatic delivery-fee discounts, and a reward ledger showing earned, applied, and reversed rewards
 - Personal review management and restaurant review pages
 - Per-order courier reviews and ratings (optional, one submission per order)
 - Order details with courier information, order activity history, order timeline estimates, delay warnings, delivery PIN visibility, customer delivery confirmation, and a public courier review page for customers
@@ -330,6 +330,18 @@ This project uses many dependencies; below are the main packages actively used i
 - The cleanup script also reports menu item images that are referenced in MongoDB but missing on Cloudinary, which helps catch broken image URLs.
 - Dry-run is the default behavior. Use the cleanup command only after reviewing the audit output.
 - To inspect production assets locally, run `node scripts/cleanup-menu-item-cloudinary-images.mjs --env=production`; add `--apply` only when you intentionally want to delete production orphans.
+
+### Loyalty Ledger Maintenance
+
+- Loyalty ledger entries are created automatically when a delivered order becomes `completed`.
+- Older completed orders that existed before the ledger feature still count toward loyalty tiers, but
+  may not have detailed ledger rows until they are backfilled.
+- `npm run loyalty:ledger:backfill` performs a dry run and reports how many missing completed-order
+  and discount rows would be created.
+- `npm run loyalty:ledger:backfill:apply` writes the missing `loyalty_ledger_entries` rows. The
+  script is idempotent and uses the unique `{ orderId, type }` ledger index to avoid duplicates.
+- Optional filters are supported for careful runs: `--limit=100`, `--userId=<id>`, and
+  `--orderId=<id>`.
 
 ## Auth: Email Verification & Password Reset
 

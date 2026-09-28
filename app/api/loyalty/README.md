@@ -12,14 +12,22 @@
 
 ## Plain-English Summary
 
-Handles get work for the loyalty area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Returns the signed-in customer's loyalty tier summary and recent loyalty ledger entries. Cart can
+continue reading the simple `discountPercentage`, `currentTier`, and `totalOrders` fields, while
+account/loyalty UI can also show reward history from `ledger`.
 
 ## What Happens In This File
 
-- The route receives GET requests and converts request/session data into server-side business checks.
-- It uses `order`, `user` for persistence.
-- It delegates shared logic to `authOptions`, `loyaltyCalculator` so behavior stays consistent across the app.
-- Detected local functions/handlers: only exported HTTP handlers.
+- The route receives a `GET` request and requires a NextAuth session.
+- It looks up `User` by the session email. If the user no longer exists, it returns `404`.
+- It counts only `Order` documents where `orderStatus` is `completed`; this preserves the existing
+  loyalty tier rule and prevents unpaid/canceled/in-progress orders from increasing discounts.
+- It calls `calculateLoyaltyStatus()` for the current tier and simple discount response fields.
+- It calls `getUserLoyaltyLedger()` to return recent ledger entries plus summary totals for reward
+  history, applied savings, and reversals.
+- It can return a ledger summary that is lower than `totalOrders` until legacy completed orders are
+  backfilled with `npm run loyalty:ledger:backfill:apply`; the `/loyalty` UI handles this as a
+  legacy history state, not as a checkout error.
 
 ## Request Inputs
 
@@ -30,6 +38,7 @@ Handles get work for the loyalty area. The route keeps the local workflow server
 - `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
 - `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
 - `mongoose` + MongoDB models: keep users, restaurants, menu items, orders, coupons, reviews, and audit data server-authoritative.
+- `currency.js` through `libs/money.ts`: used by the ledger helper for stable money rounding.
 
 ## Auth, Role, And Safety Checks
 
@@ -43,22 +52,27 @@ Handles get work for the loyalty area. The route keeps the local workflow server
 
 ## Data Dependencies
 
-- Models: `order`, `user`
-- Shared libs: `authOptions`, `loyaltyCalculator`
-- Shared types: None detected
+- Models: `order`, `user`, `loyaltyLedgerEntry` through `libs/loyaltyLedger.ts`
+- Shared libs: `authOptions`, `loyaltyCalculator`, `loyaltyLedger`
+- Shared types: `LoyaltyLedgerResult`, `LoyaltyLedgerEntry`, `LoyaltyLedgerSummary`
 
 ## Side Effects
 
-- Mostly read-only, or mutations are fully delegated to imported helpers.
+- Read-only. It does not create rewards; rewards are recorded when an order is completed through
+  `/api/orders` or `/api/my-orders`.
 
 ## Response Behavior
 
 - Status codes detected: `401`, `404`, `500`
-- Common response fields detected: `error`, `email`, `userId`, `orderStatus`, `discountPercentage`, `currentTier`, `totalOrders`, `discount`
+- Common response fields detected: `error`, `discountPercentage`, `currentTier`, `totalOrders`,
+  `ledger.entries`, `ledger.summary.earnedOrders`, `ledger.summary.totalDiscountApplied`,
+  `ledger.summary.reversedOrders`, `ledger.summary.totalDiscountReversed`
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/loyalty` does. Explain that it belongs to the loyalty workflow, serves `customer`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/loyalty` does. Explain that it is a customer-only
+read endpoint: it verifies the session, counts completed orders for tier calculation, and returns a
+safe JSON shape that includes both the current discount and the reward ledger history.
 
 ## Maintenance Notes For Future Work
 

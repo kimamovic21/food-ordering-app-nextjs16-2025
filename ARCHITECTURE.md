@@ -127,6 +127,8 @@ The important persistent models are:
 - `Restaurant`: owner, location, contact, images, working hours, blocked dates, tax, courier fee, preparation/delivery estimates, active order limit, max items per order.
 - `MenuItem`: restaurant item, category, image, prices, availability, max quantity per order.
 - `Order`: customer delivery details, cart snapshot, payment data, restaurant fee/tax snapshots, coupon/loyalty snapshots, estimate snapshots, status timeline timestamps, courier, delivery PIN, completion state.
+- `LoyaltyLedgerEntry`: customer reward history for completed-order credits, applied loyalty
+  discounts, and idempotent reversals when a later refund/cancel path invalidates a reward.
 - `Coupon`: restaurant-scoped discounts and validity rules.
 - `RestaurantReview` and `CourierReview`: one review per completed order flow.
 - `Notification`: role-aware notifications with read state and metadata routing.
@@ -202,6 +204,10 @@ Key checks:
 - Restaurant preparation estimates can increase with active kitchen load, and delivery estimates can increase when courier availability is unavailable or tight; the adjusted preparation/delivery/total estimates are returned to cart/restaurant UI and saved on the order at checkout.
 - Total cart quantity must be at or below `Restaurant.maxItemsPerOrder`, and repeated quantities for the same menu item across sizes must stay at or below `MenuItem.maxQuantityPerOrder`.
 - Coupon and loyalty discounts are validated server-side.
+- Loyalty tier math is still based on completed orders, while `loyalty_ledger_entries` records the
+  explainable history of completed-order credits, applied discount snapshots, and reversals.
+- Historical completed orders can be synced into the ledger with the dry-run-first
+  `loyalty:ledger:backfill` maintenance command.
 - Best coupon suggestions shown in cart are revalidated at checkout before Stripe is created.
 - Recent identical unpaid `placed` checkout attempts are matched by `checkoutFingerprint`; the app reuses or recovers the existing Stripe Checkout session instead of creating duplicate orders.
 - System cancellation of stale unpaid orders attempts to expire the open Stripe Checkout session so an old hosted payment page cannot pay a canceled order.

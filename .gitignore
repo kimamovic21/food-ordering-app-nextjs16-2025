@@ -43,3 +43,4 @@ next-env.d.ts
 # local maintenance scripts
 /scripts/*
 !/scripts/.gitkeep
+!/scripts/backfill-loyalty-ledger.mjs

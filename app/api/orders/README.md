@@ -23,7 +23,7 @@ the guarded `simulate-refund` action to record a realistic refund completion tra
 
 - The route receives GET/PATCH requests and converts request/session data into server-side business checks.
 - It uses `order`, `user` for persistence.
-- It delegates shared logic to `auditLog`, `authOptions`, `courierAssignmentTimeout`, `devOrderTimeSimulatorStore`, `notifications`, `orderAutoCancellation`, `qstash`, `restaurantAvailabilityRequests` so behavior stays consistent across the app.
+- It delegates shared logic to `auditLog`, `authOptions`, `courierAssignmentTimeout`, `devOrderTimeSimulatorStore`, `loyaltyLedger`, `notifications`, `orderAutoCancellation`, `qstash`, `restaurantAvailabilityRequests` so behavior stays consistent across the app.
 - Detected local functions/handlers: `normalizeOrder`, `getSuperAdminEmail`, `isSuperAdminUser`, `skip`, `normalizedOrders`.
 - Supported PATCH actions include `update-admin-note`, `handoff-to-courier`,
   `verify-failed-delivery`, and `simulate-refund`.
@@ -31,6 +31,11 @@ the guarded `simulate-refund` action to record a realistic refund completion tra
   `refundStatus: "review_required"`, and has a positive `refundAmount`.
 - Failed-delivery verification and paid ready-without-courier auto-cancel paths can move a paid
   cancellation into refund review. Healthy active orders cannot be refunded from this route.
+- When an admin completes a delivered order, the route attempts to record loyalty ledger entries for
+  the completed-order credit and any loyalty discount snapshot stored on the order.
+- When a simulated refund or failed-delivery cancellation touches an order that already has loyalty
+  ledger entries, the route attempts an idempotent loyalty reversal so customer history remains
+  explainable.
 
 ## Request Inputs
 
@@ -108,6 +113,8 @@ the guarded `simulate-refund` action to record a realistic refund completion tra
 - Writes or reads audit-log records.
 - Emits customer notification when a simulated refund is marked complete.
 - Writes refund audit metadata for `order.refund_simulated`.
+- Writes loyalty ledger records when delivered orders become completed, and reverses those records
+  when a later refund/cancel path requires it.
 
 ## Response Behavior
 

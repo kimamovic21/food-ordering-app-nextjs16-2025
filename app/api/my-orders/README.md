@@ -18,7 +18,7 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 
 - The route receives GET/PATCH requests and converts request/session data into server-side business checks.
 - It uses `menuItem`, `order`, `restaurant`, `user` for persistence.
-- It delegates shared logic to `auditLog`, `authOptions`, `notifications`, `orderAutoCancellation`, `orderNormalizer`, `restaurantAvailabilityRequests`, `stripeCheckoutSession` so behavior stays consistent across the app.
+- It delegates shared logic to `auditLog`, `authOptions`, `loyaltyLedger`, `notifications`, `orderAutoCancellation`, `orderNormalizer`, `restaurantAvailabilityRequests`, `stripeCheckoutSession` so behavior stays consistent across the app.
 - Detected local functions/handlers: `productIds`, `receiptItems`, `skip`, `normalizedOrders`.
 
 ## Request Inputs
@@ -71,6 +71,7 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 
 - Touches Stripe payment/session/webhook behavior.
 - Writes or reads audit-log records.
+- Records loyalty ledger entries when the customer confirms a delivered order as completed.
 
 ## Response Behavior
 
@@ -79,7 +80,11 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/my-orders` does. Explain that it belongs to the customer orders workflow, serves `customer`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/my-orders` does. Explain that it belongs to the
+customer order workflow: customers can read their orders, recover checkout receipts, cancel unpaid
+placed orders, and confirm delivered orders. Confirmation is important because it closes the order,
+notifies the customer, writes audit data, frees restaurant capacity, and records the loyalty ledger
+credit for the completed order.
 
 ## Maintenance Notes For Future Work
 
