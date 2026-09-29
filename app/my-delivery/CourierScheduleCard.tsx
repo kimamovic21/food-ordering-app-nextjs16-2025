@@ -100,7 +100,8 @@ const CourierScheduleCard = () => {
           Availability Schedule
         </CardTitle>
         <CardDescription>
-          These hours help restaurants assign couriers who are actually working now.
+          These hours help restaurants assign couriers who are actually working now. Go offline
+          before editing; delivery shifts are limited to 08:00-23:00.
         </CardDescription>
       </CardHeader>
       <CardContent className='space-y-4'>

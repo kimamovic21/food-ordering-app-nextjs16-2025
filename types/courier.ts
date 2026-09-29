@@ -8,6 +8,36 @@ export type CourierWorkingHour = {
   isUnavailable?: boolean;
 };
 
+export type CourierAvailabilityStatus = 'offline' | 'online' | 'on_break';
+
+export type CourierWorkPeriodSummary = {
+  breakMinutes: number;
+  grossMinutes: number;
+  netWorkMinutes: number;
+  sessionCount: number;
+};
+
+export type CourierWorkSummary = {
+  today: CourierWorkPeriodSummary;
+  week: CourierWorkPeriodSummary;
+  month: CourierWorkPeriodSummary;
+  year: CourierWorkPeriodSummary;
+};
+
+export type CourierAvailabilityState = {
+  availability: boolean;
+  availabilityStatus: CourierAvailabilityStatus;
+  breakEndsAt: string | null;
+  breakStartedAt: string | null;
+  canStartBreak: boolean;
+  breakUnavailableReason: string;
+  currentSessionStartedAt: string | null;
+  minimumBreakWorkMinutes: number;
+  breakDurationMinutes: number;
+  minimumShiftMinutesForBreak: number;
+  workSummary?: CourierWorkSummary;
+};
+
 export type CourierReadinessTone = 'healthy' | 'limited' | 'unavailable' | 'unknown';
 
 export type CourierReadinessStatus = {
@@ -25,12 +55,14 @@ export type CourierListItem = {
   email: string;
   image?: string | null;
   availability: boolean;
+  courierAvailabilityStatus?: CourierAvailabilityStatus;
   takenOrder?: EntityId | null;
   role: UserRole | string;
   createdAt?: ISODateString;
   distanceToRestaurantKm?: number | null;
   averageRating?: number;
   ratingCount?: number;
+  workSummary?: CourierWorkSummary;
 };
 
 export type CourierPerformanceSummary = {
@@ -70,4 +102,5 @@ export type CourierEarningsResponse = {
   courier: CourierEarningsCourier;
   earningsChart: EarningsChartItem[];
   summary: CourierPerformanceSummary;
+  workSummary?: CourierWorkSummary;
 };

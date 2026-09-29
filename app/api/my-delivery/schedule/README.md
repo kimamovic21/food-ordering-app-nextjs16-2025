@@ -12,18 +12,25 @@
 
 ## Plain-English Summary
 
-Handles get/patch work for the courier active delivery area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Handles courier schedule reads and updates for the active delivery area. The route keeps the saved
+working-hours rules server-authoritative so assignment, availability, breaks, and readiness checks all
+use the same schedule.
 
 ## What Happens In This File
 
-- The route receives GET/PATCH requests and converts request/session data into server-side business checks.
-- It uses `user` for persistence.
-- It delegates shared logic to `authOptions`, `courierSchedule` so behavior stays consistent across the app.
+- `GET` returns normalized weekday working hours.
+- `PATCH` validates and saves normalized weekday working hours.
+- The route rejects schedule edits while the courier is online or on break. This prevents a courier
+  from changing the active shift while a work session is being counted.
+- Validation is delegated to `libs/courierSchedule`, including no overnight shifts and the delivery
+  service window.
 - Detected local functions/handlers: `getCourier`.
 
 ## Request Inputs
 
-- No direct input parsing detected; route may rely on session/context only.
+- JSON body for `PATCH`: `{ workingHours: CourierWorkingHour[] }`.
+- Each day must use `HH:mm` time strings and a known weekday key.
+- Available shifts must start before they end and stay between `08:00` and `23:00`.
 
 ## Packages And Services Used
 
@@ -36,6 +43,7 @@ Handles get/patch work for the courier active delivery area. The route keeps the
 - Requires a NextAuth session for at least one handler branch.
 - Uses shared `authOptions`, so role/session behavior follows the global auth setup.
 - Checks the `courier` role before allowing delivery operations.
+- Blocks updates while `availability` is true or `courierAvailabilityStatus` is `online`/`on_break`.
 
 ## Edge Cases Covered
 
@@ -44,6 +52,10 @@ Handles get/patch work for the courier active delivery area. The route keeps the
 - Line 30: `if (error) return error;`
 - Line 46: `if (error) return error;`
 - Line 51: `if (validationError) {`
+- Rejects `23:00` to `08:00` overnight shifts.
+- Rejects shifts before 08:00 or after 23:00.
+- Normalizes missing days back to the default courier schedule.
+- Keeps unavailable days in the schedule while ignoring their start/end range for assignment checks.
 
 ## Data Dependencies
 
@@ -62,7 +74,10 @@ Handles get/patch work for the courier active delivery area. The route keeps the
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/my-delivery/schedule` does. Explain that it belongs to the courier active delivery workflow, serves `courier`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/my-delivery/schedule` does. Explain that it saves the
+courier's weekly work plan and protects the rest of the delivery system from unrealistic shift data.
+Couriers cannot save overnight work like `23:00-08:00`, cannot work outside the supported delivery
+window, and cannot edit the schedule while an online session or locked break is active.
 
 ## Maintenance Notes For Future Work
 

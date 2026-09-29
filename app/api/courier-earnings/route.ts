@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth/next';
 import mongoose from 'mongoose';
 import { authOptions } from '@/libs/authOptions';
 import { getCourierEarningsReport } from '@/libs/courierEarnings';
+import { getCourierWorkSummary } from '@/libs/courierWorkSessions';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { User } from '@/models/user';
 
@@ -52,6 +53,7 @@ export async function GET(request: Request) {
   }
 
   const report = await getCourierEarningsReport(courier._id);
+  const workSummary = await getCourierWorkSummary(courier._id);
 
   return Response.json({
     courier: {
@@ -65,5 +67,6 @@ export async function GET(request: Request) {
     orders: report.orders,
     earningsChart: report.earningsChart,
     summary: report.summary,
+    workSummary,
   });
 }

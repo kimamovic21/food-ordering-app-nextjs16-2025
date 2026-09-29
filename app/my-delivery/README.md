@@ -4,7 +4,8 @@
 
 ## Purpose
 
-This folder owns the courier active-delivery workflow: availability, assignment state, location sharing, pickup/handoff, and delivery problem reporting.
+This folder owns the courier active-delivery workflow: availability, locked breaks, work-time
+summaries, assignment state, location sharing, pickup/handoff, and delivery problem reporting.
 
 ## Route And Audience
 
@@ -19,12 +20,19 @@ This folder owns the courier active-delivery workflow: availability, assignment 
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/my-delivery/availability`, `/api/my-delivery/location`, `/api/my-delivery/orders`, `/api/my-delivery/schedule`. Keep API response shapes aligned.
+- `AvailabilityToggle.tsx` shows the courier as `Online`, `Offline`, or `On break`. Breaks are
+  server-authoritative: the UI can request a break, but the API decides whether the courier has
+  worked long enough, has no active delivery, is inside schedule, and has enough shift time left.
+- `CourierWorkSummaryCard.tsx` shows the courier's tracked work time for today, week, month, and
+  year. These numbers come from persisted `courier_work_sessions`, not from browser-only timers.
 
 ## Important Files
 
 - `app/my-delivery/AvailabilityToggle.tsx`
 - `app/my-delivery/CourierDeliveryPage.tsx`: functions/components: `CourierPage`, `fetchOrders`, `handleRealtimeDeliveryUpdate`, `refreshOffsets`, `handleCompleteOrder`, `handleAssignmentAction`, `handleFailedDeliveryRequest`, `handleToggleAvailability`, `handleShareLocation`, `handleManualLocationUpdate`, `handleToggleLocationPolling`; API calls: `/api/my-delivery/orders`, `/api/my-delivery/availability`, `/api/my-delivery/location`; client component
 - `app/my-delivery/CourierScheduleCard.tsx`: functions/components: `CourierScheduleCard`, `fetchSchedule`, `updateWorkingHours`, `handleSave`; API calls: `/api/my-delivery/schedule`; client component
+- `app/my-delivery/CourierWorkSummaryCard.tsx`: displays today/week/month/year net work time,
+  break time, and session counts from the courier availability API response.
 - `app/my-delivery/DeliveryOrderCard.tsx`
 - `app/my-delivery/layout.tsx`: functions/components: `MyDeliveryLayout`
 - `app/my-delivery/loading.tsx`: functions/components: `MyDeliveryLoading`
@@ -54,10 +62,19 @@ This folder owns the courier active-delivery workflow: availability, assignment 
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Do not let the browser be the source of truth for courier breaks or online time. The client can
+  show countdowns and disable buttons, but `/api/my-delivery/availability` must enforce the actual
+  break lock, minimum online time, active-delivery guard, and schedule guard.
+- Keep the existing `availability` boolean aligned with the new `courierAvailabilityStatus`:
+  `online` means assignable, `on_break` means not assignable, and `offline` means not assignable.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `courier` UI for `/my-delivery`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `courier` UI for `/my-delivery`; it lets a
+courier go online, take a locked 30-minute break after enough work time, share location, manage
+active assignments, and see their own work-time summary. The UI is intentionally friendly, but the
+server owns the important rules so a courier cannot fake being online, skip the break lock, or take a
+break while carrying an active order.
 
 ## Maintenance Notes For Future Work
 

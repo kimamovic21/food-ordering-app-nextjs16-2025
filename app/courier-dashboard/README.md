@@ -4,7 +4,8 @@
 
 ## Purpose
 
-This folder owns the `/courier-dashboard` UI area. It may include pages, loading states, nested route components, and client-side workflow helpers.
+This folder owns the `/courier-dashboard` UI area for couriers: active delivery work, earnings,
+reviews, and performance/work-time visibility.
 
 ## Route And Audience
 
@@ -18,7 +19,13 @@ This folder owns the `/courier-dashboard` UI area. It may include pages, loading
 - Start from `page.tsx` for the route shell and data loading shape.
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
-- This folder talks to `/api/courier-reviews?${params.toString()}`. Keep API response shapes aligned.
+- The dashboard redirects `/courier-dashboard` to the active delivery workflow.
+- The active delivery tab uses `/my-delivery` UI and APIs for online/offline state, locked breaks,
+  current orders, location sharing, and failed-delivery reporting.
+- The earnings page uses `/api/courier-earnings`; that response includes money/performance metrics
+  plus work-time summaries from `courier_work_sessions`.
+- This folder talks to `/api/courier-reviews?${params.toString()}` for the reviews tab. Keep API
+  response shapes aligned.
 
 ## Important Files
 
@@ -52,10 +59,16 @@ This folder owns the `/courier-dashboard` UI area. It may include pages, loading
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- The courier's work time comes from server-side availability sessions, not client-only timers.
+- Couriers can take a locked 30-minute break only after enough online work time and only when they
+  are not carrying an active delivery.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `courier` UI for `/courier-dashboard`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `courier` dashboard. It brings together the
+active delivery workflow, courier reviews, earnings, assignment reliability, and work-time tracking.
+The important availability and break rules are enforced by the API so the courier dashboard cannot
+fake online time or skip locked break rules.
 
 ## Maintenance Notes For Future Work
 

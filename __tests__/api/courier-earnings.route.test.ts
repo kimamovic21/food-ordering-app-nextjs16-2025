@@ -1,6 +1,7 @@
 import { getServerSession } from 'next-auth/next';
 import { mongoConnect } from '@/libs/mongoConnect';
 import { CourierReview } from '@/models/courierReview';
+import { CourierWorkSession } from '@/models/courierWorkSession';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 
@@ -39,6 +40,14 @@ vi.mock('@/models/order', () => ({
 vi.mock('@/models/courierReview', () => ({
   CourierReview: {
     aggregate: vi.fn(),
+  },
+}));
+
+vi.mock('@/models/courierWorkSession', () => ({
+  CourierWorkSession: {
+    find: vi.fn(() => ({
+      lean: vi.fn(async () => []),
+    })),
   },
 }));
 
@@ -119,6 +128,9 @@ describe('GET /api/courier-earnings', () => {
     vi.mocked(CourierReview.aggregate).mockResolvedValue([
       { averageRating: 5, ratingCount: 2 },
     ] as never);
+    vi.mocked(CourierWorkSession.find).mockReturnValue({
+      lean: vi.fn(async () => []),
+    } as never);
   });
 
   it('allows the superadmin to view courier earnings by courier id', async () => {
@@ -148,6 +160,7 @@ describe('GET /api/courier-earnings', () => {
       ratingCount: 2,
     });
     expect(body.earningsChart).toEqual([{ month: 'Feb 2026', earnings: 6, deliveries: 1 }]);
+    expect(body.workSummary.week.netWorkMinutes).toBe(0);
     expect(mongoConnect).toHaveBeenCalled();
   });
 

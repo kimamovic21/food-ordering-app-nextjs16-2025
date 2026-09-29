@@ -42,6 +42,15 @@ vi.mock('@/models/courierReview', () => ({
   },
 }));
 
+vi.mock('@/models/courierWorkSession', () => ({
+  CourierWorkSession: {
+    findOne: vi.fn(),
+    find: vi.fn(() => ({
+      lean: vi.fn(async () => []),
+    })),
+  },
+}));
+
 vi.mock('@/models/restaurant', () => ({
   Restaurant: {
     findById: vi.fn(),
@@ -83,6 +92,17 @@ const createAssignRequest = (body: Record<string, unknown> = {}) =>
 const createCourier = () => ({
   _id: createObjectId('courier-1'),
   role: 'courier',
+  availability: true,
+  courierAvailabilityStatus: 'online',
+  courierWorkingHours: [
+    { day: 'sunday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'monday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'tuesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'wednesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'thursday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'friday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'saturday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+  ],
   takenOrder: null,
   save: vi.fn(),
 });
@@ -109,11 +129,17 @@ const createAssignableOrder = () => ({
 describe('courier assignment routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-29T12:00:00.000Z'));
     process.env.MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017/test';
     vi.mocked(isAdmin).mockResolvedValue(true as never);
     vi.mocked(applyCourierAssignmentTimeout).mockImplementation(
       async (order) => ({ order, expired: false, reason: '' }) as never
     );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it.each([

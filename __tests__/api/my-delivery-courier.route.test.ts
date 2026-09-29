@@ -1,5 +1,6 @@
 import { getServerSession } from 'next-auth/next';
 import { Order } from '@/models/order';
+import { CourierWorkSession } from '@/models/courierWorkSession';
 import { applyCourierAssignmentTimeout } from '@/libs/courierAssignmentTimeout';
 import {
   notifyOrderDelivered,
@@ -37,6 +38,16 @@ vi.mock('@/models/order', () => ({
   },
 }));
 
+vi.mock('@/models/courierWorkSession', () => ({
+  CourierWorkSession: {
+    create: vi.fn(),
+    find: vi.fn(() => ({
+      lean: vi.fn(async () => []),
+    })),
+    findOne: vi.fn(),
+  },
+}));
+
 vi.mock('@/libs/notifications', () => ({
   notifyOrderDelivered: vi.fn(),
   notifyRestaurantAdminsAboutFailedDeliveryRequest: vi.fn(),
@@ -61,6 +72,17 @@ const courierUser = () => ({
   name: 'Courier One',
   email: 'c@courier.com',
   role: 'courier',
+  availability: true,
+  courierAvailabilityStatus: 'online',
+  courierWorkingHours: [
+    { day: 'sunday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'monday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'tuesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'wednesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'thursday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'friday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+    { day: 'saturday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+  ],
   takenOrder: 'order-1',
   save: vi.fn(async function save(this: any) {
     return this;
@@ -106,13 +128,31 @@ const assignedOrder = (overrides: Record<string, unknown> = {}) => ({
 describe('Courier availability and location routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-29T12:00:00.000Z'));
     process.env.MONGODB_URL = process.env.MONGODB_URL || 'mongodb://localhost:27017/test';
     vi.mocked(applyCourierAssignmentTimeout).mockImplementation(
       async (order) => ({ order, expired: false, reason: '' }) as never
     );
+    vi.mocked(CourierWorkSession.findOne).mockResolvedValue(null as never);
+    vi.mocked(CourierWorkSession.create).mockImplementation(
+      async (data: any) =>
+        ({
+          _id: 'session-1',
+          ...data,
+          breaks: [],
+          save: vi.fn(async function save(this: any) {
+            return this;
+          }),
+        }) as never
+    );
+    vi.mocked(CourierWorkSession.find).mockReturnValue({
+      lean: vi.fn(async () => []),
+    } as never);
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllEnvs();
   });
 
@@ -140,8 +180,19 @@ describe('Courier availability and location routes', () => {
 
   it('toggles availability when courier calls endpoint', async () => {
     const userDoc: any = {
+      _id: 'courier-1',
       email: 'c@courier.com',
       availability: false,
+      courierAvailabilityStatus: 'offline',
+      courierWorkingHours: [
+        { day: 'sunday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'monday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'tuesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'wednesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'thursday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'friday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'saturday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+      ],
       save: vi.fn(async () => {}),
     };
     vi.mocked(getServerSession).mockResolvedValueOnce({
@@ -157,6 +208,53 @@ describe('Courier availability and location routes', () => {
     expect(res.status).toBe(200);
     expect(body).toHaveProperty('availability', true);
     expect(userDoc.save).toHaveBeenCalled();
+  });
+
+  it('blocks courier break before 60 minutes online', async () => {
+    const userDoc: any = {
+      _id: 'courier-1',
+      email: 'c@courier.com',
+      availability: true,
+      courierAvailabilityStatus: 'online',
+      courierWorkingHours: [
+        { day: 'sunday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'monday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'tuesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'wednesday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'thursday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'friday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+        { day: 'saturday', startTime: '08:00', endTime: '23:00', isUnavailable: false },
+      ],
+      takenOrder: null,
+      save: vi.fn(async () => {}),
+    };
+    const activeSession = {
+      _id: 'session-1',
+      courierId: 'courier-1',
+      startedAt: new Date(Date.now() - 30 * 60 * 1000),
+      breaks: [],
+      save: vi.fn(),
+    };
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'c@courier.com', role: 'courier' },
+    } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce(userDoc as never);
+    vi.mocked(CourierWorkSession.findOne).mockResolvedValue(activeSession as never);
+
+    const PATCH = await loadAvailability();
+    const res = await PATCH(
+      new Request('http://localhost/api/my-delivery/availability', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'start-break' }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toContain('60 minutes');
+    expect(activeSession.save).not.toHaveBeenCalled();
   });
 
   it('updates courier working schedule', async () => {
@@ -227,6 +325,34 @@ describe('Courier availability and location routes', () => {
 
     expect(res.status).toBe(400);
     expect(body).toEqual({ error: 'Courier schedule start time must be before end time.' });
+  });
+
+  it('rejects overnight courier shifts outside the delivery window', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'c@courier.com', role: 'courier' },
+    } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce({
+      email: 'c@courier.com',
+      role: 'courier',
+      save: vi.fn(),
+    } as never);
+
+    const { PATCH } = await loadSchedule();
+    const res = await PATCH(
+      new Request('http://localhost/api/my-delivery/schedule', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workingHours: [
+            { day: 'monday', startTime: '23:00', endTime: '08:00', isUnavailable: false },
+          ],
+        }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('Courier schedule start time must be before end time.');
   });
 
   it('rejects invalid location inputs for courier', async () => {

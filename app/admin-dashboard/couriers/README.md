@@ -4,51 +4,65 @@
 
 ## Purpose
 
-This folder owns admin-facing UI for `/admin-dashboard/couriers`, including restaurant operations, platform management, and protected dashboard workflows.
+This folder owns the superadmin-facing courier management UI for `/admin-dashboard/couriers`,
+including courier availability state, assignment readiness, work-time summaries, and detailed courier
+performance views.
 
 ## Route And Audience
 
 - App route/group: `/admin-dashboard/couriers`
 - Folder path: `app/admin-dashboard/couriers`
-- Main audience/roles: `admin`, `super admin`
-- Main interaction style: static/server-rendered or delegated interactions
+- Main audience/roles: `super admin`
+- Main interaction style: client data loading with protected dashboard UI
 
 ## What Happens Here
 
-- Start from `page.tsx` for the route shell and data loading shape.
-- Check colocated components for user interactions, forms, and mutations.
-- Check loading/error/empty states before changing UI because these are part of the user experience.
-- This folder talks to `/api/my-delivery`. Keep API response shapes aligned.
+- `page.tsx` loads all couriers through `/api/my-delivery`.
+- The list shows each courier's profile, current availability status (`Online`, `Offline`, or
+  `On break`), join date, and week/month tracked work time.
+- The `[id]` route reuses `CourierEarningsPanel`, which combines earnings, completed deliveries,
+  assignment reliability, reviews, and today/week/month/year work-time summaries.
+- This route is intentionally superadmin-only. Restaurant admins should manage their own restaurant
+  orders, not platform-wide courier oversight.
 
 ## Important Files
 
-- `app/admin-dashboard/couriers/[id]/page.tsx`: functions/components: `AdminCourierDetailsPage`; client component
-- `app/admin-dashboard/couriers/layout.tsx`: functions/components: `AdminCouriersLayout`
-- `app/admin-dashboard/couriers/loading.tsx`: functions/components: `CouriersLoading`
-- `app/admin-dashboard/couriers/page.tsx`: functions/components: `CouriersPage`, `fetchCouriers`; API calls: `/api/my-delivery`; client component
+- `app/admin-dashboard/couriers/[id]/page.tsx`: `AdminCourierDetailsPage`; opens the shared courier
+  report panel for one courier.
+- `app/admin-dashboard/couriers/layout.tsx`: `AdminCouriersLayout`
+- `app/admin-dashboard/couriers/loading.tsx`: `CouriersLoading`
+- `app/admin-dashboard/couriers/page.tsx`: `CouriersPage`, `fetchCouriers`; API calls:
+  `/api/my-delivery`; client component
 
 ## API/Data Connections
 
 - Calls `/api/my-delivery`; inspect the matching API README/source before changing its response shape.
+- Detail views call `/api/courier-earnings?courierId=...`; this response includes `workSummary` from
+  `courier_work_sessions`.
 
 ## Packages And Services Used
 
-- `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
-- `react` and `react-dom`: provide client component state, effects, event handlers, and rendering for interactive UI.
-- `recharts`: renders dashboard charts and statistics visualizations.
-- `lucide-react`: provides the icon set used in buttons, status indicators, and dashboard actions.
-- `radix-ui` and local `components/ui`: provide accessible primitives and shadcn-style form/table/dialog controls.
+- `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions.
+- `react` and `react-dom`: provide client component state, effects, event handlers, and rendering.
+- `recharts`: renders charts inside the shared courier earnings panel.
+- `lucide-react`: provides icons for dashboard actions.
+- `radix-ui` and local `components/ui`: provide accessible shadcn-style controls.
 
 ## Edge Cases And UX Rules
 
 - Preserve route loading states so refreshes and slow network states look intentional.
 - Preserve empty/error states so users are not left with blank screens.
-- If forms exist, keep validation messages close to the field that failed.
-- If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Keep status labels aligned with the server values: `online`, `offline`, and `on_break`.
+- Treat work-time numbers as operational visibility, not payroll. They reflect app online sessions and
+  locked breaks, not GPS mileage or external HR time clocks.
+- Do not expose this route to regular restaurant admins; it is platform-level courier oversight.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `admin`, `super admin` UI for `/admin-dashboard/couriers`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `super admin` UI for
+`/admin-dashboard/couriers`. It lets the platform owner review courier status, see who is online or
+on break, inspect week/month work time, and open a detailed courier report with earnings, delivery
+reliability, ratings, and time-ledger summaries.
 
 ## Maintenance Notes For Future Work
 
