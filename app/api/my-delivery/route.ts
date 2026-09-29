@@ -7,6 +7,12 @@ import { notifyCourierAboutAssignment } from '@/libs/notifications';
 import { COURIER_OWN_ORDER_ASSIGNMENT_ERROR, isCourierOrderOwner } from '@/libs/courierAssignment';
 import { applyCourierAssignmentTimeout } from '@/libs/courierAssignmentTimeout';
 import { isCourierScheduledNow } from '@/libs/courierSchedule';
+import {
+  getCourierWorkSummary,
+  isCourierAssignableForOrder,
+  isCourierAssignableNow,
+  normalizeCourierAvailabilityState,
+} from '@/libs/courierWorkSessions';
 import { createDeliveryPin } from '@/libs/deliveryPin';
 import { scheduleCourierAssignmentTimeoutCheck } from '@/libs/qstash';
 import mongoose from 'mongoose';
@@ -51,12 +57,19 @@ export async function GET(request: Request) {
 
   const couriers = await User.find(filter)
     .select(
-      'name email image availability courierWorkingHours takenOrder role createdAt latitude longitude'
+      'name email image availability courierAvailabilityStatus courierWorkingHours takenOrder role createdAt latitude longitude'
     )
     .lean();
   const scheduledCouriers = availableOnly
-    ? couriers.filter((courier: any) => isCourierScheduledNow(courier.courierWorkingHours))
+    ? couriers.filter((courier: any) => isCourierAssignableNow(courier))
     : couriers;
+  const workSummaryEntries = await Promise.all(
+    scheduledCouriers.map(async (courier: any) => [
+      courier._id.toString(),
+      await getCourierWorkSummary(courier._id),
+    ])
+  );
+  const workSummaryMap = new Map(workSummaryEntries as any);
 
   let restaurant: any = null;
   if (orderId && mongoose.Types.ObjectId.isValid(orderId)) {
@@ -113,6 +126,7 @@ export async function GET(request: Request) {
         averageRating: rating?.averageRating ?? 0,
         ratingCount: rating?.ratingCount ?? 0,
         isWithinSchedule: isCourierScheduledNow(courier.courierWorkingHours),
+        workSummary: workSummaryMap.get(courier._id.toString()),
       };
     })
     .sort((left: any, right: any) => {
@@ -156,6 +170,8 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'User is not a courier' }, { status: 400 });
   }
 
+  await normalizeCourierAvailabilityState(courier);
+
   const order = await Order.findById(orderId);
 
   if (!order) {
@@ -188,6 +204,16 @@ export async function PATCH(request: Request) {
       {
         error:
           'This courier is currently delivering another order. Please wait for them to finish the delivery before assigning a new order.',
+      },
+      { status: 400 }
+    );
+  }
+
+  if (!isCourierAssignableForOrder(courier, order._id)) {
+    return Response.json(
+      {
+        error:
+          'This courier is not currently assignable. They may be offline, on break, already delivering, or outside their saved schedule.',
       },
       { status: 400 }
     );

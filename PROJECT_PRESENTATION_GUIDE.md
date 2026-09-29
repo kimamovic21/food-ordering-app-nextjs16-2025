@@ -514,9 +514,15 @@ Legacy customer-friendly aliases:
 
 Courier availability:
 
-- Couriers can toggle availability.
-- Couriers have working hours.
-- Assignment lists should respect whether the courier is available, already assigned, and currently working.
+- Couriers can go online/offline only through a server-authoritative availability API.
+- Couriers have saved weekly working hours. Available shifts must stay inside the supported delivery
+  window and cannot be overnight, so a courier cannot log unrealistic work like `23:00-08:00`.
+- Couriers can start a locked 30-minute break only after at least 60 minutes online, only during a
+  saved shift of at least 5 hours, only if there is enough shift time left, and only if they are not
+  carrying an active delivery.
+- While on break, the courier is not assignable and cannot end the break early by clicking online.
+- Assignment lists respect whether the courier is available, online, not on break, not already
+  assigned, and currently inside the saved schedule.
 - The UI should prevent manual location submission unless both latitude and longitude are present.
 
 Courier assignment:
@@ -542,7 +548,9 @@ Courier pickup and delivery:
 Courier earnings and performance:
 
 - Courier earnings exclude canceled and failed deliveries that were not completed.
-- Courier stats can include completed deliveries, average delivery time, accepted/declined/expired assignments, current rating, late deliveries, and total earned.
+- Courier stats can include completed deliveries, average delivery time, accepted/declined/expired assignments, current rating, late deliveries, total earned, and tracked online work time.
+- Courier work-time summaries come from `courier_work_sessions`, which records online sessions,
+  locked breaks, gross minutes, break minutes, and net work minutes for today, week, month, and year.
 - Admin can view courier details and performance.
 - Courier can view their own earnings dashboard.
 
@@ -866,6 +874,11 @@ Courier:
 
 - Courier cannot accept someone else's assignment.
 - Courier cannot be assigned while already carrying an active order.
+- Courier cannot be assigned while offline, on break, or outside their saved schedule.
+- Courier cannot take a break immediately after going online; break requires at least 60 minutes of
+  online work and is locked for 30 minutes.
+- Courier work sessions are stored in MongoDB so couriers and superadmin can review weekly, monthly,
+  and yearly work-time summaries.
 - Assignment expires after 10 minutes without response.
 - Declined/expired assignments are tracked for performance.
 - Failed delivery requires at least 30 minutes in transport.

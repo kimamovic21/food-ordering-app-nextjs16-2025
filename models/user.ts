@@ -48,6 +48,20 @@ const UserSchema = new Schema(
     passwordResetTokenHash: { type: String, default: null },
     passwordResetTokenExpiresAt: { type: Date, default: null },
     availability: { type: Boolean, default: false },
+    courierAvailabilityStatus: {
+      type: String,
+      enum: ['offline', 'online', 'on_break'],
+      default: 'offline',
+      index: true,
+    },
+    courierOnlineSince: { type: Date, default: null },
+    courierBreakStartedAt: { type: Date, default: null },
+    courierBreakEndsAt: { type: Date, default: null },
+    courierCurrentWorkSessionId: {
+      type: Schema.Types.ObjectId,
+      ref: 'CourierWorkSession',
+      default: null,
+    },
     courierWorkingHours: {
       type: [CourierWorkingHoursSchema],
       default: [

@@ -12,6 +12,7 @@ import { queryKeys } from '@/libs/queryKeys';
 import Title from '@/components/shared/Title';
 import AvailabilityToggle from './AvailabilityToggle';
 import CourierScheduleCard from './CourierScheduleCard';
+import CourierWorkSummaryCard from './CourierWorkSummaryCard';
 import LocationShareButton from './LocationShareButton';
 import DeliveryOrderCard from './DeliveryOrderCard';
 import ManualLocationSimulator from './ManualLocationSimulator';
@@ -27,6 +28,7 @@ import {
   isOrderRelatedRealtimePayload,
 } from '@/libs/realtimeClient';
 import type { CourierDeliveryOrder } from '@/types/order';
+import type { CourierAvailabilityState } from '@/types/courier';
 
 // Dynamic import to prevent SSR issues with Leaflet
 const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
@@ -48,6 +50,7 @@ const CourierPage = () => {
   const [completing, setCompleting] = useState<string | null>(null);
   const [updatingAssignment, setUpdatingAssignment] = useState<string | null>(null);
   const [availability, setAvailability] = useState(false);
+  const [availabilityState, setAvailabilityState] = useState<CourierAvailabilityState | null>(null);
   const [togglingAvailability, setTogglingAvailability] = useState(false);
   const [sharingLocation, setSharingLocation] = useState(false);
   const [locationShared, setLocationShared] = useState(false);
@@ -94,6 +97,36 @@ const CourierPage = () => {
     [isDevelopment]
   );
 
+  const applyAvailabilityState = useCallback(
+    (nextState: CourierAvailabilityState) => {
+      setAvailability(Boolean(nextState.availability));
+      setAvailabilityState(nextState);
+      queryClient.setQueryData<ProfileData | null>(queryKeys.profile.detail(), (current) =>
+        current
+          ? {
+              ...current,
+              availability: Boolean(nextState.availability),
+              courierAvailabilityStatus: nextState.availabilityStatus,
+              courierBreakStartedAt: nextState.breakStartedAt,
+              courierBreakEndsAt: nextState.breakEndsAt,
+            }
+          : current
+      );
+    },
+    [queryClient]
+  );
+
+  const fetchAvailabilityState = useCallback(async () => {
+    const response = await fetch('/api/my-delivery/availability', { cache: 'no-store' });
+    const json = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(json?.error || 'Failed to fetch courier availability');
+    }
+
+    applyAvailabilityState(json as CourierAvailabilityState);
+  }, [applyAvailabilityState]);
+
   useEffect(() => {
     if (profileLoading || profileData?.role !== 'courier') return;
 
@@ -101,6 +134,9 @@ const CourierPage = () => {
     if (profileData?.availability !== undefined) {
       setAvailability(profileData.availability);
     }
+    void fetchAvailabilityState().catch((err) => {
+      console.error('Failed to load availability state:', err);
+    });
 
     const fetchOrders = async (showLoading = true) => {
       try {
@@ -133,6 +169,9 @@ const CourierPage = () => {
     // Poll for new orders every 10 seconds without loading indicator
     const interval = setInterval(() => {
       fetchOrders(false);
+      void fetchAvailabilityState().catch((err) => {
+        console.error('Failed to refresh availability state:', err);
+      });
     }, 10000);
 
     const handleRealtimeDeliveryUpdate = (event: Event) => {
@@ -154,6 +193,7 @@ const CourierPage = () => {
     profileLoading,
     profileData?.availability,
     refreshDevFailedDeliveryOffsets,
+    fetchAvailabilityState,
   ]);
 
   useEffect(() => {
@@ -289,12 +329,13 @@ const CourierPage = () => {
     }
   };
 
-  const handleToggleAvailability = async () => {
+  const handleAvailabilityAction = async (action: 'go-online' | 'go-offline' | 'start-break') => {
     try {
       setTogglingAvailability(true);
       const res = await fetch('/api/my-delivery/availability', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
       });
 
       const data = await res.json();
@@ -309,10 +350,7 @@ const CourierPage = () => {
         return;
       }
 
-      setAvailability(data.availability);
-      queryClient.setQueryData<ProfileData | null>(queryKeys.profile.detail(), (current) =>
-        current ? { ...current, availability: Boolean(data.availability) } : current
-      );
+      applyAvailabilityState(data as CourierAvailabilityState);
       sonnerToast.success(data.message, {
         style: {
           background: '#22c55e',
@@ -330,6 +368,14 @@ const CourierPage = () => {
     } finally {
       setTogglingAvailability(false);
     }
+  };
+
+  const handleToggleAvailability = async () => {
+    await handleAvailabilityAction(availability ? 'go-offline' : 'go-online');
+  };
+
+  const handleStartBreak = async () => {
+    await handleAvailabilityAction('start-break');
   };
 
   const handleShareLocation = async () => {
@@ -547,9 +593,16 @@ const CourierPage = () => {
 
       <AvailabilityToggle
         availability={availability}
+        availabilityStatus={availabilityState?.availabilityStatus}
+        breakEndsAt={availabilityState?.breakEndsAt}
+        breakUnavailableReason={availabilityState?.breakUnavailableReason}
+        canStartBreak={availabilityState?.canStartBreak}
         togglingAvailability={togglingAvailability}
+        onStartBreak={handleStartBreak}
         onToggle={handleToggleAvailability}
       />
+
+      <CourierWorkSummaryCard summary={availabilityState?.workSummary} />
 
       <CourierScheduleCard />
 

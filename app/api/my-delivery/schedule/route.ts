@@ -45,6 +45,17 @@ export async function PATCH(request: Request) {
     const { user, error } = await getCourier();
     if (error) return error;
 
+    if (
+      user.availability ||
+      user.courierAvailabilityStatus === 'online' ||
+      user.courierAvailabilityStatus === 'on_break'
+    ) {
+      return Response.json(
+        { error: 'Go offline before editing your courier schedule.' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json().catch(() => null);
     const validationError = validateCourierWorkingHours(body?.workingHours);
 

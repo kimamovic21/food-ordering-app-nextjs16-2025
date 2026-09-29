@@ -1,4 +1,5 @@
 export type UserRole = 'user' | 'admin' | 'courier';
+export type UserCourierAvailabilityStatus = 'offline' | 'online' | 'on_break';
 
 export interface UserSummary {
   _id: string;
@@ -55,6 +56,11 @@ export interface ExtendedUser {
   country?: string | null;
   role?: UserRole | string | null;
   availability?: boolean;
+  courierAvailabilityStatus?: UserCourierAvailabilityStatus;
+  courierOnlineSince?: string | null;
+  courierBreakStartedAt?: string | null;
+  courierBreakEndsAt?: string | null;
+  courierCurrentWorkSessionId?: string | null;
   loyaltyTier?: string | null;
   restaurantId?: string | null;
   deliveryAddresses?: DeliveryAddress[];
@@ -73,6 +79,11 @@ export type AdminUserListItem = UserSummary & {
   emailVerified?: string | null;
   emailVerifiedAt?: string | null;
   availability?: boolean;
+  courierAvailabilityStatus?: UserCourierAvailabilityStatus;
+  courierOnlineSince?: string | null;
+  courierBreakStartedAt?: string | null;
+  courierBreakEndsAt?: string | null;
+  courierCurrentWorkSessionId?: string | null;
   takenOrder?: string | null;
   latitude?: number | null;
   longitude?: number | null;

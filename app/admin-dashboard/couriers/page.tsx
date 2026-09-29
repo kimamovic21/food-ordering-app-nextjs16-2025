@@ -2,16 +2,45 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import useProfile from '@/hooks/useProfile';
-import Title from '@/components/shared/Title';
-import { formatAppDate } from '@/libs/dateFormat';
 import { BarChart3 } from 'lucide-react';
-import type { CourierListItem } from '@/types/courier';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import Title from '@/components/shared/Title';
+import useProfile from '@/hooks/useProfile';
+import { formatAppDate } from '@/libs/dateFormat';
+import type { CourierAvailabilityStatus, CourierListItem } from '@/types/courier';
+
+const formatWorkMinutes = (minutes: number) => {
+  const safeMinutes = Math.max(0, Math.round(minutes || 0));
+  const hours = Math.floor(safeMinutes / 60);
+  const remainder = safeMinutes % 60;
+
+  if (!hours) {
+    return `${remainder}m`;
+  }
+
+  return remainder ? `${hours}h ${remainder}m` : `${hours}h`;
+};
+
+const statusLabels: Record<CourierAvailabilityStatus, string> = {
+  offline: 'Offline',
+  online: 'Online',
+  on_break: 'On break',
+};
+
+const getCourierStatus = (courier: CourierListItem): CourierAvailabilityStatus =>
+  courier.courierAvailabilityStatus || (courier.availability ? 'online' : 'offline');
+
+const getInitials = (name: string) =>
+  name
+    ?.split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
 const CouriersPage = () => {
   const router = useRouter();
@@ -51,25 +80,7 @@ const CouriersPage = () => {
     fetchCouriers();
   }, [isSuperAdmin, profileLoading, router]);
 
-  if (profileLoading) {
-    return (
-      <div className='max-w-7xl mx-auto px-4 py-6'>
-        <div className='space-y-6'>
-          <div>
-            <Skeleton className='h-10 w-96' />
-            <Skeleton className='h-5 w-80 mt-2' />
-          </div>
-          <div className='space-y-4'>
-            {[...Array(4)].map((_, idx) => (
-              <Skeleton key={idx} className='h-24 w-full rounded-xl' />
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
+  if (profileLoading || loading) {
     return (
       <div className='max-w-7xl mx-auto px-4 py-6'>
         <div className='space-y-6'>
@@ -110,57 +121,65 @@ const CouriersPage = () => {
         </div>
       ) : (
         <div className='space-y-4'>
-          {couriers.map((courier) => (
-            <Card key={courier._id} className='hover:shadow-lg transition-shadow'>
-              <CardContent className='py-4'>
-                <div className='flex flex-col gap-4 md:flex-row md:items-center'>
-                  <Avatar className='h-12 w-12'>
-                    <AvatarImage src={courier.image || undefined} alt={courier.name} />
-                    <AvatarFallback>
-                      {courier.name
-                        ?.split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+          {couriers.map((courier) => {
+            const status = getCourierStatus(courier);
 
-                  <div className='flex-1 min-w-0'>
-                    <h3 className='text-lg font-semibold'>{courier.name}</h3>
-                    <p className='text-sm text-muted-foreground'>{courier.email}</p>
-                  </div>
+            return (
+              <Card key={courier._id} className='hover:shadow-lg transition-shadow'>
+                <CardContent className='py-4'>
+                  <div className='flex flex-col gap-4 md:flex-row md:items-center'>
+                    <Avatar className='h-12 w-12'>
+                      <AvatarImage src={courier.image || undefined} alt={courier.name} />
+                      <AvatarFallback>{getInitials(courier.name)}</AvatarFallback>
+                    </Avatar>
 
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm font-medium text-muted-foreground'>Availability:</span>
-                    <Badge
-                      variant={courier.availability ? 'default' : 'destructive'}
-                      className={
-                        courier.availability
-                          ? 'bg-green-600 hover:bg-green-700'
-                          : 'bg-red-600 hover:bg-red-700'
-                      }
+                    <div className='flex-1 min-w-0'>
+                      <h3 className='text-lg font-semibold'>{courier.name}</h3>
+                      <p className='text-sm text-muted-foreground'>{courier.email}</p>
+                    </div>
+
+                    <div className='flex items-center gap-2'>
+                      <span className='text-sm font-medium text-muted-foreground'>
+                        Availability:
+                      </span>
+                      <Badge
+                        variant={status === 'offline' ? 'destructive' : 'default'}
+                        className={
+                          status === 'online'
+                            ? 'bg-green-600 hover:bg-green-700'
+                            : status === 'on_break'
+                              ? 'bg-amber-600 hover:bg-amber-700'
+                              : 'bg-red-600 hover:bg-red-700'
+                        }
+                      >
+                        {statusLabels[status]}
+                      </Badge>
+                    </div>
+
+                    <div className='text-xs text-muted-foreground'>
+                      Week: {formatWorkMinutes(courier.workSummary?.week?.netWorkMinutes || 0)}
+                      <br />
+                      Month: {formatWorkMinutes(courier.workSummary?.month?.netWorkMinutes || 0)}
+                    </div>
+
+                    <div className='text-xs text-muted-foreground'>
+                      Joined: {formatAppDate(courier.createdAt)}
+                    </div>
+
+                    <Button
+                      type='button'
+                      variant='outline'
+                      onClick={() => router.push(`/admin-dashboard/couriers/${courier._id}`)}
+                      className='w-full md:w-auto'
                     >
-                      {courier.availability ? 'Online' : 'Offline'}
-                    </Badge>
+                      <BarChart3 className='mr-2 size-4' />
+                      View stats
+                    </Button>
                   </div>
-
-                  <div className='text-xs text-muted-foreground'>
-                    Joined: {formatAppDate(courier.createdAt)}
-                  </div>
-
-                  <Button
-                    type='button'
-                    variant='outline'
-                    onClick={() => router.push(`/admin-dashboard/couriers/${courier._id}`)}
-                    className='w-full md:w-auto'
-                  >
-                    <BarChart3 className='mr-2 size-4' />
-                    View stats
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </section>

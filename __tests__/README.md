@@ -17,8 +17,9 @@ This folder contains unit tests grouped by feature area.
 - `api/upload-users.route.test.ts`: validates profile image upload/remove behavior.
 - `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit blockers, and failure handling.
 - `api/cart-validate.route.test.ts`: validates cart item revalidation plus restaurant minimum, busy, delivery-radius, and quantity-limit preflight blockers.
-- `api/courier-assignment.route.test.ts`: validates courier assignment guardrails and courier-only assignment notes.
-- `api/courier-earnings.route.test.ts`: validates courier earnings access, summaries, and assignment reliability metrics.
+- `api/courier-assignment.route.test.ts`: validates courier assignment guardrails, courier-only assignment notes, and assignable courier schedule/status checks.
+- `api/courier-earnings.route.test.ts`: validates courier earnings access, summaries, assignment reliability metrics, and work-summary response shape.
+- `api/my-delivery-courier.route.test.ts`: validates courier availability, locked break guards, schedule updates, location updates, active delivery actions, pickup, failed-delivery requests, and delivery PIN handoff.
 - `api/my-deliveries.route.test.ts`: validates courier delivery history, performance summaries, and assignment reliability metrics.
 - `api/realtime-streams.route.test.ts`: validates authenticated SSE streams for messages and notifications.
 - `api/restaurant.route.test.ts`: validates restaurant settings, ownership, and deletion behavior.

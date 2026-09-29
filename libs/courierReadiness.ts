@@ -1,7 +1,7 @@
 import 'server-only';
 
 import mongoose from 'mongoose';
-import { isCourierScheduledNow } from '@/libs/courierSchedule';
+import { isCourierAssignableNow } from '@/libs/courierWorkSessions';
 import type { CourierReadinessStatus } from '@/types/courier';
 
 type BuildCourierReadinessSnapshotOptions = {
@@ -98,13 +98,10 @@ export const resolveCourierReadinessStatus = async ({
   try {
     const { User } = await import('@/models/user');
     const couriers = await User.find({ role: 'courier' })
-      .select('availability takenOrder courierWorkingHours')
+      .select('availability courierAvailabilityStatus takenOrder courierWorkingHours')
       .lean();
-    const availableCouriers = couriers.filter(
-      (courier: any) =>
-        courier.availability &&
-        !courier.takenOrder &&
-        isCourierScheduledNow(courier.courierWorkingHours, now)
+    const availableCouriers = couriers.filter((courier: any) =>
+      isCourierAssignableNow(courier, now)
     ).length;
 
     return buildCourierReadinessSnapshot({
