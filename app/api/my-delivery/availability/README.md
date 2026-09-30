@@ -31,7 +31,8 @@ later be shown to the courier or super admin.
 - Optional JSON body:
   - `action: "go-online"` starts or resumes an online work session when the courier is inside their
     saved schedule.
-  - `action: "go-offline"` completes the active work session unless a locked break is still running.
+  - `action: "go-offline"` completes the active work session unless a locked break is still running
+    or the courier still has an assigned delivery.
   - `action: "start-break"` starts a 30-minute break when all break rules pass.
 - If the body is missing, the route keeps backward-compatible toggle behavior.
 
@@ -48,6 +49,8 @@ later be shown to the courier or super admin.
 - Only users with role `courier` can read or mutate courier availability.
 - The server rejects break/online changes when the courier is outside schedule, still inside a locked
   break, already carrying an order, or has not worked long enough for a break.
+- The server rejects `go-offline` while `takenOrder` is set, forcing the courier to finish or decline
+  the active delivery before leaving the delivery pool.
 
 ## Edge Cases Covered
 
@@ -57,6 +60,7 @@ later be shown to the courier or super admin.
 - A courier cannot start a break before 60 minutes online.
 - A courier cannot take a break unless the saved shift is at least 5 hours.
 - A courier cannot start a break while assigned to an active order.
+- A courier cannot go offline while assigned to an active delivery.
 - A courier cannot end a break early by clicking online/offline repeatedly.
 - Expired breaks are normalized server-side, closing the current work session and moving the courier
   back to offline.

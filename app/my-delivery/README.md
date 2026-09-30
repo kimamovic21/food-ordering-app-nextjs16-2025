@@ -65,6 +65,11 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
 - Do not let the browser be the source of truth for courier breaks or online time. The client can
   show countdowns and disable buttons, but `/api/my-delivery/availability` must enforce the actual
   break lock, minimum online time, active-delivery guard, and schedule guard.
+- Keep courier assignment actions server-checked even if the card is already visible in the UI:
+  accepting a pending assignment must still require the courier to be online, inside schedule, and
+  assignable for that order.
+- Do not allow schedule edits or offline transitions while `takenOrder` is set. The courier should
+  complete, fail, or decline the delivery through the order workflow first.
 - Keep the existing `availability` boolean aligned with the new `courierAvailabilityStatus`:
   `online` means assignable, `on_break` means not assignable, and `offline` means not assignable.
 
@@ -74,7 +79,8 @@ If someone asks what this folder does, say: this is the `courier` UI for `/my-de
 courier go online, take a locked 30-minute break after enough work time, share location, manage
 active assignments, and see their own work-time summary. The UI is intentionally friendly, but the
 server owns the important rules so a courier cannot fake being online, skip the break lock, or take a
-break while carrying an active order.
+break while carrying an active order. Assignment acceptance is also re-checked on the server, so a
+stale card cannot be accepted after the courier went offline, entered break, or left the saved shift.
 
 ## Maintenance Notes For Future Work
 

@@ -16,18 +16,16 @@ const getCourierFromSession = async () => {
   }
 
   const userEmail = session.user.email;
-  const userRole = (session.user as any).role;
-
-  if (userRole !== 'courier') {
-    return {
-      error: Response.json({ error: 'Only couriers can toggle availability' }, { status: 403 }),
-    };
-  }
-
   const currentUser = await User.findOne({ email: userEmail });
 
   if (!currentUser) {
     return { error: Response.json({ error: 'User not found' }, { status: 404 }) };
+  }
+
+  if (currentUser.role !== 'courier') {
+    return {
+      error: Response.json({ error: 'Only couriers can toggle availability' }, { status: 403 }),
+    };
   }
 
   return { currentUser };

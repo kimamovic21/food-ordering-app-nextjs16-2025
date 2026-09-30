@@ -56,6 +56,13 @@ export async function PATCH(request: Request) {
       );
     }
 
+    if (user.takenOrder) {
+      return Response.json(
+        { error: 'Finish or decline your active delivery before editing your courier schedule.' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json().catch(() => null);
     const validationError = validateCourierWorkingHours(body?.workingHours);
 

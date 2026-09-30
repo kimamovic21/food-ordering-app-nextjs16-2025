@@ -1,14 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import type { OrderMapHandle } from '@/components/shared/OrderMap';
 import dynamic from 'next/dynamic';
-import type { ProfileData } from '@/hooks/useProfile';
 import useProfile from '@/hooks/useProfile';
-import { queryKeys } from '@/libs/queryKeys';
 import Title from '@/components/shared/Title';
 import AvailabilityToggle from './AvailabilityToggle';
 import CourierScheduleCard from './CourierScheduleCard';
@@ -42,7 +39,6 @@ const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
 
 const CourierPage = () => {
   const isDevelopment = process.env.NODE_ENV === 'development';
-  const queryClient = useQueryClient();
   const { data: profileData, loading: profileLoading } = useProfile();
   const [orders, setOrders] = useState<CourierDeliveryOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,24 +93,10 @@ const CourierPage = () => {
     [isDevelopment]
   );
 
-  const applyAvailabilityState = useCallback(
-    (nextState: CourierAvailabilityState) => {
-      setAvailability(Boolean(nextState.availability));
-      setAvailabilityState(nextState);
-      queryClient.setQueryData<ProfileData | null>(queryKeys.profile.detail(), (current) =>
-        current
-          ? {
-              ...current,
-              availability: Boolean(nextState.availability),
-              courierAvailabilityStatus: nextState.availabilityStatus,
-              courierBreakStartedAt: nextState.breakStartedAt,
-              courierBreakEndsAt: nextState.breakEndsAt,
-            }
-          : current
-      );
-    },
-    [queryClient]
-  );
+  const applyAvailabilityState = useCallback((nextState: CourierAvailabilityState) => {
+    setAvailability(Boolean(nextState.availability));
+    setAvailabilityState(nextState);
+  }, []);
 
   const fetchAvailabilityState = useCallback(async () => {
     const response = await fetch('/api/my-delivery/availability', { cache: 'no-store' });
@@ -128,14 +110,16 @@ const CourierPage = () => {
   }, [applyAvailabilityState]);
 
   useEffect(() => {
-    if (profileLoading || profileData?.role !== 'courier') return;
-
-    // Set initial availability from profile data
-    if (profileData?.availability !== undefined) {
+    if (!availabilityState && profileData?.availability !== undefined) {
       setAvailability(profileData.availability);
     }
+  }, [availabilityState, profileData?.availability]);
+
+  useEffect(() => {
+    if (profileLoading || profileData?.role !== 'courier') return;
+
     void fetchAvailabilityState().catch((err) => {
-      console.error('Failed to load availability state:', err);
+      console.warn('Failed to load availability state:', err instanceof Error ? err.message : err);
     });
 
     const fetchOrders = async (showLoading = true) => {
@@ -170,7 +154,10 @@ const CourierPage = () => {
     const interval = setInterval(() => {
       fetchOrders(false);
       void fetchAvailabilityState().catch((err) => {
-        console.error('Failed to refresh availability state:', err);
+        console.warn(
+          'Failed to refresh availability state:',
+          err instanceof Error ? err.message : err
+        );
       });
     }, 10000);
 
@@ -188,13 +175,7 @@ const CourierPage = () => {
       clearInterval(interval);
       window.removeEventListener(APP_NOTIFICATION_REALTIME_EVENT, handleRealtimeDeliveryUpdate);
     };
-  }, [
-    profileData?.role,
-    profileLoading,
-    profileData?.availability,
-    refreshDevFailedDeliveryOffsets,
-    fetchAvailabilityState,
-  ]);
+  }, [profileData?.role, profileLoading, refreshDevFailedDeliveryOffsets, fetchAvailabilityState]);
 
   useEffect(() => {
     if (!isDevelopment) {

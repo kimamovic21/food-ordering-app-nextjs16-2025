@@ -22,6 +22,8 @@ use the same schedule.
 - `PATCH` validates and saves normalized weekday working hours.
 - The route rejects schedule edits while the courier is online or on break. This prevents a courier
   from changing the active shift while a work session is being counted.
+- The route also rejects schedule edits while `takenOrder` is set, because active assignments should
+  be finished or declined before changing availability rules.
 - Validation is delegated to `libs/courierSchedule`, including no overnight shifts and the delivery
   service window.
 - Detected local functions/handlers: `getCourier`.
@@ -44,6 +46,7 @@ use the same schedule.
 - Uses shared `authOptions`, so role/session behavior follows the global auth setup.
 - Checks the `courier` role before allowing delivery operations.
 - Blocks updates while `availability` is true or `courierAvailabilityStatus` is `online`/`on_break`.
+- Blocks updates while the courier has an active assigned order.
 
 ## Edge Cases Covered
 
@@ -54,6 +57,7 @@ use the same schedule.
 - Line 51: `if (validationError) {`
 - Rejects `23:00` to `08:00` overnight shifts.
 - Rejects shifts before 08:00 or after 23:00.
+- Rejects schedule edits while a courier is carrying or assigned to an order.
 - Normalizes missing days back to the default courier schedule.
 - Keeps unavailable days in the schedule while ignoring their start/end range for assignment checks.
 
@@ -78,6 +82,8 @@ Open this file when someone asks what `/api/my-delivery/schedule` does. Explain 
 courier's weekly work plan and protects the rest of the delivery system from unrealistic shift data.
 Couriers cannot save overnight work like `23:00-08:00`, cannot work outside the supported delivery
 window, and cannot edit the schedule while an online session or locked break is active.
+It also blocks schedule edits while a delivery is assigned, so schedule changes cannot be used to
+escape an active courier responsibility.
 
 ## Maintenance Notes For Future Work
 

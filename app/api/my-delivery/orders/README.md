@@ -36,6 +36,8 @@ Handles get/patch work for the courier active delivery area. The route keeps the
 - Requires a NextAuth session for at least one handler branch.
 - Uses shared `authOptions`, so role/session behavior follows the global auth setup.
 - Checks the `courier` role before allowing delivery operations.
+- Re-checks courier readiness before accepting an assignment, so a courier who went offline, entered
+  break, left their saved schedule, or became busy cannot accept a stale pending assignment.
 
 ## Edge Cases Covered
 
@@ -51,6 +53,8 @@ Handles get/patch work for the courier active delivery area. The route keeps the
 - Line 132: `if (order.courierId?.toString() !== user._id.toString()) {`
 - Line 136: `if (action === 'accept-assignment') {`
 - Line 137: `if (order.courierAssignmentStatus !== 'pending') {`
+- Accepting an assignment requires the courier to still be online, inside schedule, and assignable
+  for that exact order.
 - Line 151: `if (order.restaurantId) {`
 - Line 167: `if (action === 'decline-assignment') {`
 - Line 168: `if (!['pending', 'accepted'].includes(order.courierAssignmentStatus || '')) {`

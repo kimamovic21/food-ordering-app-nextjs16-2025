@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 import { addCourierAssignmentHistoryEntry } from '@/libs/courierAssignmentHistory';
 import { applyCourierAssignmentTimeout } from '@/libs/courierAssignmentTimeout';
+import { isCourierAssignableForOrder } from '@/libs/courierWorkSessions';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 import {
@@ -136,6 +137,16 @@ export async function PATCH(request: Request) {
   if (action === 'accept-assignment') {
     if (order.courierAssignmentStatus !== 'pending') {
       return Response.json({ error: 'This assignment is not pending' }, { status: 400 });
+    }
+
+    if (!isCourierAssignableForOrder(user, order._id)) {
+      return Response.json(
+        {
+          error:
+            'Go online and stay inside your saved courier schedule before accepting assignments.',
+        },
+        { status: 400 }
+      );
     }
 
     order.courierAssignmentStatus = 'accepted';
