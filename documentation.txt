@@ -1203,3 +1203,5 @@ Polish support ticket workflow
 Polish loyalty rewards ledger
 
 Add courier break and work-time ledger
+
+Improve courier availability and assignment safety

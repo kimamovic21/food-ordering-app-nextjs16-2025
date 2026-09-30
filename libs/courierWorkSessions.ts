@@ -284,6 +284,12 @@ export const updateCourierAvailability = async (
       throw new CourierAvailabilityError('Breaks cannot be ended early.');
     }
 
+    if (courier?.takenOrder) {
+      throw new CourierAvailabilityError(
+        'Finish or decline your active delivery before going offline.'
+      );
+    }
+
     const activeSession = await getActiveSession(courier._id);
     await completeSession(activeSession, now, 'manual_offline');
     setCourierOffline(courier);

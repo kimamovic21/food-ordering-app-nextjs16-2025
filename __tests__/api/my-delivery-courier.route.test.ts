@@ -169,6 +169,10 @@ describe('Courier availability and location routes', () => {
     vi.mocked(getServerSession).mockResolvedValueOnce({
       user: { email: 'a@b.com', role: 'user' },
     } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce({
+      email: 'a@b.com',
+      role: 'user',
+    } as never);
     const PATCH = await loadAvailability();
     const res = await PATCH(
       new Request('http://localhost/api/my-delivery/availability', { method: 'PATCH' })
@@ -182,6 +186,7 @@ describe('Courier availability and location routes', () => {
     const userDoc: any = {
       _id: 'courier-1',
       email: 'c@courier.com',
+      role: 'courier',
       availability: false,
       courierAvailabilityStatus: 'offline',
       courierWorkingHours: [
@@ -214,6 +219,7 @@ describe('Courier availability and location routes', () => {
     const userDoc: any = {
       _id: 'courier-1',
       email: 'c@courier.com',
+      role: 'courier',
       availability: true,
       courierAvailabilityStatus: 'online',
       courierWorkingHours: [
@@ -257,6 +263,30 @@ describe('Courier availability and location routes', () => {
     expect(activeSession.save).not.toHaveBeenCalled();
   });
 
+  it('blocks going offline while a courier still has an active delivery', async () => {
+    const userDoc = courierUser();
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: userDoc.email, role: 'courier' },
+    } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce(
+      userDoc as never
+    );
+
+    const PATCH = await loadAvailability();
+    const res = await PATCH(
+      new Request('http://localhost/api/my-delivery/availability', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'go-offline' }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('Finish or decline your active delivery before going offline.');
+    expect(userDoc.save).not.toHaveBeenCalled();
+  });
+
   it('updates courier working schedule', async () => {
     const userDoc: any = {
       email: 'c@courier.com',
@@ -297,6 +327,42 @@ describe('Courier availability and location routes', () => {
       expect.objectContaining({ day: 'monday', startTime: '08:00', endTime: '16:00' })
     );
     expect(userDoc.save).toHaveBeenCalled();
+  });
+
+  it('blocks schedule edits while a courier still has an active delivery', async () => {
+    const userDoc: any = {
+      email: 'c@courier.com',
+      role: 'courier',
+      availability: false,
+      courierAvailabilityStatus: 'offline',
+      takenOrder: 'order-1',
+      courierWorkingHours: [],
+      save: vi.fn(),
+    };
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'c@courier.com', role: 'courier' },
+    } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce(userDoc as never);
+
+    const { PATCH } = await loadSchedule();
+    const res = await PATCH(
+      new Request('http://localhost/api/my-delivery/schedule', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workingHours: [
+            { day: 'monday', startTime: '08:00', endTime: '16:00', isUnavailable: false },
+          ],
+        }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe(
+      'Finish or decline your active delivery before editing your courier schedule.'
+    );
+    expect(userDoc.save).not.toHaveBeenCalled();
   });
 
   it('rejects invalid courier schedule time ranges', async () => {
@@ -511,6 +577,43 @@ describe('Courier availability and location routes', () => {
         status: 'accepted',
       })
     );
+  });
+
+  it('blocks accepting assignments when the courier is no longer ready', async () => {
+    const userDoc = {
+      ...courierUser(),
+      availability: false,
+      courierAvailabilityStatus: 'offline',
+    };
+    const orderDoc = assignedOrder({
+      orderStatus: 'ready',
+      courierAssignmentStatus: 'pending',
+    });
+
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: userDoc.email, role: 'courier' },
+    } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce(
+      userDoc as never
+    );
+    vi.mocked(Order.findById).mockResolvedValueOnce(orderDoc as never);
+
+    const PATCH = await loadDeliveryOrdersPatch();
+    const res = await PATCH(
+      new Request('http://localhost/api/my-delivery/orders', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: 'order-1', action: 'accept-assignment' }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe(
+      'Go online and stay inside your saved courier schedule before accepting assignments.'
+    );
+    expect(orderDoc.save).not.toHaveBeenCalled();
+    expect(notifyRestaurantAdminsAboutCourierAssignmentUpdate).not.toHaveBeenCalled();
   });
 
   it('blocks accepting an assignment after the response window expires', async () => {
