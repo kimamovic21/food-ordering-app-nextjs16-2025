@@ -879,6 +879,11 @@ Courier:
   online work and is locked for 30 minutes.
 - Courier work sessions are stored in MongoDB so couriers and superadmin can review weekly, monthly,
   and yearly work-time summaries.
+- Courier schedule checks, break eligibility, stale-session cleanup, and work summaries use
+  `Europe/Sarajevo` as the business timezone, so production server timezone differences do not move
+  the courier's workday.
+- If an active work session survives past the saved shift end, the server closes it at the saved
+  shift end instead of counting extra overnight time.
 - Assignment expires after 10 minutes without response.
 - Declined/expired assignments are tracked for performance.
 - Failed delivery requires at least 30 minutes in transport.

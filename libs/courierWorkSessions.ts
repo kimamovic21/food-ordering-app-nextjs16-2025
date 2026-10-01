@@ -1,7 +1,13 @@
 import 'server-only';
 
 import {
+  getCourierCurrentMinutes,
+  getCourierShiftEndForDate,
   getCourierShiftDurationMinutesForDate,
+  getCourierStartOfDay,
+  getCourierStartOfMonth,
+  getCourierStartOfWeek,
+  getCourierStartOfYear,
   getCourierWorkingHoursForDate,
   isCourierScheduledNow,
   parseCourierTimeToMinutes,
@@ -113,13 +119,33 @@ const setCourierOffline = (courier: any) => {
   courier.courierCurrentWorkSessionId = null;
 };
 
+const getStaleActiveSessionEnd = (courier: any, activeSession: any, now: Date) => {
+  const startedAt = dateOrNull(activeSession?.startedAt);
+  if (!startedAt) return null;
+
+  const shiftEndAt = getCourierShiftEndForDate(courier?.courierWorkingHours, startedAt);
+  if (!shiftEndAt || shiftEndAt > now || shiftEndAt <= startedAt) {
+    return null;
+  }
+
+  return shiftEndAt;
+};
+
 export const normalizeCourierAvailabilityState = async (courier: any, now = new Date()) => {
   const status = getStatus(courier);
   const breakEndsAt = dateOrNull(courier?.courierBreakEndsAt);
+  const activeSession = await getActiveSession(courier._id);
 
   if (status === 'on_break' && breakEndsAt && breakEndsAt <= now) {
-    const activeSession = await getActiveSession(courier._id);
     await completeSession(activeSession, breakEndsAt, 'break_completed');
+    setCourierOffline(courier);
+    await courier.save?.();
+    return courier;
+  }
+
+  const staleActiveSessionEnd = getStaleActiveSessionEnd(courier, activeSession, now);
+  if (staleActiveSessionEnd) {
+    await completeSession(activeSession, staleActiveSessionEnd, 'outside_saved_schedule');
     setCourierOffline(courier);
     await courier.save?.();
     return courier;
@@ -130,8 +156,14 @@ export const normalizeCourierAvailabilityState = async (courier: any, now = new 
     courier?.availability &&
     !isCourierScheduledNow(courier.courierWorkingHours, now)
   ) {
-    const activeSession = await getActiveSession(courier._id);
     await completeSession(activeSession, now, 'outside_saved_schedule');
+    setCourierOffline(courier);
+    await courier.save?.();
+    return courier;
+  }
+
+  if (status === 'offline' && activeSession) {
+    await completeSession(activeSession, now, 'stale_offline_cleanup');
     setCourierOffline(courier);
     await courier.save?.();
   }
@@ -170,7 +202,7 @@ const getBreakEligibility = (courier: any, activeSession: any, now = new Date())
   }
 
   const todayHours = getCourierWorkingHoursForDate(courier.courierWorkingHours, now);
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = getCourierCurrentMinutes(now);
   const shiftEndMinutes = todayHours ? parseCourierTimeToMinutes(todayHours.endTime) : 0;
   if (currentMinutes + COURIER_BREAK_DURATION_MINUTES > shiftEndMinutes) {
     return {
@@ -337,20 +369,6 @@ export const updateCourierAvailability = async (
   throw new CourierAvailabilityError('Unsupported courier availability action.');
 };
 
-const startOfLocalDay = (date: Date) =>
-  new Date(date.getFullYear(), date.getMonth(), date.getDate());
-
-const startOfLocalWeek = (date: Date) => {
-  const start = startOfLocalDay(date);
-  const day = start.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  start.setDate(start.getDate() + mondayOffset);
-  return start;
-};
-
-const startOfLocalMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth(), 1);
-const startOfLocalYear = (date: Date) => new Date(date.getFullYear(), 0, 1);
-
 const emptyPeriod = (): CourierWorkPeriodSummary => ({
   breakMinutes: 0,
   grossMinutes: 0,
@@ -397,7 +415,7 @@ export const getCourierWorkSummary = async (
   courierId: unknown,
   now = new Date()
 ): Promise<CourierWorkSummary> => {
-  const yearStart = startOfLocalYear(now);
+  const yearStart = getCourierStartOfYear(now);
   const rangeEnd = now;
   const sessions = await CourierWorkSession.find({
     courierId,
@@ -411,9 +429,9 @@ export const getCourierWorkSummary = async (
     year: emptyPeriod(),
   };
   const ranges = [
-    ['today', startOfLocalDay(now)] as const,
-    ['week', startOfLocalWeek(now)] as const,
-    ['month', startOfLocalMonth(now)] as const,
+    ['today', getCourierStartOfDay(now)] as const,
+    ['week', getCourierStartOfWeek(now)] as const,
+    ['month', getCourierStartOfMonth(now)] as const,
     ['year', yearStart] as const,
   ];
 

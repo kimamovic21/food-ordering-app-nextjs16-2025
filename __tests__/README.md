@@ -30,6 +30,8 @@ This folder contains unit tests grouped by feature area.
 - `api/payment.test.ts`: validates payment-related helper logic and utility contracts.
 - `libs/courier-assignment-timeout.test.ts`: validates stale pending courier assignment expiry and courier release rules.
 - `libs/courier-assignment-history.test.ts`: validates finalized courier assignment attempt history.
+- `libs/courierSchedule.test.ts`: validates Sarajevo-time courier schedule checks and report boundary helpers.
+- `libs/courierWorkSessions.test.ts`: validates stale courier work-session cleanup and Sarajevo-local work summaries.
 - `libs/order-auto-cancellation.test.ts`: validates stale unpaid and ready-without-courier auto-cancel rules.
 - `libs/paymentExpiry.test.ts`: validates the customer-facing unpaid payment countdown helper.
 - `libs/restaurantCapacity.test.ts`: validates shared active kitchen capacity normalization and near-capacity snapshot behavior.

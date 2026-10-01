@@ -25,6 +25,8 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
   worked long enough, has no active delivery, is inside schedule, and has enough shift time left.
 - `CourierWorkSummaryCard.tsx` shows the courier's tracked work time for today, week, month, and
   year. These numbers come from persisted `courier_work_sessions`, not from browser-only timers.
+- Courier schedule and work summaries are calculated in `Europe/Sarajevo`, so local business hours
+  stay correct when production infrastructure runs in a different timezone.
 
 ## Important Files
 
@@ -70,6 +72,8 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
   assignable for that order.
 - Do not allow schedule edits or offline transitions while `takenOrder` is set. The courier should
   complete, fail, or decline the delivery through the order workflow first.
+- Preserve stale-session cleanup: if an active work session survives past the saved shift end, the
+  server closes it at the Sarajevo shift end instead of counting extra overnight time.
 - Keep the existing `availability` boolean aligned with the new `courierAvailabilityStatus`:
   `online` means assignable, `on_break` means not assignable, and `offline` means not assignable.
 
@@ -81,6 +85,8 @@ active assignments, and see their own work-time summary. The UI is intentionally
 server owns the important rules so a courier cannot fake being online, skip the break lock, or take a
 break while carrying an active order. Assignment acceptance is also re-checked on the server, so a
 stale card cannot be accepted after the courier went offline, entered break, or left the saved shift.
+The work ledger uses Sarajevo-local day/week boundaries, which keeps courier summaries consistent
+between local development and Vercel production.
 
 ## Maintenance Notes For Future Work
 
