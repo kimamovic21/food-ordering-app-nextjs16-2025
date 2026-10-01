@@ -53,6 +53,15 @@ vi.mock('@/models/restaurant', () => ({
   },
 }));
 
+vi.mock('@/models/courierWorkSession', () => ({
+  CourierWorkSession: {
+    find: vi.fn(() => ({
+      lean: vi.fn(async () => []),
+    })),
+    findOne: vi.fn(),
+  },
+}));
+
 const openWorkingHours = [
   'monday',
   'tuesday',

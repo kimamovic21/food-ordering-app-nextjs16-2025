@@ -1,7 +1,9 @@
+import { TZDate } from '@date-fns/tz';
 import type { CourierWorkingHour } from '@/types/courier';
 
 export type { CourierWorkingHour } from '@/types/courier';
 
+export const COURIER_TIME_ZONE = 'Europe/Sarajevo';
 export const COURIER_SERVICE_START_TIME = '08:00';
 export const COURIER_SERVICE_END_TIME = '23:00';
 export const COURIER_SERVICE_START_MINUTES = 8 * 60;
@@ -25,8 +27,56 @@ export const parseCourierTimeToMinutes = (value: string) => {
   return hours * 60 + minutes;
 };
 
+export const getCourierZonedDate = (date: Date = new Date()) =>
+  TZDate.tz(COURIER_TIME_ZONE, date);
+
+export const getCourierCurrentMinutes = (date: Date = new Date()) => {
+  const courierDate = getCourierZonedDate(date);
+  return courierDate.getHours() * 60 + courierDate.getMinutes();
+};
+
 export const getCourierDayName = (date: Date) =>
-  ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][date.getDay()];
+  ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][
+    getCourierZonedDate(date).getDay()
+  ];
+
+const createCourierZonedDate = (
+  year: number,
+  month: number,
+  date: number,
+  hours = 0,
+  minutes = 0
+) => new Date(new TZDate(year, month, date, hours, minutes, 0, 0, COURIER_TIME_ZONE).getTime());
+
+export const getCourierStartOfDay = (date: Date = new Date()) => {
+  const courierDate = getCourierZonedDate(date);
+  return createCourierZonedDate(
+    courierDate.getFullYear(),
+    courierDate.getMonth(),
+    courierDate.getDate()
+  );
+};
+
+export const getCourierStartOfWeek = (date: Date = new Date()) => {
+  const courierDate = getCourierZonedDate(date);
+  const mondayOffset = courierDate.getDay() === 0 ? -6 : 1 - courierDate.getDay();
+
+  return createCourierZonedDate(
+    courierDate.getFullYear(),
+    courierDate.getMonth(),
+    courierDate.getDate() + mondayOffset
+  );
+};
+
+export const getCourierStartOfMonth = (date: Date = new Date()) => {
+  const courierDate = getCourierZonedDate(date);
+  return createCourierZonedDate(courierDate.getFullYear(), courierDate.getMonth(), 1);
+};
+
+export const getCourierStartOfYear = (date: Date = new Date()) => {
+  const courierDate = getCourierZonedDate(date);
+  return createCourierZonedDate(courierDate.getFullYear(), 0, 1);
+};
 
 export const normalizeCourierWorkingHours = (workingHours: unknown): CourierWorkingHour[] => {
   const incoming = Array.isArray(workingHours) ? workingHours : [];
@@ -112,6 +162,40 @@ export const getCourierShiftDurationMinutesForDate = (
   );
 };
 
+export const getCourierShiftEndForDate = (
+  workingHours: unknown,
+  targetDate: Date = new Date()
+) => {
+  const todayHours = getCourierWorkingHoursForDate(workingHours, targetDate);
+
+  if (!todayHours || todayHours.isUnavailable) {
+    return null;
+  }
+
+  const startMinutes = parseCourierTimeToMinutes(todayHours.startTime);
+  const endMinutes = parseCourierTimeToMinutes(todayHours.endTime);
+
+  if (
+    startMinutes < COURIER_SERVICE_START_MINUTES ||
+    endMinutes > COURIER_SERVICE_END_MINUTES ||
+    startMinutes >= endMinutes
+  ) {
+    return null;
+  }
+
+  const courierDate = getCourierZonedDate(targetDate);
+  const hours = Math.floor(endMinutes / 60);
+  const minutes = endMinutes % 60;
+
+  return createCourierZonedDate(
+    courierDate.getFullYear(),
+    courierDate.getMonth(),
+    courierDate.getDate(),
+    hours,
+    minutes
+  );
+};
+
 export const isCourierScheduledNow = (workingHours: unknown, targetDate: Date = new Date()) => {
   const todayHours = getCourierWorkingHoursForDate(workingHours, targetDate);
 
@@ -129,6 +213,6 @@ export const isCourierScheduledNow = (workingHours: unknown, targetDate: Date = 
     return false;
   }
 
-  const currentMinutes = targetDate.getHours() * 60 + targetDate.getMinutes();
+  const currentMinutes = getCourierCurrentMinutes(targetDate);
   return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
 };

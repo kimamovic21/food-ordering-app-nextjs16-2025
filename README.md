@@ -83,6 +83,9 @@ It includes:
 - Leaflet map tracking with polling + manual refresh
 - Delivery PIN entry to record courier handoff before customer/admin confirmation
 - Failed-delivery cancellation request when the customer is unavailable after extended transport time
+- Sarajevo-time courier schedules, locked breaks, and work-time summaries so production server
+  timezone differences do not shift courier availability or reports
+- Stale active work-session cleanup when a courier leaves the app open past the saved shift end
 - Estimated delivery time summaries for active and completed deliveries
 - Report-problem action for delivery issues
 - Courier-facing review and rating list for completed deliveries

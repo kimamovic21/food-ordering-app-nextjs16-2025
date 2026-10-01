@@ -41,6 +41,8 @@ later be shown to the courier or super admin.
 - `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
 - `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
 - `mongoose` + MongoDB models: keep users, restaurants, menu items, orders, coupons, reviews, and audit data server-authoritative.
+- `@date-fns/tz`: keeps courier schedule, break, and work-summary calculations pinned to
+  `Europe/Sarajevo` instead of relying on the server machine timezone.
 
 ## Auth, Role, And Safety Checks
 
@@ -64,6 +66,8 @@ later be shown to the courier or super admin.
 - A courier cannot end a break early by clicking online/offline repeatedly.
 - Expired breaks are normalized server-side, closing the current work session and moving the courier
   back to offline.
+- Stale active work sessions are auto-closed at the saved Sarajevo shift end when a courier leaves
+  the app open, closes the browser, or production server time differs from local business time.
 
 ## Data Dependencies
 
@@ -76,7 +80,8 @@ later be shown to the courier or super admin.
 - Updates courier availability fields on `User`.
 - Creates and completes `courier_work_sessions`.
 - Appends break windows to the active work session.
-- Calculates work summaries for today, week, month, and year.
+- Calculates work summaries for today, week, month, and year using Sarajevo-local report
+  boundaries.
 
 ## Response Behavior
 
@@ -90,7 +95,9 @@ later be shown to the courier or super admin.
 Open this file when someone asks what `/api/my-delivery/availability` does. Explain that it is the
 server authority for courier online/offline/break state. It prevents fake availability by checking
 the saved courier schedule, active delivery state, minimum work time before break, and locked
-30-minute break windows, then stores the time ledger used by courier and superadmin reports.
+30-minute break windows, then stores the time ledger used by courier and superadmin reports. The
+time ledger is calculated in `Europe/Sarajevo`, so Vercel/server timezone differences do not shift
+the courier's workday or weekly totals.
 
 ## Maintenance Notes For Future Work
 
