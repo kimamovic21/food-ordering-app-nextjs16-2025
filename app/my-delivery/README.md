@@ -27,6 +27,8 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
   year. These numbers come from persisted `courier_work_sessions`, not from browser-only timers.
 - Courier schedule and work summaries are calculated in `Europe/Sarajevo`, so local business hours
   stay correct when production infrastructure runs in a different timezone.
+- When a courier tries to go online outside the saved shift, the API returns a helpful next-shift
+  message that the existing toast flow can show without extra client-side schedule math.
 
 ## Important Files
 
@@ -74,6 +76,8 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
   complete, fail, or decline the delivery through the order workflow first.
 - Preserve stale-session cleanup: if an active work session survives past the saved shift end, the
   server closes it at the Sarajevo shift end instead of counting extra overnight time.
+- Preserve next-shift messaging for outside-schedule go-online attempts. The browser should not
+  guess the next shift; it should display the API error returned by `/api/my-delivery/availability`.
 - Keep the existing `availability` boolean aligned with the new `courierAvailabilityStatus`:
   `online` means assignable, `on_break` means not assignable, and `offline` means not assignable.
 
@@ -86,7 +90,9 @@ server owns the important rules so a courier cannot fake being online, skip the 
 break while carrying an active order. Assignment acceptance is also re-checked on the server, so a
 stale card cannot be accepted after the courier went offline, entered break, or left the saved shift.
 The work ledger uses Sarajevo-local day/week boundaries, which keeps courier summaries consistent
-between local development and Vercel production.
+between local development and Vercel production. If the courier tries to go online too early, too
+late, or on an unavailable day, the backend responds with a friendly message such as the next shift
+start time.
 
 ## Maintenance Notes For Future Work
 

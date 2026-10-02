@@ -24,6 +24,8 @@ later be shown to the courier or super admin.
 - The route loads the signed-in courier, delegates work-session rules to `libs/courierWorkSessions`,
   then returns a stable JSON state used by `/my-delivery`.
 - It uses `User` for current status fields and `CourierWorkSession` for durable online/break history.
+- If `go-online` is requested outside the saved shift, the route returns a schedule-aware message
+  such as the next start time, ended shift, next available weekday, or missing shift configuration.
 - Detected local functions/handlers: `userRole`.
 
 ## Request Inputs
@@ -53,6 +55,8 @@ later be shown to the courier or super admin.
   break, already carrying an order, or has not worked long enough for a break.
 - The server rejects `go-offline` while `takenOrder` is set, forcing the courier to finish or decline
   the active delivery before leaving the delivery pool.
+- The `go-online` rejection message is generated from the Sarajevo-local courier schedule, so the
+  courier sees what to do next instead of a generic "outside schedule" error.
 
 ## Edge Cases Covered
 
@@ -68,6 +72,8 @@ later be shown to the courier or super admin.
   back to offline.
 - Stale active work sessions are auto-closed at the saved Sarajevo shift end when a courier leaves
   the app open, closes the browser, or production server time differs from local business time.
+- Go-online attempts outside the saved shift explain whether the shift starts later today, already
+  ended, resumes on another weekday, or has no available saved shifts.
 
 ## Data Dependencies
 
@@ -97,7 +103,8 @@ server authority for courier online/offline/break state. It prevents fake availa
 the saved courier schedule, active delivery state, minimum work time before break, and locked
 30-minute break windows, then stores the time ledger used by courier and superadmin reports. The
 time ledger is calculated in `Europe/Sarajevo`, so Vercel/server timezone differences do not shift
-the courier's workday or weekly totals.
+the courier's workday or weekly totals. When the courier is outside schedule, the same schedule
+helper returns a friendly next-shift message for the UI toast.
 
 ## Maintenance Notes For Future Work
 

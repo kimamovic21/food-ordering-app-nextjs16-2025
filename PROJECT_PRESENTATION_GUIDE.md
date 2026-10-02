@@ -884,6 +884,8 @@ Courier:
   the courier's workday.
 - If an active work session survives past the saved shift end, the server closes it at the saved
   shift end instead of counting extra overnight time.
+- If a courier tries to go online outside the saved schedule, the app explains the next available
+  shift instead of showing a generic blocked message.
 - Assignment expires after 10 minutes without response.
 - Declined/expired assignments are tracked for performance.
 - Failed delivery requires at least 30 minutes in transport.

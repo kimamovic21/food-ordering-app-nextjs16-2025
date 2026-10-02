@@ -21,6 +21,15 @@ export const defaultCourierWorkingHours: CourierWorkingHour[] = [
 
 const validDays = new Set(defaultCourierWorkingHours.map((item) => item.day));
 const timePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+const courierDayLabels: Record<string, string> = {
+  monday: 'Monday',
+  tuesday: 'Tuesday',
+  wednesday: 'Wednesday',
+  thursday: 'Thursday',
+  friday: 'Friday',
+  saturday: 'Saturday',
+  sunday: 'Sunday',
+};
 
 export const parseCourierTimeToMinutes = (value: string) => {
   const [hours, minutes] = value.split(':').map(Number);
@@ -47,6 +56,15 @@ const createCourierZonedDate = (
   hours = 0,
   minutes = 0
 ) => new Date(new TZDate(year, month, date, hours, minutes, 0, 0, COURIER_TIME_ZONE).getTime());
+
+const getCourierDateWithDayOffset = (date: Date, dayOffset: number) => {
+  const courierDate = getCourierZonedDate(date);
+  return createCourierZonedDate(
+    courierDate.getFullYear(),
+    courierDate.getMonth(),
+    courierDate.getDate() + dayOffset
+  );
+};
 
 export const getCourierStartOfDay = (date: Date = new Date()) => {
   const courierDate = getCourierZonedDate(date);
@@ -99,6 +117,96 @@ export const normalizeCourierWorkingHours = (workingHours: unknown): CourierWork
       isUnavailable: Boolean(match?.isUnavailable),
     };
   });
+};
+
+const isValidCourierShift = (
+  hours: CourierWorkingHour | null | undefined
+): hours is CourierWorkingHour => {
+  if (!hours || hours.isUnavailable) {
+    return false;
+  }
+
+  const startMinutes = parseCourierTimeToMinutes(hours.startTime);
+  const endMinutes = parseCourierTimeToMinutes(hours.endTime);
+
+  return (
+    startMinutes >= COURIER_SERVICE_START_MINUTES &&
+    endMinutes <= COURIER_SERVICE_END_MINUTES &&
+    startMinutes < endMinutes
+  );
+};
+
+const getCourierWorkingHoursForOffset = (
+  normalizedHours: CourierWorkingHour[],
+  targetDate: Date,
+  dayOffset: number
+) => {
+  const dayDate = getCourierDateWithDayOffset(targetDate, dayOffset);
+  return normalizedHours.find((item) => item.day === getCourierDayName(dayDate)) || null;
+};
+
+const getNextCourierShift = (workingHours: unknown, targetDate: Date = new Date()) => {
+  const normalizedHours = normalizeCourierWorkingHours(workingHours);
+
+  for (let dayOffset = 1; dayOffset <= 7; dayOffset += 1) {
+    const hours = getCourierWorkingHoursForOffset(normalizedHours, targetDate, dayOffset);
+
+    if (isValidCourierShift(hours)) {
+      return { dayOffset, hours };
+    }
+  }
+
+  return null;
+};
+
+const formatCourierShiftDay = (dayOffset: number, targetDate: Date) => {
+  if (dayOffset === 0) return 'today';
+  if (dayOffset === 1) return 'tomorrow';
+
+  const dayDate = getCourierDateWithDayOffset(targetDate, dayOffset);
+  const dayName = getCourierDayName(dayDate);
+  return courierDayLabels[dayName] || dayName;
+};
+
+export const getCourierScheduleUnavailableMessage = (
+  workingHours: unknown,
+  targetDate: Date = new Date()
+) => {
+  const normalizedHours = normalizeCourierWorkingHours(workingHours);
+  const todayHours = getCourierWorkingHoursForDate(normalizedHours, targetDate);
+  const currentMinutes = getCourierCurrentMinutes(targetDate);
+  const nextShift = getNextCourierShift(normalizedHours, targetDate);
+
+  if (isValidCourierShift(todayHours)) {
+    const startMinutes = parseCourierTimeToMinutes(todayHours.startTime);
+    const endMinutes = parseCourierTimeToMinutes(todayHours.endTime);
+
+    if (currentMinutes < startMinutes) {
+      return `Your shift starts today at ${todayHours.startTime}.`;
+    }
+
+    if (currentMinutes > endMinutes) {
+      if (!nextShift) {
+        return `Your shift ended at ${todayHours.endTime}. You do not have any other available courier shifts saved.`;
+      }
+
+      return `Your shift ended at ${
+        todayHours.endTime
+      }. Next shift starts ${formatCourierShiftDay(
+        nextShift.dayOffset,
+        targetDate
+      )} at ${nextShift.hours.startTime}.`;
+    }
+  }
+
+  if (!nextShift) {
+    return 'You do not have any available courier shifts saved.';
+  }
+
+  return `You are not scheduled today. Next shift starts ${formatCourierShiftDay(
+    nextShift.dayOffset,
+    targetDate
+  )} at ${nextShift.hours.startTime}.`;
 };
 
 export const validateCourierWorkingHours = (workingHours: unknown) => {

@@ -215,6 +215,47 @@ describe('Courier availability and location routes', () => {
     expect(userDoc.save).toHaveBeenCalled();
   });
 
+  it('returns the next shift message when a courier tries to go online too early', async () => {
+    vi.setSystemTime(new Date('2026-09-29T06:30:00.000Z'));
+    const userDoc: any = {
+      _id: 'courier-1',
+      email: 'c@courier.com',
+      role: 'courier',
+      availability: false,
+      courierAvailabilityStatus: 'offline',
+      courierWorkingHours: [
+        { day: 'sunday', startTime: '10:00', endTime: '16:00', isUnavailable: true },
+        { day: 'monday', startTime: '10:00', endTime: '18:00', isUnavailable: false },
+        { day: 'tuesday', startTime: '10:00', endTime: '18:00', isUnavailable: false },
+        { day: 'wednesday', startTime: '10:00', endTime: '18:00', isUnavailable: false },
+        { day: 'thursday', startTime: '10:00', endTime: '18:00', isUnavailable: false },
+        { day: 'friday', startTime: '10:00', endTime: '18:00', isUnavailable: false },
+        { day: 'saturday', startTime: '10:00', endTime: '16:00', isUnavailable: true },
+      ],
+      save: vi.fn(async function save(this: any) {
+        return this;
+      }),
+    };
+    vi.mocked(getServerSession).mockResolvedValueOnce({
+      user: { email: 'c@courier.com', role: 'courier' },
+    } as never);
+    vi.mocked((await import('@/models/user')).User.findOne).mockResolvedValueOnce(userDoc as never);
+
+    const PATCH = await loadAvailability();
+    const res = await PATCH(
+      new Request('http://localhost/api/my-delivery/availability', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'go-online' }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toBe('Your shift starts today at 10:00.');
+    expect(userDoc.save).not.toHaveBeenCalled();
+  });
+
   it('blocks courier break before 60 minutes online', async () => {
     const userDoc: any = {
       _id: 'courier-1',
