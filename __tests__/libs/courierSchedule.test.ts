@@ -1,6 +1,7 @@
 import {
   getCourierCurrentMinutes,
   getCourierDayName,
+  getCourierScheduleUnavailableMessage,
   getCourierStartOfDay,
   getCourierStartOfWeek,
   isCourierScheduledNow,
@@ -42,5 +43,31 @@ describe('courier schedule timezone helpers', () => {
     expect(getCourierStartOfWeek(sarajevoMondayAfterMidnight).toISOString()).toBe(
       '2026-09-27T22:00:00.000Z'
     );
+  });
+
+  it('explains when the courier shift starts later today', () => {
+    expect(
+      getCourierScheduleUnavailableMessage(weekdayHours, new Date('2026-09-28T05:30:00.000Z'))
+    ).toBe('Your shift starts today at 08:00.');
+  });
+
+  it('explains when the shift ended and the next shift starts tomorrow', () => {
+    expect(
+      getCourierScheduleUnavailableMessage(weekdayHours, new Date('2026-09-28T16:30:00.000Z'))
+    ).toBe('Your shift ended at 17:00. Next shift starts tomorrow at 08:00.');
+  });
+
+  it('explains unavailable days with the next scheduled day', () => {
+    expect(
+      getCourierScheduleUnavailableMessage(weekdayHours, new Date('2026-10-03T10:00:00.000Z'))
+    ).toBe('You are not scheduled today. Next shift starts Monday at 08:00.');
+  });
+
+  it('explains when no courier shifts are available at all', () => {
+    const unavailableHours = weekdayHours.map((hours) => ({ ...hours, isUnavailable: true }));
+
+    expect(
+      getCourierScheduleUnavailableMessage(unavailableHours, new Date('2026-09-28T10:00:00.000Z'))
+    ).toBe('You do not have any available courier shifts saved.');
   });
 });

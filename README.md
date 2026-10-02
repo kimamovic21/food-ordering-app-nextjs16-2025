@@ -79,6 +79,8 @@ It includes:
 
 - Courier dashboard with active delivery, delivery history, and ratings sections
 - Availability on/off toggle
+- Schedule-aware go-online feedback that tells couriers when their next shift starts instead of
+  showing a generic blocked message
 - Real-time courier location sharing
 - Leaflet map tracking with polling + manual refresh
 - Delivery PIN entry to record courier handoff before customer/admin confirmation

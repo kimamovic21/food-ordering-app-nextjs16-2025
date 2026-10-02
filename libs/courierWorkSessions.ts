@@ -4,6 +4,7 @@ import {
   getCourierCurrentMinutes,
   getCourierShiftEndForDate,
   getCourierShiftDurationMinutesForDate,
+  getCourierScheduleUnavailableMessage,
   getCourierStartOfDay,
   getCourierStartOfMonth,
   getCourierStartOfWeek,
@@ -288,7 +289,7 @@ export const updateCourierAvailability = async (
 
     if (!isCourierScheduledNow(courier.courierWorkingHours, now)) {
       throw new CourierAvailabilityError(
-        'You can go online only during your saved courier schedule.'
+        getCourierScheduleUnavailableMessage(courier.courierWorkingHours, now)
       );
     }
 
