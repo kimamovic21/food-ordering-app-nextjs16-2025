@@ -25,7 +25,7 @@ This folder owns cart review, cart validation, delivery address/location checks,
 - The cart UI reads local cart items, groups them by restaurant, and prevents the user from silently mixing restaurants in one order.
 - `/api/cart/validate` checks whether selected items still exist, remain available, use valid sizes/prices, and stay within item/order quantity limits.
 - Restaurant status data powers the visible checkout messaging: open/closed, paused, busy, outside delivery radius, minimum order amount, ETA tone, courier readiness, and capacity warnings.
-- Saved delivery addresses and manual/current location controls prepare the delivery fields before checkout.
+- Saved delivery addresses and manual/current location controls prepare the delivery fields before checkout. Customers can give saved addresses a friendly label such as `Home` or `Work`, rename that label without changing the address coordinates, and must confirm before deleting a saved address.
 - Coupon and loyalty calls show the user likely discounts, but `/api/checkout` recalculates everything again before payment.
 - When the user clicks checkout, the UI sends the verified cart, delivery details, coupon code, location, and special instructions to `/api/checkout`, which returns the Stripe URL.
 - The UI is allowed to provide a better experience, but the checkout API remains the final authority.
@@ -38,12 +38,13 @@ This folder owns cart review, cart validation, delivery address/location checks,
 - `app/cart/layout.tsx`: functions/components: `CartLayout`
 - `app/cart/loading.tsx`: functions/components: `CartLoading`, `ItemCardSkeleton`
 - `app/cart/OrderSummary.tsx`
-- `app/cart/page.tsx`: functions/components: `getCartItemKey`, `CartAvailabilityBanner`, `CartSkeleton`, `CartPage`, `completeRestaurantStatusCheck`, `fetchRestaurants`, `fetchLoyaltyDiscount`, `json`, `validateCart`, `handleInputChange`, `getValidatedItemPrice`, `calculateTotals`, `hasMultipleRestaurants`, `getCartRestaurantId`, `getCartRestaurant`, `isRestaurantOpen`, `getRestaurantName`, `isRestaurantBusy`, `getMinimumOrderAmount`, `getMaxItemsPerOrder`, `isRestaurantPaused`, `isRestaurantAcceptingCheckout`, `getRestaurantUnavailableReason`, `getRestaurantEtaMessage`, `getRestaurantEtaTone`, `getRestaurantCourierReadinessMessage`, `getRestaurantCourierReadinessTone`, `getRestaurantCapacityMessage`, `getRestaurantNumberField`, `getDeliveryRadiusKm`, `getDeliveryDistanceKm`, `toRadians`, `handleUseCurrentLocation`, `handleManualDeliveryLocationUpdate`, `handleSelectSavedAddress`, `handleSaveCurrentDeliveryAddress`, `handleSetDefaultDeliveryAddress`, `handleDeleteSelectedDeliveryAddress`, `fetchBestCoupon`, `handleCouponCodeChange`, `handleApplyBestCoupon`, `handleApplyCoupon`, `handleCheckout`, `handleRemoveBlockingCartItems`; API calls: `/api/restaurant/${cartRestaurantIdForLookup}`, `/api/loyalty`, `/api/cart/validate`, `/api/checkout`; client component; session-aware
+- `app/cart/page.tsx`: functions/components: `getCartItemKey`, `CartAvailabilityBanner`, `CartSkeleton`, `CartPage`, `completeRestaurantStatusCheck`, `fetchRestaurants`, `fetchLoyaltyDiscount`, `json`, `validateCart`, `handleInputChange`, `getValidatedItemPrice`, `calculateTotals`, `hasMultipleRestaurants`, `getCartRestaurantId`, `getCartRestaurant`, `isRestaurantOpen`, `getRestaurantName`, `isRestaurantBusy`, `getMinimumOrderAmount`, `getMaxItemsPerOrder`, `isRestaurantPaused`, `isRestaurantAcceptingCheckout`, `getRestaurantUnavailableReason`, `getRestaurantEtaMessage`, `getRestaurantEtaTone`, `getRestaurantCourierReadinessMessage`, `getRestaurantCourierReadinessTone`, `getRestaurantCapacityMessage`, `getRestaurantNumberField`, `getDeliveryRadiusKm`, `getDeliveryDistanceKm`, `toRadians`, `handleUseCurrentLocation`, `handleManualDeliveryLocationUpdate`, `handleSelectSavedAddress`, `handleSaveCurrentDeliveryAddress`, `handleSetDefaultDeliveryAddress`, `handleUpdateSelectedDeliveryAddressLabel`, `handleDeleteSelectedDeliveryAddress`, `fetchBestCoupon`, `handleCouponCodeChange`, `handleApplyBestCoupon`, `handleApplyCoupon`, `handleCheckout`, `handleRemoveBlockingCartItems`; API calls: `/api/restaurant/${cartRestaurantIdForLookup}`, `/api/profile/delivery-addresses`, `/api/loyalty`, `/api/cart/validate`, `/api/checkout`; client component; session-aware
 
 ## API/Data Connections
 
 - Calls `/api/cart/validate`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/checkout`; inspect the matching API README/source before changing its response shape.
+- Calls `/api/profile/delivery-addresses`; inspect the matching API README/source before changing saved address behavior.
 - Calls `/api/loyalty`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/restaurant/${cartRestaurantIdForLookup}`; inspect the matching API README/source before changing its response shape.
 
@@ -66,6 +67,8 @@ This folder owns cart review, cart validation, delivery address/location checks,
 - Do not hide restaurant availability checks behind the checkout button; customers should see why ordering is blocked before they pay.
 - Keep the "checking restaurant status" style states stable so hard refreshes do not briefly show wrong closed/open messages.
 - Keep courier-readiness and busy/capacity messaging aligned with `/api/checkout`; the API must block the same critical cases the UI warns about.
+- Keep saved-address labels optional and UI-only for checkout. The checkout payload should include the delivery address snapshot, but not require an address-book label to place an order.
+- Keep destructive saved-address actions behind a confirmation dialog so users do not lose frequently reused addresses by accident.
 - If delivery radius or ETA logic changes, update restaurant, cart, checkout, and operations documentation together.
 
 ## How To Explain This In A Presentation

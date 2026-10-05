@@ -61,6 +61,26 @@ describe('delivery address helpers', () => {
     expect(findMatchingDeliveryAddress([savedAddress], candidateAddress)).toBe(savedAddress);
   });
 
+  it('falls back to the street address when the display label is blank', () => {
+    const result = normalizeDeliveryAddress({
+      label: '   ',
+      phone: '+38761111222',
+      streetAddress: '  Main Street 1  ',
+      postalCode: '71000',
+      city: 'Sarajevo',
+      country: 'Bosnia & Herzegovina',
+      deliveryLatitude: 43.8563,
+      deliveryLongitude: 18.4131,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      address: expect.objectContaining({
+        label: 'Main Street 1',
+      }),
+    });
+  });
+
   it('treats different coordinates as a different delivery address', () => {
     expect(
       getDeliveryAddressFingerprint({

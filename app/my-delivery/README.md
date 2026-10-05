@@ -29,6 +29,9 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
   stay correct when production infrastructure runs in a different timezone.
 - When a courier tries to go online outside the saved shift, the API returns a helpful next-shift
   message that the existing toast flow can show without extra client-side schedule math.
+- In development, `ManualLocationSimulator.tsx` renders as a bottom-right floating panel. It starts
+  collapsed, can be opened for manual latitude/longitude testing, and can be closed with `X` so it
+  does not push or cover the main delivery workflow by default.
 
 ## Important Files
 
@@ -41,7 +44,7 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
 - `app/my-delivery/layout.tsx`: functions/components: `MyDeliveryLayout`
 - `app/my-delivery/loading.tsx`: functions/components: `MyDeliveryLoading`
 - `app/my-delivery/LocationShareButton.tsx`
-- `app/my-delivery/ManualLocationSimulator.tsx`: functions/components: `handleManualSubmit`; client component
+- `app/my-delivery/ManualLocationSimulator.tsx`: functions/components: `handleManualSubmit`; client component; development-only floating location simulator
 - `app/my-delivery/page.tsx`: functions/components: `MyDeliveryPage`
 
 ## API/Data Connections
@@ -78,6 +81,9 @@ summaries, assignment state, location sharing, pickup/handoff, and delivery prob
   server closes it at the Sarajevo shift end instead of counting extra overnight time.
 - Preserve next-shift messaging for outside-schedule go-online attempts. The browser should not
   guess the next shift; it should display the API error returned by `/api/my-delivery/availability`.
+- Keep development-only simulator controls visually separate from production courier actions. The
+  simulator should stay collapsible and out of the normal page flow so it does not make the delivery
+  screen feel broken during local map testing.
 - Keep the existing `availability` boolean aligned with the new `courierAvailabilityStatus`:
   `online` means assignable, `on_break` means not assignable, and `offline` means not assignable.
 

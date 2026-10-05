@@ -170,8 +170,8 @@ Profile:
 - Users can update profile details.
 - Phone values are validated and normalized through `libs/phone.ts`.
 - Avatar uploads go through Cloudinary.
-- Users can save delivery addresses and reuse them during checkout.
-- Saved delivery addresses are capped and deduplicated.
+- Users can save delivery addresses with friendly labels such as `Home` or `Work` and reuse them during checkout.
+- Saved delivery addresses are capped, deduplicated by real delivery data, and can be renamed without changing the stored address or location.
 
 ## 6. Customer App Flow
 

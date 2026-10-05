@@ -49,10 +49,20 @@ export async function POST(req: Request) {
 
   const matchingAddress = findMatchingDeliveryAddress(currentAddresses, result.address);
   if (matchingAddress) {
+    const nextLabel = result.address.label.trim();
+    const labelUpdated = Boolean(nextLabel && matchingAddress.label !== nextLabel);
+
+    if (labelUpdated) {
+      matchingAddress.label = nextLabel;
+    }
+
     if (result.address.isDefault && !matchingAddress.isDefault) {
       currentAddresses.forEach((address: any) => {
         address.isDefault = String(address._id) === String(matchingAddress._id);
       });
+    }
+
+    if (labelUpdated || (result.address.isDefault && !matchingAddress.isDefault)) {
       user.deliveryAddresses = currentAddresses;
       await user.save();
     }
@@ -61,6 +71,7 @@ export async function POST(req: Request) {
       address: serializeDeliveryAddress(matchingAddress),
       addresses: serializeDeliveryAddresses(user.deliveryAddresses || currentAddresses),
       duplicate: true,
+      labelUpdated,
     });
   }
 
@@ -108,9 +119,15 @@ export async function PATCH(req: Request) {
 
   const body = await req.json().catch(() => null);
   const addressId = String(body?.addressId || '');
+  const hasLabelUpdate = typeof body?.label === 'string';
+  const nextLabel = hasLabelUpdate ? String(body.label).trim().slice(0, 60) : '';
 
   if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {
     return Response.json({ error: 'Invalid delivery address ID' }, { status: 400 });
+  }
+
+  if (hasLabelUpdate && !nextLabel) {
+    return Response.json({ error: 'Delivery address label is required.' }, { status: 400 });
   }
 
   const addresses = Array.isArray(user.deliveryAddresses) ? user.deliveryAddresses : [];
@@ -120,9 +137,13 @@ export async function PATCH(req: Request) {
     return Response.json({ error: 'Delivery address not found' }, { status: 404 });
   }
 
-  addresses.forEach((item: any) => {
-    item.isDefault = String(item._id) === addressId;
-  });
+  if (hasLabelUpdate) {
+    address.label = nextLabel;
+  } else {
+    addresses.forEach((item: any) => {
+      item.isDefault = String(item._id) === addressId;
+    });
+  }
 
   user.deliveryAddresses = addresses;
   await user.save();

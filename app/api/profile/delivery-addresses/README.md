@@ -12,11 +12,15 @@
 
 ## Plain-English Summary
 
-Handles get/post/patch/delete work for the profile and saved addresses area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Handles get/post/patch/delete work for the profile and saved addresses area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs. It supports friendly labels such as `Home` or `Work`, but still treats the actual phone, address, city, country, and confirmed latitude/longitude as the delivery-critical data.
 
 ## What Happens In This File
 
 - The route receives GET/POST/PATCH/DELETE requests and converts request/session data into server-side business checks.
+- `GET` returns the signed-in user's saved delivery addresses.
+- `POST` validates and saves a new delivery address, deduplicating by delivery data instead of label so the same address is not stored repeatedly under different names. If the duplicate request carries a new friendly label, the existing saved address label is updated instead of creating another row.
+- `PATCH` either marks an address as default or updates only the friendly label when a label is supplied.
+- `DELETE` removes an address and promotes another saved address to default when needed.
 - It uses `user` for persistence.
 - It delegates shared logic to `authOptions`, `deliveryAddresses`, `mongoConnect` so behavior stays consistent across the app.
 - Detected local functions/handlers: `getCurrentUser`.
@@ -49,6 +53,8 @@ Handles get/post/patch/delete work for the profile and saved addresses area. The
 - Line 74: `if (result.address.isDefault || currentAddresses.length === 0) {`
 - Line 105: `if (!user) {`
 - Line 112: `if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {`
+- Label-only updates reject blank labels instead of saving empty display names.
+- Duplicate saves can update the existing address label, but they still do not bypass the saved-address limit or create another saved address.
 - Line 119: `if (!address) {`
 - Line 140: `if (!user) {`
 - Line 147: `if (!addressId || !mongoose.Types.ObjectId.isValid(addressId)) {`
@@ -72,7 +78,7 @@ Handles get/post/patch/delete work for the profile and saved addresses area. The
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/profile/delivery-addresses` does. Explain that it belongs to the profile and saved addresses workflow, serves `signed-in user`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/profile/delivery-addresses` does. Explain that it belongs to the profile and saved addresses workflow, serves `signed-in user`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status. It lets customers reuse up to five confirmed delivery addresses during checkout, choose a default address, delete old addresses, and rename display labels without changing the underlying delivery snapshot.
 
 ## Maintenance Notes For Future Work
 

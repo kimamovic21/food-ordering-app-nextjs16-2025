@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MapPinned, X } from 'lucide-react';
 
 interface ManualLocationSimulatorProps {
   availability: boolean;
@@ -20,6 +21,7 @@ const ManualLocationSimulator: React.FC<ManualLocationSimulatorProps> = ({
   onPollingToggle,
   onManualUpdate,
 }) => {
+  const [open, setOpen] = useState(false);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const latitudeValue = latitude.trim();
@@ -69,44 +71,71 @@ const ManualLocationSimulator: React.FC<ManualLocationSimulatorProps> = ({
   };
 
   return (
-    <div className='mt-6 w-full rounded-xl border bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 shadow-2xl p-4 pointer-events-auto'>
-      <div className='mb-3'>
-        <p className='font-semibold text-foreground'>Dev Courier Simulator</p>
-        <p className='text-xs text-muted-foreground'>
-          Enter latitude/longitude to simulate courier movement on the map.
-        </p>
-      </div>
-
-      <div className='grid grid-cols-2 gap-2 mb-3'>
-        <Input
-          value={latitude}
-          onChange={(e) => setLatitude(e.target.value)}
-          placeholder='Latitude'
-          inputMode='decimal'
-          disabled={updating}
-        />
-        <Input
-          value={longitude}
-          onChange={(e) => setLongitude(e.target.value)}
-          placeholder='Longitude'
-          inputMode='decimal'
-          disabled={updating}
-        />
-      </div>
-
-      <div className='space-y-2'>
+    <div className='fixed bottom-4 right-4 z-50 w-[calc(100vw-2rem)] max-w-sm pointer-events-none sm:bottom-6 sm:right-6'>
+      {!open ? (
         <Button
-          onClick={handleManualSubmit}
-          disabled={updating || !availability || !hasCoordinates}
-          className='w-full bg-primary hover:bg-primary/90'
+          type='button'
+          onClick={() => setOpen(true)}
+          className='ml-auto flex shadow-2xl pointer-events-auto'
         >
-          {updating ? 'Updating Location...' : 'Update Manual Location'}
+          <MapPinned className='size-4' aria-hidden='true' />
+          Dev Courier Simulator
         </Button>
+      ) : (
+        <div className='rounded-xl border bg-background/95 p-4 shadow-2xl backdrop-blur supports-backdrop-filter:bg-background/80 pointer-events-auto'>
+          <div className='mb-3 flex items-start justify-between gap-3'>
+            <div className='min-w-0'>
+              <div className='flex items-center gap-2'>
+                <MapPinned className='size-4 text-primary' aria-hidden='true' />
+                <p className='font-semibold text-foreground'>Dev Courier Simulator</p>
+              </div>
+              <p className='mt-1 text-xs text-muted-foreground'>
+                Enter latitude/longitude to simulate courier movement on the map.
+              </p>
+            </div>
+            <Button
+              type='button'
+              variant='ghost'
+              size='icon-sm'
+              aria-label='Close dev courier simulator'
+              onClick={() => setOpen(false)}
+            >
+              <X className='size-4' aria-hidden='true' />
+            </Button>
+          </div>
 
-        <Button onClick={onPollingToggle} className='w-full bg-primary hover:bg-primary/90'>
-          {pollingEnabled ? 'Disable Location Polling' : 'Enable Location Polling'}
-        </Button>
-      </div>
+          <div className='grid grid-cols-2 gap-2 mb-3'>
+            <Input
+              value={latitude}
+              onChange={(e) => setLatitude(e.target.value)}
+              placeholder='Latitude'
+              inputMode='decimal'
+              disabled={updating}
+            />
+            <Input
+              value={longitude}
+              onChange={(e) => setLongitude(e.target.value)}
+              placeholder='Longitude'
+              inputMode='decimal'
+              disabled={updating}
+            />
+          </div>
+
+          <div className='space-y-2'>
+            <Button
+              onClick={handleManualSubmit}
+              disabled={updating || !availability || !hasCoordinates}
+              className='w-full bg-primary hover:bg-primary/90'
+            >
+              {updating ? 'Updating Location...' : 'Update Manual Location'}
+            </Button>
+
+            <Button onClick={onPollingToggle} className='w-full bg-primary hover:bg-primary/90'>
+              {pollingEnabled ? 'Disable Location Polling' : 'Enable Location Polling'}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

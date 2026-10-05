@@ -8,6 +8,7 @@ type DeliveryAddressResponse = {
   address?: DeliveryAddress;
   addresses: DeliveryAddress[];
   duplicate?: boolean;
+  labelUpdated?: boolean;
 };
 
 const readErrorMessage = async (response: Response, fallback: string) => {
@@ -80,6 +81,26 @@ const useDeliveryAddresses = (enabled: boolean) => {
     },
   });
 
+  const updateAddressLabel = useMutation({
+    mutationFn: async ({ addressId, label }: { addressId: string; label: string }) => {
+      const response = await fetch('/api/profile/delivery-addresses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addressId, label }),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response, 'Failed to update delivery address.'));
+      }
+
+      return (await response.json()) as DeliveryAddressResponse;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(queryKeys.profile.deliveryAddresses(), data.addresses);
+      void queryClient.invalidateQueries({ queryKey: queryKeys.profile.detail() });
+    },
+  });
+
   const deleteAddress = useMutation({
     mutationFn: async (addressId: string) => {
       const response = await fetch(
@@ -104,6 +125,7 @@ const useDeliveryAddresses = (enabled: boolean) => {
     isLoading: query.isLoading,
     createAddress,
     setDefaultAddress,
+    updateAddressLabel,
     deleteAddress,
   };
 };

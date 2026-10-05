@@ -110,7 +110,7 @@ describe('/api/profile/delivery-addresses route', () => {
     expect(mongoConnect).toHaveBeenCalled();
   });
 
-  it('reuses a duplicate saved address before enforcing the saved address limit', async () => {
+  it('reuses a duplicate saved address and updates its label before enforcing the limit', async () => {
     const matchingAddress = {
       _id: { toString: () => 'address-existing' },
       ...validAddress,
@@ -136,14 +136,16 @@ describe('/api/profile/delivery-addresses route', () => {
 
     expect(res.status).toBe(200);
     expect(body.duplicate).toBe(true);
+    expect(body.labelUpdated).toBe(true);
     expect(body.address).toEqual(
       expect.objectContaining({
         _id: 'address-existing',
-        label: 'Home saved earlier',
+        label: 'Same address again',
       })
     );
     expect(user.deliveryAddresses).toHaveLength(5);
-    expect(user.save).not.toHaveBeenCalled();
+    expect(matchingAddress.label).toBe('Same address again');
+    expect(user.save).toHaveBeenCalled();
   });
 
   it('sets a selected address as default', async () => {
@@ -168,6 +170,34 @@ describe('/api/profile/delivery-addresses route', () => {
     expect(res.status).toBe(200);
     expect(user.deliveryAddresses[0].isDefault).toBe(false);
     expect(user.deliveryAddresses[1].isDefault).toBe(true);
+    expect(user.save).toHaveBeenCalled();
+  });
+
+  it('updates a saved address label without changing the default address', async () => {
+    const user = {
+      deliveryAddresses: [
+        { _id: { toString: () => 'address-1' }, label: 'Home', isDefault: true },
+        { _id: { toString: () => 'address-2' }, label: 'Office', isDefault: false },
+      ],
+      save: vi.fn(),
+    };
+    vi.mocked(User.findOne).mockResolvedValueOnce(user as never);
+
+    const { PATCH } = await loadRoute();
+    const res = await PATCH(
+      new Request('http://localhost/api/profile/delivery-addresses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addressId: 'address-2', label: 'Work' }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.address).toEqual(expect.objectContaining({ label: 'Work', isDefault: false }));
+    expect(user.deliveryAddresses[0].isDefault).toBe(true);
+    expect(user.deliveryAddresses[1].label).toBe('Work');
+    expect(user.deliveryAddresses[1].isDefault).toBe(false);
     expect(user.save).toHaveBeenCalled();
   });
 

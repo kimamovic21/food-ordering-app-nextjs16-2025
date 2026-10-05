@@ -3,6 +3,17 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -17,6 +28,7 @@ import type { DeliveryAddress } from '@/types/user';
 interface DeliveryInformationProps {
   email: string;
   formData: {
+    deliveryAddressLabel: string;
     phone: string;
     streetAddress: string;
     postalCode: string;
@@ -40,11 +52,14 @@ interface DeliveryInformationProps {
   savingDeliveryAddress?: boolean;
   deletingDeliveryAddress?: boolean;
   settingDefaultDeliveryAddress?: boolean;
+  updatingDeliveryAddressLabel?: boolean;
   canSaveDeliveryAddress?: boolean;
+  canUpdateSelectedAddressLabel?: boolean;
   onSelectSavedAddress?: (addressId: string) => void;
   onSaveCurrentAddress?: () => void;
   onDeleteSelectedAddress?: () => void;
   onSetDefaultAddress?: () => void;
+  onUpdateSelectedAddressLabel?: () => void;
 }
 
 const DeliveryInformation: React.FC<DeliveryInformationProps> = ({
@@ -64,11 +79,14 @@ const DeliveryInformation: React.FC<DeliveryInformationProps> = ({
   savingDeliveryAddress = false,
   deletingDeliveryAddress = false,
   settingDefaultDeliveryAddress = false,
+  updatingDeliveryAddressLabel = false,
   canSaveDeliveryAddress = false,
+  canUpdateSelectedAddressLabel = false,
   onSelectSavedAddress,
   onSaveCurrentAddress,
   onDeleteSelectedAddress,
   onSetDefaultAddress,
+  onUpdateSelectedAddressLabel,
 }) => {
   const hasDeliveryLocation =
     typeof formData.deliveryLatitude === 'number' && typeof formData.deliveryLongitude === 'number';
@@ -123,6 +141,33 @@ const DeliveryInformation: React.FC<DeliveryInformationProps> = ({
             </div>
           )}
 
+          <div className='mt-3 space-y-2'>
+            <Label htmlFor='deliveryAddressLabel'>Address label</Label>
+            <Input
+              type='text'
+              id='deliveryAddressLabel'
+              name='deliveryAddressLabel'
+              value={formData.deliveryAddressLabel}
+              onChange={handleInputChange}
+              maxLength={60}
+              placeholder='Home, Work, Apartment...'
+            />
+            <p className='text-xs text-muted-foreground'>
+              Optional. If left empty, the street and city become the saved address name.
+            </p>
+            {selectedSavedAddress && (
+              <Button
+                type='button'
+                size='sm'
+                variant='outline'
+                onClick={onUpdateSelectedAddressLabel}
+                disabled={!canUpdateSelectedAddressLabel || updatingDeliveryAddressLabel}
+              >
+                {updatingDeliveryAddressLabel ? 'Updating label...' : 'Update label'}
+              </Button>
+            )}
+          </div>
+
           {selectedSavedAddress && (
             <div className='mt-3 rounded-md border bg-background/60 p-3'>
               <div className='flex flex-wrap items-start justify-between gap-2'>
@@ -151,16 +196,37 @@ const DeliveryInformation: React.FC<DeliveryInformationProps> = ({
                   <Star className='size-4' aria-hidden='true' />
                   {selectedSavedAddress.isDefault ? 'Default address' : 'Make default'}
                 </Button>
-                <Button
-                  type='button'
-                  size='sm'
-                  variant='outline'
-                  onClick={onDeleteSelectedAddress}
-                  disabled={deletingDeliveryAddress}
-                >
-                  <Trash2 className='size-4' aria-hidden='true' />
-                  Delete
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      type='button'
+                      size='sm'
+                      variant='outline'
+                      disabled={deletingDeliveryAddress}
+                    >
+                      <Trash2 className='size-4' aria-hidden='true' />
+                      Delete
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete saved address?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This removes {selectedSavedAddress.label} from your saved delivery
+                        addresses. Your current checkout details will stay on the form.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        className='bg-destructive text-white hover:bg-destructive/90'
+                        onClick={onDeleteSelectedAddress}
+                      >
+                        {deletingDeliveryAddress ? 'Deleting...' : 'Delete address'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           )}

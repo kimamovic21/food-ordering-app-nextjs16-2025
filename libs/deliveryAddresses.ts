@@ -58,12 +58,12 @@ export const findMatchingDeliveryAddress = <TAddress extends DeliveryAddressComp
 
 export const normalizeDeliveryAddress = (data: unknown): DeliveryAddressValidationResult => {
   const input = (data ?? {}) as Partial<DeliveryAddressInput>;
-  const label = normalizeRequiredText(input.label || input.streetAddress || 'Delivery address');
   const phone = normalizeRequiredText(input.phone);
   const streetAddress = normalizeRequiredText(input.streetAddress);
   const postalCode = normalizeRequiredText(input.postalCode);
   const city = normalizeRequiredText(input.city);
   const country = normalizeRequiredText(input.country);
+  const label = normalizeRequiredText(input.label) || streetAddress || 'Delivery address';
   const deliveryLatitude = normalizeCoordinate(input.deliveryLatitude);
   const deliveryLongitude = normalizeCoordinate(input.deliveryLongitude);
 
