@@ -297,7 +297,7 @@ This project uses many dependencies; below are the main packages actively used i
 - Cart can suggest the best public coupon for the current restaurant subtotal and let the customer apply it directly.
 - Checkout blocks customers from starting another paid active order until the previous order is completed or canceled.
 - Signed-in customers see a header quick-access link to finish payment, track the active order, or spot a delayed active order without hunting through order history.
-- Customers can save up to five validated delivery addresses with confirmed latitude/longitude and apply them during checkout; duplicate saves reuse the existing saved address instead of creating another entry.
+- Customers can save up to five validated delivery addresses with confirmed latitude/longitude, friendly labels, default selection, and label-only rename support; duplicate saves reuse the existing saved address instead of creating another entry.
 - Order detail pages show a delay warning when active elapsed time passes the saved estimated total plus the grace window.
 - Customer and admin order detail pages show an activity log built from stored order timestamps so the important payment, kitchen, courier, delivery, and cancellation events are easy to scan.
 - Admin order detail pages include an internal order note for support/kitchen/handoff context; customer and courier order payloads must not expose that note.

@@ -1209,3 +1209,5 @@ Improve courier availability and assignment safety
 Add courier timezone and stale session cleanup
 
 Add courier next shift messaging
+
+Polish saved delivery addresses and courier simulator

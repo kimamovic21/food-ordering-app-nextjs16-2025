@@ -185,10 +185,12 @@ const CartPage = () => {
     isLoading: loadingSavedDeliveryAddresses,
     createAddress: createDeliveryAddress,
     setDefaultAddress,
+    updateAddressLabel,
     deleteAddress,
   } = useDeliveryAddresses(isLoggedIn);
 
   const [formData, setFormData] = useState({
+    deliveryAddressLabel: '',
     phone: '',
     streetAddress: '',
     postalCode: '',
@@ -368,6 +370,7 @@ const CartPage = () => {
     hasLoadedProfileDeliveryInfoRef.current = true;
     setFormData((prev) => ({
       ...prev,
+      deliveryAddressLabel: prev.deliveryAddressLabel || '',
       phone: prev.phone || profileData.phone || '',
       streetAddress: prev.streetAddress || profileData.streetAddress || '',
       postalCode: prev.postalCode || profileData.postalCode || '',
@@ -395,6 +398,7 @@ const CartPage = () => {
     setSelectedDeliveryAddressId(defaultAddress._id);
     setFormData((prev) => ({
       ...prev,
+      deliveryAddressLabel: defaultAddress.label,
       phone: defaultAddress.phone,
       streetAddress: defaultAddress.streetAddress,
       postalCode: defaultAddress.postalCode,
@@ -497,6 +501,18 @@ const CartPage = () => {
 
   const handleInputChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    if (
+      selectedDeliveryAddressId &&
+      [
+        'phone',
+        'streetAddress',
+        'postalCode',
+        'city',
+        'country',
+      ].includes(name)
+    ) {
+      setSelectedDeliveryAddressId('');
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -700,6 +716,7 @@ const CartPage = () => {
           deliveryLatitude: position.coords.latitude,
           deliveryLongitude: position.coords.longitude,
         }));
+        setSelectedDeliveryAddressId('');
         setIsGettingDeliveryLocation(false);
         sonnerToast.success('Delivery location confirmed');
       },
@@ -721,6 +738,7 @@ const CartPage = () => {
       deliveryLatitude: latitude,
       deliveryLongitude: longitude,
     }));
+    setSelectedDeliveryAddressId('');
   };
 
   const hasRequiredDeliveryAddressFields = [
@@ -732,6 +750,14 @@ const CartPage = () => {
   ].every((value) => String(value || '').trim());
   const canSaveDeliveryAddress =
     isLoggedIn && hasRequiredDeliveryAddressFields && hasDeliveryLocation;
+  const selectedSavedDeliveryAddress = useMemo(
+    () => savedDeliveryAddresses.find((address) => address._id === selectedDeliveryAddressId),
+    [savedDeliveryAddresses, selectedDeliveryAddressId]
+  );
+  const canUpdateSelectedDeliveryAddressLabel =
+    Boolean(selectedSavedDeliveryAddress) &&
+    Boolean(String(formData.deliveryAddressLabel || '').trim()) &&
+    String(formData.deliveryAddressLabel || '').trim() !== selectedSavedDeliveryAddress?.label;
 
   const handleSelectSavedAddress = (addressId: string) => {
     const selectedAddress = savedDeliveryAddresses.find((address) => address._id === addressId);
@@ -742,6 +768,7 @@ const CartPage = () => {
     setSelectedDeliveryAddressId(addressId);
     setFormData((prev) => ({
       ...prev,
+      deliveryAddressLabel: selectedAddress.label,
       phone: selectedAddress.phone,
       streetAddress: selectedAddress.streetAddress,
       postalCode: selectedAddress.postalCode,
@@ -761,7 +788,9 @@ const CartPage = () => {
       return;
     }
 
-    const label = `${formData.streetAddress}, ${formData.city}`.slice(0, 60);
+    const label =
+      String(formData.deliveryAddressLabel || '').trim() ||
+      `${formData.streetAddress}, ${formData.city}`.slice(0, 60);
     const address: DeliveryAddressInput = {
       label,
       phone: formData.phone,
@@ -778,10 +807,18 @@ const CartPage = () => {
       const result = await createDeliveryAddress.mutateAsync(address);
       if (result.address?._id) {
         setSelectedDeliveryAddressId(result.address._id);
+        setFormData((prev) => ({
+          ...prev,
+          deliveryAddressLabel: result.address?.label || prev.deliveryAddressLabel,
+        }));
       }
 
       if (result.duplicate) {
-        sonnerToast.info('This delivery address is already saved. Using the saved address.');
+        sonnerToast.info(
+          result.labelUpdated
+            ? 'This delivery address was already saved. Its label was updated.'
+            : 'This delivery address is already saved. Using the saved address.'
+        );
         return;
       }
 
@@ -806,6 +843,36 @@ const CartPage = () => {
     try {
       await setDefaultAddress.mutateAsync(selectedDeliveryAddressId);
       sonnerToast.success('Default delivery address updated', {
+        style: { background: '#22c55e', color: 'white' },
+      });
+    } catch (error) {
+      sonnerToast.error(error instanceof Error ? error.message : 'Failed to update address.');
+    }
+  };
+
+  const handleUpdateSelectedDeliveryAddressLabel = async () => {
+    if (!selectedDeliveryAddressId) {
+      return;
+    }
+
+    const label = String(formData.deliveryAddressLabel || '').trim();
+    if (!label) {
+      sonnerToast.error('Enter an address label first.');
+      return;
+    }
+
+    try {
+      const result = await updateAddressLabel.mutateAsync({
+        addressId: selectedDeliveryAddressId,
+        label,
+      });
+      const updatedAddress =
+        result.address || result.addresses.find((item) => item._id === selectedDeliveryAddressId);
+      setFormData((prev) => ({
+        ...prev,
+        deliveryAddressLabel: updatedAddress?.label || label,
+      }));
+      sonnerToast.success('Delivery address label updated', {
         style: { background: '#22c55e', color: 'white' },
       });
     } catch (error) {
@@ -1116,6 +1183,7 @@ const CartPage = () => {
         ([key, value]) =>
           key !== 'deliveryLatitude' &&
           key !== 'deliveryLongitude' &&
+          key !== 'deliveryAddressLabel' &&
           key !== 'specialInstructions' &&
           !String(value || '').trim()
       );
@@ -1144,7 +1212,14 @@ const CartPage = () => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              ...formData,
+              phone: formData.phone,
+              streetAddress: formData.streetAddress,
+              postalCode: formData.postalCode,
+              city: formData.city,
+              country: formData.country,
+              deliveryLatitude: formData.deliveryLatitude,
+              deliveryLongitude: formData.deliveryLongitude,
+              specialInstructions: formData.specialInstructions,
               cartItems,
               loyaltyDiscount,
               loyaltyDiscountPercentage,
@@ -1583,11 +1658,14 @@ const CartPage = () => {
             savingDeliveryAddress={createDeliveryAddress.isPending}
             deletingDeliveryAddress={deleteAddress.isPending}
             settingDefaultDeliveryAddress={setDefaultAddress.isPending}
+            updatingDeliveryAddressLabel={updateAddressLabel.isPending}
             canSaveDeliveryAddress={canSaveDeliveryAddress}
+            canUpdateSelectedAddressLabel={canUpdateSelectedDeliveryAddressLabel}
             onSelectSavedAddress={handleSelectSavedAddress}
             onSaveCurrentAddress={handleSaveCurrentDeliveryAddress}
             onDeleteSelectedAddress={handleDeleteSelectedDeliveryAddress}
             onSetDefaultAddress={handleSetDefaultDeliveryAddress}
+            onUpdateSelectedAddressLabel={handleUpdateSelectedDeliveryAddressLabel}
           />
           <OrderSummary
             subtotal={subtotal}
