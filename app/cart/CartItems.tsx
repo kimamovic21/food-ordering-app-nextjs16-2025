@@ -2,6 +2,8 @@
 
 import { FaPlus, FaMinus, FaTrash } from 'react-icons/fa';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
+import { Textarea } from '@/components/ui/textarea';
+import { CART_ITEM_NOTE_MAX_LENGTH } from '@/libs/cartItemNotes';
 import Image from 'next/image';
 import Pizza from '@/public/pizza.png';
 import {
@@ -15,6 +17,7 @@ import type { CartItem, CartValidationItem } from '@/types/cart';
 interface CartItemsProps {
   cartItems: CartItem[];
   updateQuantity: (id: string, size: string, quantity: number) => void;
+  updateItemNote: (id: string, size: string, note: string) => void;
   removeFromCart: (id: string, size: string) => void;
   clearCart: () => void;
   validationItems?: CartValidationItem[];
@@ -26,6 +29,7 @@ const getCartItemKey = (item: CartItem) => `${item._id}:${item.size}`;
 const CartItems: React.FC<CartItemsProps> = ({
   cartItems,
   updateQuantity,
+  updateItemNote,
   removeFromCart,
   clearCart,
   validationItems = [],
@@ -106,7 +110,7 @@ const CartItems: React.FC<CartItemsProps> = ({
               key={`${item._id}-${item.size}`}
               className='bg-card border rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4'
             >
-              <div className='flex items-start gap-3 w-full sm:w-auto'>
+              <div className='flex items-start gap-3 w-full min-w-0 sm:flex-1'>
                 <div className='relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 overflow-hidden rounded'>
                   {isValidImageUrl ? (
                     isRemoteImage ? (
@@ -173,6 +177,29 @@ const CartItems: React.FC<CartItemsProps> = ({
                       to ${itemPrice.toFixed(2)}.
                     </p>
                   )}
+                  <div className='mt-3 max-w-xl'>
+                    <div className='mb-1 flex items-center justify-between gap-2'>
+                      <label
+                        htmlFor={`cart-note-${item._id}-${item.size}`}
+                        className='text-xs font-medium uppercase tracking-wide text-muted-foreground'
+                      >
+                        Item note
+                      </label>
+                      <span className='text-[11px] text-muted-foreground'>
+                        {(item.note || '').length}/{CART_ITEM_NOTE_MAX_LENGTH}
+                      </span>
+                    </div>
+                    <Textarea
+                      id={`cart-note-${item._id}-${item.size}`}
+                      value={item.note || ''}
+                      maxLength={CART_ITEM_NOTE_MAX_LENGTH}
+                      onChange={(event) =>
+                        updateItemNote(item._id, item.size, event.target.value)
+                      }
+                      placeholder='Example: no onions, extra spicy, sauce on the side...'
+                      className='min-h-20 resize-none rounded-lg border-border bg-background/70 text-sm'
+                    />
+                  </div>
                 </div>
               </div>
               <div className='flex items-center gap-2 sm:gap-3 ml-auto'>

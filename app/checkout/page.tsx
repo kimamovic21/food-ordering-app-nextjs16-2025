@@ -192,6 +192,11 @@ const CheckoutContent = () => {
                       <p className='text-sm text-gray-500'>
                         {item.size} x {item.quantity}
                       </p>
+                      {item.note ? (
+                        <p className='mt-1 max-w-xl text-xs leading-relaxed text-gray-600 dark:text-gray-300'>
+                          Note: {item.note}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
 

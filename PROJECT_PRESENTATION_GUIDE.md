@@ -220,6 +220,7 @@ Favorites:
 Cart:
 
 - Cart keeps selected menu item snapshots in client state.
+- Customers can attach a short note to an individual cart item, for example `no onions` or `sauce on the side`; that note is stored with the order item and is visible later in order detail and receipt views.
 - Cart validates the latest server state before checkout.
 - It checks deleted items, unavailable items, price changes, restaurant status, delivery radius, minimum order amount, busy capacity, and courier-safe order quantity limits.
 - Restaurant open/paused/radius/capacity checks are centralized server-side so the menu, cart, checkout, restaurant pages, availability alerts, and admin operations views report the same ordering state.
@@ -227,6 +228,7 @@ Cart:
 - If no courier is available, or courier coverage is tight compared with active kitchen demand, the UI shows a delivery-readiness warning and increases the delivery ETA before Stripe Checkout.
 - Price changes are shown clearly and can be refreshed.
 - Deleted, unavailable, invalid, cross-restaurant, or blocked restaurant states prevent checkout.
+- Item notes are normalized and stored server-side at checkout, but they do not trigger repeated availability validation while the user is typing.
 - The cart can show a "checking restaurant status" state so closed/open messages do not flicker during loading.
 - Development-only manual location controls allow testing delivery radius without physically moving.
 

@@ -13,7 +13,7 @@ Email template components used by Resend/React Email flows such as verification 
 - `resend` sends the rendered HTML through the configured `RESEND_API_KEY` and `SENDER_EMAIL`.
 - Auth emails use `NEXT_PUBLIC_APP_URL` or `NEXTAUTH_URL` to build absolute links back into the app.
 - Purchase receipt emails are triggered after Stripe webhook confirmation, not from the checkout button itself.
-- Verification and password reset emails include action links; receipt emails include order, restaurant, item, tax, delivery fee, coupon, and total details.
+- Verification and password reset emails include action links; receipt emails include order, restaurant, item, item-note, tax, delivery fee, coupon, and total details.
 
 ## What To Know Before Editing
 
@@ -24,7 +24,7 @@ Email template components used by Resend/React Email flows such as verification 
 ## Components And Responsibilities
 
 - `components/resend/PasswordResetEmail.tsx`: exports `PasswordResetEmail`; receives `name`, `email`, and `resetUrl`; shows a reset button, fallback URL, and Google sign-in note.
-- `components/resend/PurchaseReceiptEmail.tsx`: exports `PurchaseReceiptEmail`, `formatMoney`, `lineTotal`; imports `formatAppDate` and receipt types; renders order id, purchase date, restaurant details, line items, tax, delivery fee, coupon discount, special instructions, and final total.
+- `components/resend/PurchaseReceiptEmail.tsx`: exports `PurchaseReceiptEmail`, `formatMoney`, `lineTotal`; imports `formatAppDate` and receipt types; renders order id, purchase date, restaurant details, line items with optional item notes, tax, delivery fee, coupon discount, special instructions, and final total.
 - `components/resend/VerifyEmailEmail.tsx`: exports `VerifyEmailEmail`; receives `name`, `email`, and `verificationUrl`; shows a verification button and fallback URL.
 
 ## Edge Cases And UX Rules

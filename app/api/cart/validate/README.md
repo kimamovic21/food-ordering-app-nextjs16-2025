@@ -12,13 +12,14 @@
 
 ## Plain-English Summary
 
-Handles post work for the cart validation area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Handles post work for the cart validation area. The route keeps menu/restaurant validation server-authoritative and delegates shared business rules to models and libs.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
 - It uses no direct Mongoose model imports for persistence.
 - It delegates shared logic to `cartValidation` so behavior stays consistent across the app.
+- Item notes can pass through shared cart item types, but this validation route is intentionally focused on item identity, size, price, quantity, restaurant, and delivery location. Note typing in the cart should not create extra availability validation calls.
 - Detected local functions/handlers: only exported HTTP handlers.
 
 ## Request Inputs

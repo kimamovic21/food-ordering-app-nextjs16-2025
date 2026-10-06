@@ -81,8 +81,8 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 ## How To Explain This In A Presentation
 
 Open this file when someone asks what `/api/my-orders` does. Explain that it belongs to the
-customer order workflow: customers can read their orders, recover checkout receipts, cancel unpaid
-placed orders, and confirm delivered orders. Confirmation is important because it closes the order,
+customer order workflow: customers can read their orders, recover checkout receipts with item-level
+notes, cancel unpaid placed orders, and confirm delivered orders. Confirmation is important because it closes the order,
 notifies the customer, writes audit data, frees restaurant capacity, and records the loyalty ledger
 credit for the completed order.
 

@@ -104,6 +104,7 @@ export async function POST(req: Request) {
           const imageMap = new Map(menuItems.map((item) => [item._id.toString(), item.image]));
           const items = ((order as any).cartProducts || []).map((item: any) => ({
             name: item.name,
+            note: item.note || null,
             size: item.size,
             quantity: Number(item.quantity) || 1,
             price: Number(item.price) || 0,

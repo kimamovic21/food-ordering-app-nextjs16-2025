@@ -9,7 +9,7 @@ import type { CartProduct } from '@/types/cart';
 
 export type OrderItemsDataTableProduct = Pick<
   CartProduct,
-  'productId' | 'name' | 'size' | 'quantity' | 'price'
+  'productId' | 'name' | 'size' | 'quantity' | 'price' | 'note'
 >;
 
 type OrderItemRow = OrderItemsDataTableProduct & {
@@ -27,7 +27,20 @@ const orderItemsColumns = columnHelper.columns([
   columnHelper.accessor((item) => item.name, {
     id: 'name',
     header: 'Product Name',
-    cell: ({ getValue }) => <span className='font-medium'>{getValue()}</span>,
+    cell: ({ getValue, row }) => {
+      const note = String(row.original.note || '').trim();
+
+      return (
+        <div className='min-w-0'>
+          <span className='font-medium'>{getValue()}</span>
+          {note ? (
+            <p className='mt-1 max-w-md whitespace-normal text-xs leading-relaxed text-muted-foreground'>
+              Note: {note}
+            </p>
+          ) : null}
+        </div>
+      );
+    },
   }),
   columnHelper.accessor((item) => item.size, {
     id: 'size',

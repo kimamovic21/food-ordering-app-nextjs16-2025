@@ -179,6 +179,7 @@ export default function PurchaseReceiptPdfDocument({
                     <Text style={styles.itemSub}>
                       {item.size} x {item.quantity}
                     </Text>
+                    {item.note ? <Text style={styles.itemSub}>Note: {item.note}</Text> : null}
                   </View>
                   <Text style={styles.metaValue}>{formatMoney(lineTotal)}</Text>
                 </View>

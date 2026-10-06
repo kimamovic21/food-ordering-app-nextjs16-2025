@@ -48,6 +48,10 @@ vi.mock('@/models/restaurant', () => ({
   },
 }));
 
+vi.mock('@/libs/courierWorkSessions', () => ({
+  isCourierAssignableNow: vi.fn(() => true),
+}));
+
 const openWorkingHours = [
   'monday',
   'tuesday',

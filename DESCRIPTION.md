@@ -20,6 +20,7 @@ They can:
 - Browse restaurants and menu items.
 - Filter, search, sort, and paginate public restaurant/menu views.
 - Add menu items to cart when they are available and the restaurant is currently accepting orders.
+- Add short per-item notes in the cart, such as removing an ingredient or keeping sauce on the side.
 - Use coupons and loyalty discounts when eligible.
 - See and apply the best available public coupon for the current restaurant cart.
 - Checkout through Stripe.
@@ -234,6 +235,7 @@ The cart is client-side state managed by `CartContext`.
 
 Customer-side checkout helpers:
 
+- Per-item cart notes stay in the cart snapshot, are capped to a short server-normalized string, and follow the order into admin/customer/courier order details plus receipt email/PDF output.
 - Saved delivery addresses are loaded through `/api/profile/delivery-addresses`, deduped by normalized delivery details, and cached with TanStack Query.
 - The default saved address can prefill checkout once per cart visit, and customers can switch, save, set default, or delete saved addresses.
 - The header active-order quick access uses `/api/my-orders/active` to surface the latest non-terminal customer order.
@@ -260,6 +262,7 @@ Checkout server rules:
 - Customers see a payment-expiry countdown for unpaid `placed` orders that matches the 30-minute auto-cancel window.
 - Cart validation surfaces item-specific unavailable/deleted-item blockers and non-blocking price-change warnings before checkout.
 - Cart validation also performs a server-side restaurant preflight for closed/paused/closing-soon/busy/minimum-order/delivery-radius/order-quantity blockers, while the cart UI shows matching visible warnings and dynamic ETA before Stripe Checkout.
+- Typing an item note does not refetch menu availability validation; validation refreshes are tied to item identity, size, quantity, price, restaurant, and delivery location.
 - Order is created as unpaid before redirecting to Stripe.
 - QStash schedules a delayed unpaid-order maintenance check after a new Stripe Checkout session is created.
 - If that unpaid order expires, the app attempts to expire the original Stripe Checkout session and stores the expiration result in the cancellation audit log.

@@ -12,6 +12,7 @@ export interface CartItem {
   quantity: number;
   restaurantId: EntityId;
   maxQuantityPerOrder?: number;
+  note?: string;
 }
 
 export type CheckoutCartItemPayload = {
@@ -21,6 +22,7 @@ export type CheckoutCartItemPayload = {
   price: number;
   quantity: number;
   restaurantId: EntityId;
+  note?: string;
 };
 
 export type CartProduct = {
@@ -30,6 +32,7 @@ export type CartProduct = {
   quantity: number;
   price: number;
   restaurantId?: EntityId;
+  note?: string;
 };
 
 export type CartValidationRequestItem = {
@@ -38,6 +41,7 @@ export type CartValidationRequestItem = {
   quantity?: number;
   restaurantId?: EntityId;
   price?: number | null;
+  note?: string;
 };
 
 export type CartValidationStatus =
@@ -76,6 +80,7 @@ export type CartValidationItem = {
   priceChanged?: boolean;
   maxQuantityPerOrder?: number;
   message?: string | null;
+  note?: string;
 };
 
 export type CartValidationResponse = {

@@ -8,7 +8,7 @@ This is a full-stack food ordering platform built with Next.js App Router and Ty
 
 It includes:
 
-- customer authentication, profile management, saved delivery addresses, cart, checkout, active order quick access, and order history
+- customer authentication, profile management, saved delivery addresses, cart with per-item notes, checkout, active order quick access, and order history
 - restaurant browsing with search/filter/sort/pagination and shareable URLs
 - favorites for meals and restaurants
 - restaurant ordering-status checks before add-to-cart plus availability alerts when checkout is blocked by closed, paused, closing-soon, or busy restaurants
@@ -46,7 +46,7 @@ It includes:
 - Menu and restaurant discovery with filtering/sorting/search
 - Menu item availability indicators with disabled ordering for sold-out items
 - Add-to-cart restaurant ordering checks, prefetched for visible menu items, so closed, paused, closing-soon, or busy restaurants are blocked before the cart is changed
-- Cart, checkout, best coupon suggestion, busy/closed/radius restaurant checks, restaurant availability alerts, active order quick access, and order tracking
+- Cart with per-item special notes, checkout, best coupon suggestion, busy/closed/radius restaurant checks, restaurant availability alerts, active order quick access, and order tracking
 - Favorites for menu items and restaurants
 - Loyalty tiers, automatic delivery-fee discounts, and a reward ledger showing earned, applied, and reversed rewards
 - Personal review management and restaurant review pages

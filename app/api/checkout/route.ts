@@ -14,6 +14,7 @@ import {
 } from '@/libs/coupon';
 import { createAuditLog } from '@/libs/auditLog';
 import { addMoney, multiplyMoney, roundMoney, subtractMoney } from '@/libs/money';
+import { normalizeCartItemNote } from '@/libs/cartItemNotes';
 import { normalizePhoneNumberForStorage } from '@/libs/phone';
 import {
   normalizeDeliveryCoordinate,
@@ -108,7 +109,7 @@ const createCheckoutFingerprint = ({
 }: {
   userId: unknown;
   restaurantId: unknown;
-  verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize }>;
+  verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize; note: string }>;
   delivery: {
     phone: string;
     streetAddress: string;
@@ -146,6 +147,7 @@ const createCheckoutFingerprint = ({
     items: [...verifiedItems]
       .map((item) => ({
         productId: item._id,
+        note: normalizeFingerprintText(item.note),
         size: item.size,
         quantity: item.quantity,
         price: roundToTwoDecimals(item.price),
@@ -175,7 +177,7 @@ const createStripeLineItems = ({
   deliveryFee,
   couponLineDiscountRate,
 }: {
-  verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize }>;
+  verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize; note: string }>;
   deliveryFee: number;
   couponLineDiscountRate: number;
 }) => {
@@ -672,10 +674,11 @@ export async function POST(req: Request) {
     return Response.json({ error: `Restaurant ${restaurantId} not found` }, { status: 404 });
   }
 
-  const verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize }> =
+  const verifiedItems: Array<CheckoutCartItemPayload & { size: CartSize; note: string }> =
     cartValidation.validItems.map((item) => ({
       _id: item._id,
       name: item.name || 'Menu item',
+      note: normalizeCartItemNote(item.note),
       price: roundToTwoDecimals(Number(item.price) || 0),
       quantity: item.quantity,
       restaurantId: String(item.restaurantId),
@@ -845,6 +848,7 @@ export async function POST(req: Request) {
     cartProducts: verifiedItems.map((item) => ({
       productId: item._id,
       name: item.name,
+      note: item.note,
       size: item.size,
       quantity: item.quantity,
       price: item.price,

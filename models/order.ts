@@ -13,6 +13,12 @@ const CartProductSchema = new Schema(
     size: { type: String, required: true },
     quantity: { type: Number, required: true },
     price: { type: Number, required: true },
+    note: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 160,
+    },
     restaurantId: {
       type: Schema.Types.ObjectId,
       ref: 'Restaurant',

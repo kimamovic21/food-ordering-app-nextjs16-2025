@@ -10,7 +10,7 @@ describe('PurchaseReceiptEmail component', () => {
       customerEmail: 'buyer@example.com',
       purchasedOn: new Date('2024-01-01'),
       restaurant: { name: 'Resto', street: '1 St', city: 'Town', postalCode: '0000', country: 'X' },
-      items: [{ name: 'Burger', size: 'M', quantity: 2, price: 5 }],
+      items: [{ name: 'Burger', size: 'M', quantity: 2, price: 5, note: 'Sauce on the side.' }],
       taxAmount: 1,
       deliveryFee: 3,
       couponCode: 'SAVE',
@@ -27,6 +27,7 @@ describe('PurchaseReceiptEmail component', () => {
     expect(output).toContain('Purchase Receipt');
     expect(output).toContain('order-123');
     expect(output).toContain('Burger');
+    expect(output).toContain('Sauce on the side.');
     expect(output).toContain('No onions, call when outside.');
     expect(output).toContain('$12.00');
   });

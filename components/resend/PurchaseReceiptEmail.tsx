@@ -217,6 +217,18 @@ export default function PurchaseReceiptEmail({
                         >
                           {item.size} x {item.quantity}
                         </Text>
+                        {item.note ? (
+                          <Text
+                            style={{
+                              margin: '4px 0 0',
+                              fontSize: '12px',
+                              lineHeight: '18px',
+                              color: '#4b5563',
+                            }}
+                          >
+                            Note: {item.note}
+                          </Text>
+                        ) : null}
                       </Column>
 
                       <Column align='right' style={{ verticalAlign: 'top' }}>

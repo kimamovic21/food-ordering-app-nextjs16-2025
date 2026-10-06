@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns cart review, cart validation, delivery address/location checks, coupon handling, dynamic ETA messaging, and the final handoff into Stripe Checkout.
+This folder owns cart review, per-item cart notes, cart validation, delivery address/location checks, coupon handling, dynamic ETA messaging, and the final handoff into Stripe Checkout.
 
 ## Route And Audience
 
@@ -23,16 +23,17 @@ This folder owns cart review, cart validation, delivery address/location checks,
 ## Cart And Checkout Handoff Flow
 
 - The cart UI reads local cart items, groups them by restaurant, and prevents the user from silently mixing restaurants in one order.
+- Each cart line can carry a short item note, such as an ingredient or packaging request. The note is stored in local cart state and sent to checkout, but it is not part of availability validation so typing does not spam `/api/cart/validate`.
 - `/api/cart/validate` checks whether selected items still exist, remain available, use valid sizes/prices, and stay within item/order quantity limits.
 - Restaurant status data powers the visible checkout messaging: open/closed, paused, busy, outside delivery radius, minimum order amount, ETA tone, courier readiness, and capacity warnings.
 - Saved delivery addresses and manual/current location controls prepare the delivery fields before checkout. Customers can give saved addresses a friendly label such as `Home` or `Work`, rename that label without changing the address coordinates, and must confirm before deleting a saved address.
 - Coupon and loyalty calls show the user likely discounts, but `/api/checkout` recalculates everything again before payment.
-- When the user clicks checkout, the UI sends the verified cart, delivery details, coupon code, location, and special instructions to `/api/checkout`, which returns the Stripe URL.
+- When the user clicks checkout, the UI sends the verified cart with per-item notes, delivery details, coupon code, location, and order-level special instructions to `/api/checkout`, which returns the Stripe URL.
 - The UI is allowed to provide a better experience, but the checkout API remains the final authority.
 
 ## Important Files
 
-- `app/cart/CartItems.tsx`: functions/components: `getCartItemKey`, `showToast`, `handleUpdateQuantity`, `handleRemoveFromCart`, `handleClearCart`; client component
+- `app/cart/CartItems.tsx`: functions/components: `getCartItemKey`, `showToast`, `handleUpdateQuantity`, `handleRemoveFromCart`, `handleClearCart`; renders quantity controls plus a short per-item note textarea; client component
 - `app/cart/DeliveryInformation.tsx`
 - `app/cart/DevDeliveryLocationDialog.tsx`: functions/components: `DevDeliveryLocationDialog`, `handleOpenChange`, `handleSubmit`; client component
 - `app/cart/layout.tsx`: functions/components: `CartLayout`
@@ -65,6 +66,7 @@ This folder owns cart review, cart validation, delivery address/location checks,
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
 - Do not hide restaurant availability checks behind the checkout button; customers should see why ordering is blocked before they pay.
+- Keep item notes short and optional. They are preparation hints for a specific item, while `specialInstructions` stays the order-level delivery/request field.
 - Keep the "checking restaurant status" style states stable so hard refreshes do not briefly show wrong closed/open messages.
 - Keep courier-readiness and busy/capacity messaging aligned with `/api/checkout`; the API must block the same critical cases the UI warns about.
 - Keep saved-address labels optional and UI-only for checkout. The checkout payload should include the delivery address snapshot, but not require an address-book label to place an order.

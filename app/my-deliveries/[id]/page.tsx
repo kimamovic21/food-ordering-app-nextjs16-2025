@@ -289,6 +289,11 @@ const DeliveryDetailsPage = () => {
                   <h3 className='font-semibold'>{item.name}</h3>
                   <p className='text-sm text-muted-foreground'>Quantity: {item.quantity}</p>
                   {item.size && <p className='text-sm text-muted-foreground'>Size: {item.size}</p>}
+                  {item.note?.trim() ? (
+                    <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
+                      Note: {item.note}
+                    </p>
+                  ) : null}
                 </div>
                 <div className='text-right'>
                   <p className='font-semibold'>${(item.price * item.quantity).toFixed(2)}</p>
