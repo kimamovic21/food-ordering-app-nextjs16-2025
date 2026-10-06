@@ -12,7 +12,7 @@
 
 ## Plain-English Summary
 
-Creates or recovers a Stripe Checkout session after server-side cart, user, restaurant, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
+Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
 
 ## What Happens In This File
 
@@ -26,6 +26,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, user, rest
 - NextAuth identifies the customer and blocks anonymous checkout.
 - Upstash rate limiting slows repeated checkout attempts.
 - Cart validation re-checks menu item existence, availability, size/price validity, quantity limits, one-restaurant-per-cart behavior, and restaurant capacity.
+- Per-item cart notes are trimmed, whitespace-normalized, capped, included in the checkout fingerprint, and saved into `Order.cartProducts` so restaurant/admin/customer/courier views can see item-specific preparation requests.
 - Restaurant checks verify open/closed state, pause reason, delivery radius, delivery location, busy/capacity state, and courier readiness before money is collected.
 - Coupon and loyalty helpers recalculate discounts server-side so the browser cannot fake cheaper totals.
 - Stripe line items are built from verified items and server-calculated totals.
@@ -112,7 +113,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, user, rest
 ## Response Behavior
 
 - Status codes detected: `400`, `401`, `403`, `404`, `409`, `500`
-- Common response fields detected: `node`, `apiVersion`, `message`, `reason`, `actor`, `action`, `entityType`, `entityId`, `restaurantId`, `metadata`, `error`, `req`, `http`, `localhost`, `value`, `userId`, `verifiedItems`, `size`, `delivery`, `phone`, `streetAddress`, `postalCode`, `city`, `country`, `deliveryLatitude`, `deliveryLongitude`, `specialInstructions`, `pricing`, `subtotal`, `taxAmount`, `deliveryFee`, `loyaltyDiscount`, `loyaltyDiscountPercentage`, `couponCode`, `couponDiscountAmount`, `total`, `items`, `productId`, `quantity`, `price`, `couponLineDiscountRate`, `stripeLineItems`, `price_data`, `currency`, `unit_amount`
+- Common response fields detected: `node`, `apiVersion`, `message`, `reason`, `actor`, `action`, `entityType`, `entityId`, `restaurantId`, `metadata`, `error`, `req`, `http`, `localhost`, `value`, `userId`, `verifiedItems`, `size`, `note`, `delivery`, `phone`, `streetAddress`, `postalCode`, `city`, `country`, `deliveryLatitude`, `deliveryLongitude`, `specialInstructions`, `pricing`, `subtotal`, `taxAmount`, `deliveryFee`, `loyaltyDiscount`, `loyaltyDiscountPercentage`, `couponCode`, `couponDiscountAmount`, `total`, `items`, `productId`, `quantity`, `price`, `couponLineDiscountRate`, `stripeLineItems`, `price_data`, `currency`, `unit_amount`
 
 ## How To Explain This In A Presentation
 

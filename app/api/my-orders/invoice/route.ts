@@ -83,6 +83,7 @@ export async function GET(request: Request) {
       : null,
     items: receiptItems.map((item: any) => ({
       name: item.name,
+      note: item.note || null,
       size: item.size,
       quantity: item.quantity,
       price: item.price,

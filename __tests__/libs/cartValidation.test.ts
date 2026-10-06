@@ -166,7 +166,7 @@ describe('cart validation helpers', () => {
     mockMenuItems([createMenuItem()]);
 
     const result = await validateCartForOrder({
-      cartItems: [createCartItem({ price: 1 })],
+      cartItems: [createCartItem({ note: '  No onions,   please.  ', price: 1 })],
       deliveryLatitude: 43.01,
       deliveryLongitude: 18.01,
     });
@@ -182,6 +182,7 @@ describe('cart validation helpers', () => {
     expect(result.items[0]).toEqual(
       expect.objectContaining({
         name: 'Pizza',
+        note: 'No onions, please.',
         previousPrice: 1,
         price: 14.5,
         priceChanged: true,

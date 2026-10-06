@@ -7,6 +7,7 @@ export type ReceiptItem = {
   price: number;
   image?: string | null;
   lineTotal?: number;
+  note?: string | null;
 };
 
 export type ReceiptRestaurant = {

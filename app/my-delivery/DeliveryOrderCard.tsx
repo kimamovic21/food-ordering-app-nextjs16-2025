@@ -164,6 +164,11 @@ const DeliveryOrderCard: React.FC<DeliveryOrderCardProps> = ({
                     <p className='text-muted-foreground'>
                       Size: {product.size} x {product.quantity}
                     </p>
+                    {product.note?.trim() ? (
+                      <p className='mt-1 text-xs leading-relaxed text-muted-foreground'>
+                        Note: {product.note}
+                      </p>
+                    ) : null}
                   </div>
                   <p className='font-medium text-foreground'>${product.price.toFixed(2)}</p>
                 </div>

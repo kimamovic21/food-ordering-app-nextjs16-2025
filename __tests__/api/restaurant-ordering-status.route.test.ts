@@ -37,6 +37,10 @@ vi.mock('@/libs/restaurantAvailabilityRequests', () => ({
   notifyWaitingUsersIfRestaurantAcceptingOrders: vi.fn(),
 }));
 
+vi.mock('@/libs/courierWorkSessions', () => ({
+  isCourierAssignableNow: vi.fn(() => true),
+}));
+
 const loadRoute = async () => import('@/app/api/restaurants/[id]/ordering-status/route');
 
 const workingHours = [

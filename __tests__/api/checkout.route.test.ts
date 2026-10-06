@@ -118,6 +118,10 @@ vi.mock('@/libs/auditLog', () => ({
   createAuditLog: vi.fn(),
 }));
 
+vi.mock('@/libs/courierWorkSessions', () => ({
+  isCourierAssignableNow: vi.fn(() => true),
+}));
+
 const openWorkingHours = [
   { day: 'monday', openTime: '00:00', closeTime: '23:59', isClosed: false },
   { day: 'tuesday', openTime: '00:00', closeTime: '23:59', isClosed: false },
@@ -166,6 +170,7 @@ const createCheckoutRequest = (overrides: Partial<Record<string, unknown>> = {})
         price: 14.5,
         quantity: 1,
         restaurantId: 'restaurant-1',
+        note: '  Cut into small slices, please.  ',
       },
     ],
   };
@@ -588,6 +593,7 @@ describe('POST /api/checkout', () => {
             price: 1,
             quantity: 2,
             restaurantId: 'restaurant-1',
+            note: 'Cut into small slices, please.',
           },
         ],
       })
@@ -601,6 +607,7 @@ describe('POST /api/checkout', () => {
         cartProducts: [
           expect.objectContaining({
             name: 'Pizza',
+            note: 'Cut into small slices, please.',
             size: 'large',
             price: 14.5,
             quantity: 2,

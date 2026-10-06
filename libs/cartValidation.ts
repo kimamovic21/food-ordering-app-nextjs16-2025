@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 
+import { normalizeCartItemNote } from '@/libs/cartItemNotes';
 import {
   getCartTotalQuantity,
   normalizeMenuItemQuantityLimit,
@@ -26,6 +27,7 @@ export type NormalizedCartValidationItem = {
   quantity: number;
   requestedSize: CartSize | null;
   restaurantId: string;
+  note: string;
 };
 
 export type ValidatedCartItem = CartValidationItem & {
@@ -122,6 +124,7 @@ const normalizeCartValidationItems = (
       _id: id,
       cartPrice: Number(item.price),
       itemKey: getCartItemKey(id, size),
+      note: normalizeCartItemNote(item.note),
       quantity,
       requestedSize: size,
       restaurantId: String(item.restaurantId || ''),

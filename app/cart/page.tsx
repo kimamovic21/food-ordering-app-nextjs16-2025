@@ -175,7 +175,7 @@ const CartSkeleton = () => (
 
 const CartPage = () => {
   const router = useRouter();
-  const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, updateItemNote, clearCart } = useCart();
 
   const { data: profileData } = useProfile();
   const { status: sessionStatus } = useSession();
@@ -226,6 +226,24 @@ const CartPage = () => {
   const [selectedDeliveryAddressId, setSelectedDeliveryAddressId] = useState('');
   const hasLoadedProfileDeliveryInfoRef = useRef(false);
   const hasAppliedDefaultDeliveryAddressRef = useRef(false);
+  const cartItemsValidationRef = useRef(cartItems);
+
+  const cartValidationSignature = useMemo(
+    () =>
+      cartItems
+        .map(
+          (item) =>
+            `${item._id}:${item.size}:${item.quantity}:${item.restaurantId}:${Number(
+              item.price || 0
+            )}`
+        )
+        .join('|'),
+    [cartItems]
+  );
+
+  useEffect(() => {
+    cartItemsValidationRef.current = cartItems;
+  }, [cartItems]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -410,11 +428,19 @@ const CartPage = () => {
   }, [formData.deliveryLatitude, formData.deliveryLongitude, savedDeliveryAddresses]);
 
   const fetchCartValidation = useCallback(async (): Promise<CartValidationResponse> => {
+    const cartItemsForValidation = cartItemsValidationRef.current.map((item) => ({
+      _id: item._id,
+      price: item.price,
+      quantity: item.quantity,
+      restaurantId: item.restaurantId,
+      size: item.size,
+    }));
+
     const response = await fetch('/api/cart/validate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        cartItems,
+        cartItems: cartItemsForValidation,
         deliveryLatitude: formData.deliveryLatitude,
         deliveryLongitude: formData.deliveryLongitude,
       }),
@@ -426,7 +452,7 @@ const CartPage = () => {
     }
 
     return json;
-  }, [cartItems, formData.deliveryLatitude, formData.deliveryLongitude]);
+  }, [formData.deliveryLatitude, formData.deliveryLongitude]);
 
   useEffect(() => {
     if (cartItems.length === 0) {
@@ -452,7 +478,7 @@ const CartPage = () => {
         console.error('Failed to validate cart:', error);
         if (!cancelled) {
           setCartValidationItems(
-            cartItems.map((item) => ({
+            cartItemsValidationRef.current.map((item) => ({
               _id: item._id,
               itemKey: getCartItemKey(item),
               status: 'invalid',
@@ -475,7 +501,7 @@ const CartPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [cartItems, fetchCartValidation]);
+  }, [cartItems.length, cartValidationSignature, fetchCartValidation]);
 
   useEffect(() => {
     if (!cartItems.length) {
@@ -1633,6 +1659,7 @@ const CartPage = () => {
           <CartItems
             cartItems={cartItems}
             updateQuantity={updateQuantity}
+            updateItemNote={updateItemNote}
             removeFromCart={removeFromCart}
             clearCart={clearCart}
             validationItems={cartValidationItems}

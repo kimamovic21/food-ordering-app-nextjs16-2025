@@ -1211,3 +1211,5 @@ Add courier timezone and stale session cleanup
 Add courier next shift messaging
 
 Polish saved delivery addresses and courier simulator
+
+Add per-item cart notes

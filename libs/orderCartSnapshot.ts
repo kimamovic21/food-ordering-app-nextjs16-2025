@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MenuItem } from '@/models/menuItem';
+import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { CartSize } from '@/types/cart';
 
@@ -75,6 +76,7 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
       quantity: Math.max(1, Number(product.quantity) || 1),
       restaurantId: menuItem.restaurantId?.toString?.() || String(menuItem.restaurantId || ''),
       maxQuantityPerOrder: normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder),
+      note: limitCartItemNoteInput(product.note),
     };
   });
 

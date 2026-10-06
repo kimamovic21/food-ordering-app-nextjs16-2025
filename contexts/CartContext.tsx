@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { canAddItemToCart } from '@/libs/orderQuantityLimits';
 import type { CartItem } from '@/types/cart';
 
@@ -14,6 +15,7 @@ interface CartContextType {
   ) => AddToCartResult;
   removeFromCart: (id: string, size: string) => void;
   updateQuantity: (id: string, size: string, quantity: number) => void;
+  updateItemNote: (id: string, size: string, note: string) => void;
   clearCart: () => void;
   replaceCart: (items: CartItem[]) => void;
   getTotalItems: () => number;
@@ -139,12 +141,26 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     );
   };
 
+  const updateItemNote = useCallback((id: string, size: string, note: string) => {
+    const limitedNote = limitCartItemNoteInput(note);
+
+    setCartItems((prevItems) =>
+      prevItems.map((item) =>
+        item._id === id && item.size === size ? { ...item, note: limitedNote } : item
+      )
+    );
+  }, []);
+
   const clearCart = useCallback(() => {
     setCartItems([]);
   }, []);
 
   const replaceCart = useCallback((items: CartItem[]) => {
-    setCartItems(items.filter((item) => item.restaurantId && item.quantity > 0));
+    setCartItems(
+      items
+        .filter((item) => item.restaurantId && item.quantity > 0)
+        .map((item) => ({ ...item, note: limitCartItemNoteInput(item.note) }))
+    );
   }, []);
 
   const getCartRestaurantId = (): string | null => {
@@ -174,6 +190,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         addToCart,
         removeFromCart,
         updateQuantity,
+        updateItemNote,
         clearCart,
         replaceCart,
         getTotalItems,
