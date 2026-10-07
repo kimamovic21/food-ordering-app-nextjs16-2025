@@ -49,7 +49,7 @@ Auth is a high-value and high-risk area. Testing register and login first gives 
   - profile management flow (info update, image upload/remove, account deletion)
   - checkout & payment flow (order creation, coupon application, payment webhook)
 
-Recent high-priority coverage also checks best coupon suggestion rules, restaurant closed/busy/minimum/radius/cart-quantity validation helpers, checkout quantity-limit blockers, per-item cart note persistence, checkout blocked-attempt audit logs and reason filters, pre-cart ordering status checks, saved delivery address duplicate matching, active customer order lookup, restaurant operations overview summaries, internal admin order notes staying out of customer payloads, ETA-style notification copy, unpaid payment-expiry countdowns, order activity events, order delay warnings, courier delivery summaries, delete protection for active restaurant/menu orders, Redis rate-limit helper behavior, Stripe Checkout session expiration for stale unpaid/customer-canceled orders, and app date formatting helpers.
+Recent high-priority coverage also checks best coupon suggestion rules, restaurant closed/busy/minimum/radius/cart-quantity validation helpers, checkout quantity-limit blockers, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, kitchen order queue item-note payloads, checkout blocked-attempt audit logs and reason filters, pre-cart ordering status checks, saved delivery address duplicate matching, active customer order lookup, restaurant operations overview summaries, internal admin order notes staying out of customer payloads, ETA-style notification copy, unpaid payment-expiry countdowns, order activity events, order delay warnings, courier delivery summaries, delete protection for active restaurant/menu orders, Redis rate-limit helper behavior, Stripe Checkout session expiration for stale unpaid/customer-canceled orders, and app date formatting helpers.
 
 ## Folder Layout
 
@@ -120,7 +120,7 @@ npm run test:file -- __tests__/libs/orderQuantityLimits.test.ts __tests__/api/ca
 Useful focused command after shared cart/checkout validation or order-index changes:
 
 ```bash
-npm run test:file -- __tests__/libs/cartValidation.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/order.model.test.ts
+npm run test:file -- __tests__/libs/cartValidation.test.ts __tests__/libs/freeDelivery.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/order.model.test.ts
 ```
 
 Useful focused command after restaurant ordering capacity/status changes:

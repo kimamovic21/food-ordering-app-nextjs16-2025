@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT } from '@/libs/freeDelivery';
 import { Clock3, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -9,6 +10,11 @@ interface OrderSummaryProps {
   includedTax: number;
   taxPercentage: number;
   deliveryFee: number;
+  courierPayoutAmount?: number;
+  freeDeliveryMinimumAmount?: number;
+  freeDeliveryDiscount?: number;
+  isFreeDelivery?: boolean;
+  remainingForFreeDelivery?: number;
   loyaltyDiscountPercentage: number;
   loyaltyDiscount: number;
   couponCode: string;
@@ -56,6 +62,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   includedTax,
   taxPercentage,
   deliveryFee,
+  courierPayoutAmount = deliveryFee,
+  freeDeliveryMinimumAmount = DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT,
+  freeDeliveryDiscount = 0,
+  isFreeDelivery = false,
+  remainingForFreeDelivery = 0,
   loyaltyDiscountPercentage,
   loyaltyDiscount,
   couponCode,
@@ -113,9 +124,7 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
       ? courierReadinessDelayMinutes
       : 0;
   const kitchenDelayMinutes =
-    typeof etaDelayMinutes === 'number'
-      ? Math.max(0, etaDelayMinutes - deliveryReadinessDelay)
-      : 0;
+    typeof etaDelayMinutes === 'number' ? Math.max(0, etaDelayMinutes - deliveryReadinessDelay) : 0;
   const showCourierReadinessWarning =
     courierReadinessTone === 'limited' || courierReadinessTone === 'unavailable';
 
@@ -141,8 +150,27 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
       <div className='space-y-2 border-b pb-3'>
         <div className='flex justify-between text-muted-foreground text-sm sm:text-base'>
           <span className='font-semibold'>Delivery Fee:</span>
-          <span>${deliveryFee.toFixed(2)}</span>
+          {isFreeDelivery ? (
+            <span className='flex items-center gap-2'>
+              <span className='text-xs line-through opacity-70'>
+                ${courierPayoutAmount.toFixed(2)}
+              </span>
+              <span className='font-semibold text-green-600'>Free</span>
+            </span>
+          ) : (
+            <span>${deliveryFee.toFixed(2)}</span>
+          )}
         </div>
+        {isFreeDelivery ? (
+          <p className='text-xs font-medium text-green-600'>
+            Free delivery unlocked over ${freeDeliveryMinimumAmount.toFixed(2)}. The restaurant
+            covers the ${freeDeliveryDiscount.toFixed(2)} courier payout.
+          </p>
+        ) : remainingForFreeDelivery > 0 ? (
+          <p className='text-xs text-muted-foreground'>
+            Add ${remainingForFreeDelivery.toFixed(2)} more to unlock free delivery.
+          </p>
+        ) : null}
       </div>
 
       {hasEta && (

@@ -27,7 +27,7 @@ const OrderItemsCard = ({
   const taxPercent = taxPercentage || 10;
   const includedTax = taxAmount ?? subtotal * (taxPercent / 100);
   const discount = loyaltyDiscount || 0;
-  const calculatedDeliveryFee = deliveryFee || 5;
+  const calculatedDeliveryFee = deliveryFee ?? 5;
   const discountedSubtotal = Math.max(0, subtotal - discount);
 
   return (

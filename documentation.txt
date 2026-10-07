@@ -1213,3 +1213,5 @@ Add courier next shift messaging
 Polish saved delivery addresses and courier simulator
 
 Add per-item cart notes
+
+Add free delivery threshold and courier payout split

@@ -20,6 +20,7 @@ describe('Restaurant model validation', () => {
 
     await expect(restaurant.validate()).resolves.toBeUndefined();
     expect(restaurant.maxItemsPerOrder).toBe(20);
+    expect(restaurant.freeDeliveryMinimumAmount).toBe(50);
   });
 
   it('rejects restaurant item limits above the courier-safe maximum', async () => {

@@ -6,18 +6,13 @@ type OrderInfoCardProps = {
   orderId: string;
   paymentStatus: boolean;
   orderStatus:
-    | 'placed'
-    | 'processing'
-    | 'ready'
-    | 'transportation'
-    | 'delivered'
-    | 'completed'
-    | 'canceled';
+    'placed' | 'processing' | 'ready' | 'transportation' | 'delivered' | 'completed' | 'canceled';
   createdAt: string;
   updatedAt: string;
   stripeSessionId?: string;
   deliveryPin?: string | null;
   deliveryFee?: number;
+  courierPayoutAmount?: number;
   taxPercentage?: number;
   taxAmount?: number;
 };
@@ -31,6 +26,7 @@ const OrderInfoCard = ({
   stripeSessionId,
   deliveryPin,
   deliveryFee,
+  courierPayoutAmount,
   taxPercentage,
   taxAmount,
 }: OrderInfoCardProps) => {
@@ -110,6 +106,7 @@ const OrderInfoCard = ({
 
           {/* Row 5: Delivery Fee and Tax (if available) */}
           {(deliveryFee !== undefined ||
+            courierPayoutAmount !== undefined ||
             taxPercentage !== undefined ||
             taxAmount !== undefined) && (
             <div className='border-t pt-4'>
@@ -129,8 +126,16 @@ const OrderInfoCard = ({
                 )}
                 {deliveryFee !== undefined && (
                   <div className='flex justify-between'>
-                    <span className='text-muted-foreground'>Delivery Fee:</span>
+                    <span className='text-muted-foreground'>Customer Delivery Fee:</span>
                     <span className='font-semibold text-foreground'>${deliveryFee.toFixed(2)}</span>
+                  </div>
+                )}
+                {courierPayoutAmount !== undefined && (
+                  <div className='flex justify-between'>
+                    <span className='text-muted-foreground'>Courier Payout:</span>
+                    <span className='font-semibold text-foreground'>
+                      ${courierPayoutAmount.toFixed(2)}
+                    </span>
                   </div>
                 )}
               </div>

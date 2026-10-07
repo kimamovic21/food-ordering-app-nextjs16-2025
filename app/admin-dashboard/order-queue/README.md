@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns admin-facing UI for `/admin-dashboard/order-queue`, including restaurant operations, platform management, and protected dashboard workflows.
+This folder owns admin-facing UI for `/admin-dashboard/order-queue`, including restaurant kitchen flow, courier handoff awareness, late-order warnings, and protected dashboard workflows.
 
 ## Route And Audience
 
@@ -18,16 +18,19 @@ This folder owns admin-facing UI for `/admin-dashboard/order-queue`, including r
 - Start from `page.tsx` for the route shell and data loading shape.
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
-- No direct `fetch()` calls were detected here; data may come from hooks, server components, contexts, or child components.
+- The page reads the restaurant's active queue through `useOrderQueueQuery`, groups orders by lifecycle status, and invalidates the query when realtime order notifications arrive.
+- Each queue card gives the kitchen a compact preparation summary: order short ID, customer email, active minutes, courier warning badges, item count, item sizes, and per-item notes from checkout.
+- The item preview intentionally shows only the first few line items so the kanban columns stay readable; the full order remains available through the order detail link.
 
 ## Important Files
 
 - `app/admin-dashboard/order-queue/loading.tsx`: functions/components: `OrderQueueLoading`
-- `app/admin-dashboard/order-queue/page.tsx`: functions/components: `OrderQueuePage`, `handleRealtimeOrderUpdate`; client component
+- `app/admin-dashboard/order-queue/page.tsx`: functions/components: `OrderQueuePage`, `handleRealtimeOrderUpdate`, `getQueueOrderItemCount`, `getQueueItemSizeLabel`; client component
 
 ## API/Data Connections
 
-- No direct `fetch()` calls detected in this folder.
+- Uses `useOrderQueueQuery`, which calls `/api/orders/queue`.
+- The queue response includes normalized `cartProducts`, `itemCount`, and `hasItemNotes`; keep this UI aligned with `types/order.ts` and `app/api/orders/queue/README.md`.
 
 ## Packages And Services Used
 
@@ -44,10 +47,12 @@ This folder owns admin-facing UI for `/admin-dashboard/order-queue`, including r
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Do not hide per-item notes in the kitchen view. These notes are operational instructions, not decorative metadata.
+- Keep order cards compact enough for five queue columns while still surfacing urgent states such as late orders, expired courier assignments, and notes.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `admin`, `super admin` UI for `/admin-dashboard/order-queue`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the restaurant's live kitchen board. Admins can see every active order grouped by stage, spot late or courier-risk orders quickly, and read the exact items and customer item notes before opening the full order detail page. The browser presents the workflow, while `/api/orders/queue` remains responsible for ownership checks, active-order filtering, timeout cleanup, and normalized queue data.
 
 ## Maintenance Notes For Future Work
 

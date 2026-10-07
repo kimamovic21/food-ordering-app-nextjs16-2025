@@ -15,7 +15,8 @@ This folder contains unit tests grouped by feature area.
 - `api/restaurant-ordering-status.route.test.ts`: validates public restaurant ordering status and active capacity responses.
 - `api/profile-change-password.route.test.ts`: validates password change API behavior.
 - `api/upload-users.route.test.ts`: validates profile image upload/remove behavior.
-- `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit blockers, per-item cart note persistence, and failure handling.
+- `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit blockers, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, and failure handling.
+- `api/order-queue.route.test.ts`: validates restaurant queue access, courier timeout handling, and kitchen item-note payload normalization.
 - `api/cart-validate.route.test.ts`: validates cart item revalidation plus restaurant minimum, busy, delivery-radius, and quantity-limit preflight blockers.
 - `api/courier-assignment.route.test.ts`: validates courier assignment guardrails, courier-only assignment notes, and assignable courier schedule/status checks.
 - `api/courier-earnings.route.test.ts`: validates courier earnings access, summaries, assignment reliability metrics, and work-summary response shape.
@@ -38,6 +39,7 @@ This folder contains unit tests grouped by feature area.
 - `libs/restaurantEta.test.ts`: validates load-adjusted restaurant preparation/delivery estimates and customer-facing busy timing messages.
 - `libs/restaurantOrderingStatus.test.ts`: validates capacity-aware ordering status, busy copy, active-order counting, and cart validation status mapping.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item and per-order quantity-limit helpers used by cart UI and checkout APIs.
+- `libs/freeDelivery.test.ts`: validates customer free-delivery threshold calculations, disabled thresholds, remaining-to-free-delivery copy, and courier payout preservation.
 - `libs/orderCapacityBackfill.test.ts`: validates server-side maintenance helpers for backfilling restaurant/menu item quantity-limit fields.
 - `libs/authGuards.test.ts`: validates shared server-side admin and super-admin guard behavior.
 - `libs/deliveryAddresses.test.ts`: validates saved delivery address normalization, blank-label fallback, and duplicate matching.

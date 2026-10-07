@@ -14,11 +14,43 @@ import { User } from '@/models/user';
 const LATE_ORDER_THRESHOLD_MINUTES = 120;
 const activeStatuses = ['placed', 'processing', 'ready', 'transportation', 'delivered'];
 
-const normalizeOrder = (order: any) => ({
-  ...order,
-  paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
-  orderStatus: order.orderStatus || 'placed',
-});
+const normalizeQueueCartProducts = (cartProducts: unknown) => {
+  if (!Array.isArray(cartProducts)) {
+    return [];
+  }
+
+  return cartProducts.map((item) => {
+    const product = item as {
+      name?: unknown;
+      quantity?: unknown;
+      size?: unknown;
+      note?: unknown;
+    };
+    const quantity = Number(product.quantity);
+
+    return {
+      name:
+        typeof product.name === 'string' && product.name.trim() ? product.name.trim() : 'Menu item',
+      quantity: Number.isFinite(quantity) && quantity > 0 ? Math.floor(quantity) : 1,
+      size:
+        typeof product.size === 'string' && product.size.trim() ? product.size.trim() : 'single',
+      note: typeof product.note === 'string' ? product.note.trim() : '',
+    };
+  });
+};
+
+const normalizeOrder = (order: any) => {
+  const cartProducts = normalizeQueueCartProducts(order.cartProducts);
+
+  return {
+    ...order,
+    cartProducts,
+    itemCount: cartProducts.reduce((total, item) => total + item.quantity, 0),
+    hasItemNotes: cartProducts.some((item) => item.note.length > 0),
+    paymentStatus: Boolean(order.orderPaid ?? order.paymentStatus ?? order.paid),
+    orderStatus: order.orderStatus || 'placed',
+  };
+};
 
 const getMinutesSince = (date: Date | string) =>
   Math.floor((Date.now() - new Date(date).getTime()) / 60000);

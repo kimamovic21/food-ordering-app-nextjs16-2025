@@ -12,6 +12,7 @@ It includes:
 - restaurant browsing with search/filter/sort/pagination and shareable URLs
 - favorites for meals and restaurants
 - restaurant ordering-status checks before add-to-cart plus availability alerts when checkout is blocked by closed, paused, closing-soon, or busy restaurants
+- restaurant-controlled free delivery thresholds where customers can pay `$0` delivery after the configured subtotal while courier payout is still preserved
 - loyalty rewards with delivery fee discounts, tier progress, and an auditable rewards ledger
 - ratings and review flows
 - approved in-app messaging between customers, restaurant owners, admins, and couriers
@@ -46,7 +47,7 @@ It includes:
 - Menu and restaurant discovery with filtering/sorting/search
 - Menu item availability indicators with disabled ordering for sold-out items
 - Add-to-cart restaurant ordering checks, prefetched for visible menu items, so closed, paused, closing-soon, or busy restaurants are blocked before the cart is changed
-- Cart with per-item special notes, checkout, best coupon suggestion, busy/closed/radius restaurant checks, restaurant availability alerts, active order quick access, and order tracking
+- Cart with per-item special notes, checkout, best coupon suggestion, free delivery threshold messaging, busy/closed/radius restaurant checks, restaurant availability alerts, active order quick access, and order tracking
 - Favorites for menu items and restaurants
 - Loyalty tiers, automatic delivery-fee discounts, and a reward ledger showing earned, applied, and reversed rewards
 - Personal review management and restaurant review pages
@@ -64,9 +65,9 @@ It includes:
 - CRUD for categories, menu items, restaurants, and users
 - Super-admin user deletion with confirmation, active-order guards, Cloudinary cleanup, restaurant/menu/coupon cascade cleanup, review cleanup, and preserved historical orders
 - Menu item availability controls for temporarily unavailable or sold-out items, with delete protection while active orders still reference an item
-- Restaurant preparation/delivery estimate settings, working-hours checkout protection, active order limit controls, and max-items-per-order controls
+- Restaurant preparation/delivery estimate settings, working-hours checkout protection, active order limit controls, free delivery threshold settings, and max-items-per-order controls
 - Courier management and order assignment with optional courier-only assignment notes
-- Order lifecycle management, internal admin order notes, operations overview, late-order operational alerts, order queue, and dashboards/statistics
+- Order lifecycle management, internal admin order notes, operations overview, late-order operational alerts, kitchen order queue with item-note visibility, and dashboards/statistics
 - Restaurant operations overview at `/admin-dashboard/operations` with active stage counts, restaurant capacity, open/closing/paused status, courier availability, today revenue, unpaid/canceled counts, and orders that need attention
 - Restaurant reports at `/admin-dashboard/restaurant-reports` with daily, weekly, and monthly summaries plus PDF downloads when there is activity
 - Support ticket dashboard for reported order, delivery, and app issues
@@ -279,6 +280,7 @@ This project uses many dependencies; below are the main packages actively used i
 
 - Restaurants can configure average preparation time, average delivery time, and an active kitchen order limit in the admin restaurant form.
 - Restaurants can configure `maxItemsPerOrder` up to 20 items, and each menu item can configure `maxQuantityPerOrder` up to 20 units per order.
+- Restaurants can configure a free delivery threshold. When the food subtotal reaches the threshold, the customer delivery fee becomes `$0`, but the order still stores `courierPayoutAmount` from the restaurant courier fee so courier earnings and admin reporting do not disappear.
 - Checkout snapshots load-adjusted restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
 - Public menu item pages check the restaurant ordering status before adding to cart, while checkout remains the final server-side source of truth.
 - `libs/restaurantOrderingStatus.ts` centralizes restaurant ordering availability with active kitchen capacity and dynamic ETA data so public status checks, restaurant details, cart validation, checkout, availability alerts, and admin load indicators use the same busy/open/paused result.

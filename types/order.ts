@@ -84,6 +84,10 @@ export type OrderDetails = OrderListItem & {
   taxPercentage?: number;
   taxAmount?: number;
   deliveryFee?: number;
+  courierPayoutAmount?: number;
+  freeDeliveryMinimumAmount?: number;
+  freeDeliveryDiscount?: number;
+  isFreeDelivery?: boolean;
   estimatedPreparationMinutes?: number | null;
   estimatedDeliveryMinutes?: number | null;
   estimatedTotalMinutes?: number | null;
@@ -119,6 +123,10 @@ export type DeliveredOrder = {
   cartProducts: CartProduct[];
   estimatedDeliveryMinutes?: number | null;
   deliveryFee?: number;
+  courierPayoutAmount?: number;
+  freeDeliveryMinimumAmount?: number;
+  freeDeliveryDiscount?: number;
+  isFreeDelivery?: boolean;
   loyaltyDiscount?: number;
   couponCode?: string | null;
   couponDiscountAmount?: number;
@@ -128,6 +136,13 @@ export type DeliveredOrder = {
   orderStatus: OrderStatus | string;
   createdAt: ISODateString;
   updatedAt: ISODateString;
+};
+
+export type QueueOrderCartProduct = {
+  name: string;
+  quantity: number;
+  size: string;
+  note?: string;
 };
 
 export type QueueOrder = {
@@ -143,7 +158,9 @@ export type QueueOrder = {
   isLateBeforeTransport: boolean;
   isCourierAssignmentExpired?: boolean;
   isReadyWithoutCourierLate?: boolean;
-  cartProducts: Array<{ name: string; quantity: number; size: string }>;
+  cartProducts: QueueOrderCartProduct[];
+  itemCount?: number;
+  hasItemNotes?: boolean;
   courierId?: Pick<UserSummary, 'name' | 'email'> | null;
 };
 

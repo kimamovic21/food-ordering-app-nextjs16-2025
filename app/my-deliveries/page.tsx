@@ -320,7 +320,9 @@ const MyDeliveriesPage = () => {
                       <DollarSign className='h-4 w-4 text-muted-foreground' />
                       <div className='text-sm'>
                         <p className='font-medium'>
-                          ${(Number(order.deliveryFee) || 0).toFixed(2)} earned
+                          $
+                          {(Number(order.courierPayoutAmount ?? order.deliveryFee) || 0).toFixed(2)}{' '}
+                          earned
                         </p>
                       </div>
                     </div>

@@ -46,6 +46,9 @@ const getIdText = (value: any) => value?._id?.toString?.() || value?.toString?.(
 
 const isSameId = (left: unknown, right: unknown) => getIdText(left) === getIdText(right);
 
+const getCourierPayoutAmount = (order: any) =>
+  Number(order.courierPayoutAmount ?? order.deliveryFee) || 0;
+
 const pushUniqueAssignmentEntry = (
   entries: AssignmentMetricEntry[],
   seen: Set<string>,
@@ -189,7 +192,7 @@ export const getCourierEarningsReport = async (courierId: unknown) => {
   }).length;
   const assignmentMetrics = await getCourierAssignmentMetrics(courierId);
   const totalEarnings = deliveredOrders.reduce(
-    (sum: number, order: any) => addMoney(sum, Number(order.deliveryFee) || 0),
+    (sum: number, order: any) => addMoney(sum, getCourierPayoutAmount(order)),
     0
   );
   const ratingSummary = await CourierReview.aggregate([
@@ -221,7 +224,7 @@ export const getCourierEarningsReport = async (courierId: unknown) => {
       deliveries: 0,
     };
 
-    current.earnings = addMoney(current.earnings, Number(order.deliveryFee) || 0);
+    current.earnings = addMoney(current.earnings, getCourierPayoutAmount(order));
     current.deliveries += 1;
     earningsByMonth.set(key, current);
   });

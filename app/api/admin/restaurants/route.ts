@@ -8,7 +8,7 @@ import { Restaurant } from '@/models/restaurant';
 import { User } from '@/models/user';
 
 const ADMIN_RESTAURANT_SELECT =
-  'ownerId name street city postalCode country latitude longitude contact email webAddress description tax courierFee minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason workingHours blockedDates totalEmployees images createdAt updatedAt';
+  'ownerId name street city postalCode country latitude longitude contact email webAddress description tax courierFee freeDeliveryMinimumAmount minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason workingHours blockedDates totalEmployees images createdAt updatedAt';
 
 const statusFilters = ['all', 'accepting', 'open', 'closed', 'paused'] as const;
 const imageFilters = ['all', 'with-images', 'missing-images'] as const;
@@ -188,7 +188,10 @@ export async function GET(req: NextRequest) {
       : {};
 
     const ownerIds = ownerQuery
-      ? await User.find(ownerFilter).select('_id').lean().then((owners) => owners.map((owner) => owner._id))
+      ? await User.find(ownerFilter)
+          .select('_id')
+          .lean()
+          .then((owners) => owners.map((owner) => owner._id))
       : [];
 
     if (ownerQuery) {
@@ -243,6 +246,7 @@ export async function GET(req: NextRequest) {
         description: String(restaurant.description || ''),
         tax: Number(restaurant.tax || 0),
         courierFee: Number(restaurant.courierFee || 0),
+        freeDeliveryMinimumAmount: Number(restaurant.freeDeliveryMinimumAmount ?? 50),
         minimumOrderAmount: Number(restaurant.minimumOrderAmount || 10),
         averagePreparationMinutes: Number(restaurant.averagePreparationMinutes || 25),
         averageDeliveryMinutes: Number(restaurant.averageDeliveryMinutes || 20),

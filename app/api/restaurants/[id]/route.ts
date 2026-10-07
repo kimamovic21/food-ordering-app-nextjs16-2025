@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, context: { params: Promise<{ id: st
 
     const restaurant = await Restaurant.findById(id)
       .select(
-        'name street city postalCode country latitude longitude contact email webAddress description images workingHours blockedDates tax courierFee minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason totalEmployees createdAt updatedAt'
+        'name street city postalCode country latitude longitude contact email webAddress description images workingHours blockedDates tax courierFee freeDeliveryMinimumAmount minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason totalEmployees createdAt updatedAt'
       )
       .lean();
 

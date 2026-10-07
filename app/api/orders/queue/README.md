@@ -12,14 +12,16 @@
 
 ## Plain-English Summary
 
-Handles get work for the order operations area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Handles the restaurant kitchen order queue. The route keeps the local workflow server-authoritative, filters active restaurant orders, applies courier/order cleanup rules, emits late-order alerts when needed, and returns a stable payload for the `/admin-dashboard/order-queue` UI.
 
 ## What Happens In This File
 
 - The route receives GET requests and converts request/session data into server-side business checks.
 - It uses `notification`, `order`, `user` for persistence.
 - It delegates shared logic to `authOptions`, `courierAssignmentTimeout`, `notifications`, `orderAutoCancellation` so behavior stays consistent across the app.
-- Detected local functions/handlers: `normalizeOrder`, `getMinutesSince`, `orders`.
+- It normalizes `cartProducts` into a kitchen-safe shape with `name`, `quantity`, `size`, and `note` so the queue UI can display item notes without trusting raw MongoDB document shape.
+- It returns `itemCount` and `hasItemNotes` for compact kitchen badges and quick scanning.
+- Detected local functions/handlers: `normalizeQueueCartProducts`, `normalizeOrder`, `getMinutesSince`, `orders`.
 
 ## Request Inputs
 
@@ -39,10 +41,11 @@ Handles get work for the order operations area. The route keeps the local workfl
 
 ## Edge Cases Covered
 
-- Line 32: `if (!userEmail) {`
-- Line 38: `if (!user || user.role !== 'admin') {`
-- Line 42: `if (!user.restaurantId) {`
-- Line 86: `if (existingLateNotification) {`
+- Returns `401` when there is no signed-in user.
+- Returns `401` when the signed-in user is not an admin.
+- Returns `403` when the admin is not assigned to a restaurant.
+- Avoids duplicate late-order notifications by checking for an existing matching notification first.
+- Cart product data is normalized defensively so missing names, invalid quantities, missing sizes, or missing notes do not break the kitchen queue.
 
 ## Data Dependencies
 
@@ -57,11 +60,11 @@ Handles get work for the order operations area. The route keeps the local workfl
 ## Response Behavior
 
 - Status codes detected: `401`, `403`
-- Common response fields detected: `order`, `paymentStatus`, `orderStatus`, `date`, `error`, `email`, `restaurantId`, `in`, `createdAt`, `minutesSincePlaced`, `orderId`, `type`, `reason`, `orders`, `isCourierAssignmentExpired`, `isReadyWithoutCourierLate`, `isLateBeforeTransport`, `lateThresholdMinutes`
+- Common response fields detected: `order`, `paymentStatus`, `orderStatus`, `date`, `error`, `email`, `restaurantId`, `in`, `createdAt`, `minutesSincePlaced`, `orderId`, `type`, `reason`, `orders`, `cartProducts`, `itemCount`, `hasItemNotes`, `isCourierAssignmentExpired`, `isReadyWithoutCourierLate`, `isLateBeforeTransport`, `lateThresholdMinutes`
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/orders/queue` does. Explain that it belongs to the order operations workflow, serves `admin`, `restaurant admin`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/orders/queue` does. Explain that it is the server source for the kitchen board: it proves the signed-in admin owns a restaurant, loads only active orders for that restaurant, applies courier timeout and auto-cancel rules, sends late-order notifications once, and returns normalized order cards with item counts and per-item notes.
 
 ## Maintenance Notes For Future Work
 

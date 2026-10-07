@@ -14,7 +14,7 @@ import { User } from '@/models/user';
 const ACTIVE_ORDER_STATUSES = ['placed', 'processing', 'ready', 'transportation', 'delivered'];
 
 const RESTAURANT_SELECT =
-  'ownerId name street city postalCode country latitude longitude contact email webAddress description tax courierFee minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason workingHours blockedDates totalEmployees images createdAt updatedAt';
+  'ownerId name street city postalCode country latitude longitude contact email webAddress description tax courierFee freeDeliveryMinimumAmount minimumOrderAmount averagePreparationMinutes averageDeliveryMinutes activeOrderLimit maxItemsPerOrder deliveryRadiusKm isPaused pauseReason workingHours blockedDates totalEmployees images createdAt updatedAt';
 
 const getTodayDateRange = () => {
   const start = new Date();

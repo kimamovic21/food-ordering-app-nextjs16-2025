@@ -12,7 +12,7 @@
 
 ## Plain-English Summary
 
-Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
+Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, free delivery threshold, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
 
 ## What Happens In This File
 
@@ -29,6 +29,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 - Per-item cart notes are trimmed, whitespace-normalized, capped, included in the checkout fingerprint, and saved into `Order.cartProducts` so restaurant/admin/customer/courier views can see item-specific preparation requests.
 - Restaurant checks verify open/closed state, pause reason, delivery radius, delivery location, busy/capacity state, and courier readiness before money is collected.
 - Coupon and loyalty helpers recalculate discounts server-side so the browser cannot fake cheaper totals.
+- Free delivery pricing is calculated server-side from the restaurant threshold. If unlocked, the customer delivery fee becomes `0`, the free delivery discount is snapshotted, and the courier payout still uses the restaurant courier fee.
 - Stripe line items are built from verified items and server-calculated totals.
 - If the user already has an open Stripe session for the same checkout fingerprint, the route can reuse it instead of creating duplicate unpaid orders.
 - QStash schedules post-checkout maintenance so stale unpaid orders or delivery readiness issues can be cleaned up later.
@@ -48,7 +49,8 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 - `@upstash/qstash`: schedules signed background checks for unpaid orders, courier assignment timeouts, and order maintenance.
 - `@upstash/redis` and `@upstash/ratelimit`: protect sensitive routes from repeated abuse while keeping checks server-side.
 - `libphonenumber-js`: normalizes and validates phone numbers before checkout/profile data is accepted.
-- `currency.js` and money helpers: keep prices, discounts, delivery fees, and totals rounded consistently.
+- `currency.js` and money helpers: keep prices, discounts, customer delivery fees, courier payout, and totals rounded consistently.
+- `libs/freeDelivery.ts`: keeps free delivery threshold, customer delivery fee, restaurant-covered discount, and courier payout calculations shared and testable.
 
 ## Auth, Role, And Safety Checks
 
@@ -113,11 +115,11 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 ## Response Behavior
 
 - Status codes detected: `400`, `401`, `403`, `404`, `409`, `500`
-- Common response fields detected: `node`, `apiVersion`, `message`, `reason`, `actor`, `action`, `entityType`, `entityId`, `restaurantId`, `metadata`, `error`, `req`, `http`, `localhost`, `value`, `userId`, `verifiedItems`, `size`, `note`, `delivery`, `phone`, `streetAddress`, `postalCode`, `city`, `country`, `deliveryLatitude`, `deliveryLongitude`, `specialInstructions`, `pricing`, `subtotal`, `taxAmount`, `deliveryFee`, `loyaltyDiscount`, `loyaltyDiscountPercentage`, `couponCode`, `couponDiscountAmount`, `total`, `items`, `productId`, `quantity`, `price`, `couponLineDiscountRate`, `stripeLineItems`, `price_data`, `currency`, `unit_amount`
+- Common response fields detected: `node`, `apiVersion`, `message`, `reason`, `actor`, `action`, `entityType`, `entityId`, `restaurantId`, `metadata`, `error`, `req`, `http`, `localhost`, `value`, `userId`, `verifiedItems`, `size`, `note`, `delivery`, `phone`, `streetAddress`, `postalCode`, `city`, `country`, `deliveryLatitude`, `deliveryLongitude`, `specialInstructions`, `pricing`, `subtotal`, `taxAmount`, `deliveryFee`, `courierPayoutAmount`, `freeDeliveryMinimumAmount`, `freeDeliveryDiscount`, `isFreeDelivery`, `loyaltyDiscount`, `loyaltyDiscountPercentage`, `couponCode`, `couponDiscountAmount`, `total`, `items`, `productId`, `quantity`, `price`, `couponLineDiscountRate`, `stripeLineItems`, `price_data`, `currency`, `unit_amount`
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/checkout` does. Explain that it is the final server-side gate before payment. The cart page can warn the user, but this API makes the authoritative decision: it validates user, cart, restaurant, courier readiness, coupons, loyalty, totals, duplicate payment sessions, and only then creates or reuses a Stripe Checkout URL.
+Open this file when someone asks what `/api/checkout` does. Explain that it is the final server-side gate before payment. The cart page can warn the user, but this API makes the authoritative decision: it validates user, cart, restaurant, courier readiness, free delivery threshold, coupons, loyalty, totals, duplicate payment sessions, and only then creates or reuses a Stripe Checkout URL.
 
 ## Maintenance Notes For Future Work
 

@@ -97,6 +97,27 @@ const OrderSchema = new Schema(
       default: 5,
       min: 0,
     },
+    courierPayoutAmount: {
+      type: Number,
+      required: true,
+      default: 5,
+      min: 0,
+    },
+    freeDeliveryMinimumAmount: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 500,
+    },
+    freeDeliveryDiscount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    isFreeDelivery: {
+      type: Boolean,
+      default: false,
+    },
     estimatedPreparationMinutes: {
       type: Number,
       default: null,

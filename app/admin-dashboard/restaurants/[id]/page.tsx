@@ -253,7 +253,13 @@ const AdminRestaurantDetailsPage = () => {
           icon={Timer}
           label='Active kitchen orders'
           value={`${operationalSummary.activeKitchenOrders}/${operationalSummary.activeOrderLimit}`}
-          tone={operationalSummary.isAtCapacity ? 'red' : operationalSummary.isNearCapacity ? 'amber' : 'default'}
+          tone={
+            operationalSummary.isAtCapacity
+              ? 'red'
+              : operationalSummary.isNearCapacity
+                ? 'amber'
+                : 'default'
+          }
         />
         <MetricCard icon={Utensils} label='Menu items' value={menuSummary.total} />
         <MetricCard
@@ -386,6 +392,12 @@ const AdminRestaurantDetailsPage = () => {
               <div className='rounded-xl border border-white/10 p-3'>
                 <p className='text-muted-foreground'>Courier fee</p>
                 <p className='mt-1 font-semibold'>{formatMoney(restaurant.courierFee)}</p>
+              </div>
+              <div className='rounded-xl border border-white/10 p-3'>
+                <p className='text-muted-foreground'>Free delivery over</p>
+                <p className='mt-1 font-semibold'>
+                  {formatMoney(restaurant.freeDeliveryMinimumAmount ?? 50)}
+                </p>
               </div>
               <div className='rounded-xl border border-white/10 p-3'>
                 <p className='text-muted-foreground'>Tax</p>

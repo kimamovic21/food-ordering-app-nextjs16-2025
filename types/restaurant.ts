@@ -89,6 +89,7 @@ export type RestaurantDetails = RestaurantSummary & {
   images: string[];
   tax: number;
   courierFee: number;
+  freeDeliveryMinimumAmount: number;
   totalEmployees: number;
   workingHours: RestaurantWorkingHour[];
   blockedDates: RestaurantBlockedDate[];
@@ -136,6 +137,7 @@ export type RestaurantFormData = {
   description: string;
   tax: number;
   courierFee: number;
+  freeDeliveryMinimumAmount: number;
   minimumOrderAmount: number;
   averagePreparationMinutes: number;
   averageDeliveryMinutes: number;
