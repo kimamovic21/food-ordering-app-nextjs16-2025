@@ -10,6 +10,7 @@ import { findBlockingRestaurantOrder } from '@/libs/orderDeletionGuards';
 import { notifyWaitingUsersIfRestaurantAcceptingOrders } from '@/libs/restaurantAvailabilityRequests';
 import { normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import { getRestaurantOrderingCapacityStatus } from '@/libs/restaurantOrderingStatus';
+import { normalizeFreeDeliveryMinimumAmount } from '@/libs/freeDelivery';
 import cloudinary from '@/libs/cloudinary';
 
 type BlockedDateInput = {
@@ -48,6 +49,9 @@ const sanitizeRestaurantPayload = (body: Record<string, unknown>, includeId: boo
   const tax = typeof body.tax === 'number' ? body.tax : Number(body.tax) || 17;
   const courierFee =
     typeof body.courierFee === 'number' ? body.courierFee : Number(body.courierFee) || 5;
+  const freeDeliveryMinimumAmount = normalizeFreeDeliveryMinimumAmount(
+    body.freeDeliveryMinimumAmount
+  );
   const minimumOrderAmount =
     typeof body.minimumOrderAmount === 'number'
       ? body.minimumOrderAmount
@@ -103,6 +107,7 @@ const sanitizeRestaurantPayload = (body: Record<string, unknown>, includeId: boo
     description: body.description,
     tax: Math.min(100, Math.max(0, tax)),
     courierFee: Math.max(0, courierFee),
+    freeDeliveryMinimumAmount,
     minimumOrderAmount,
     averagePreparationMinutes: Math.min(240, Math.max(0, averagePreparationMinutes)),
     averageDeliveryMinutes: Math.min(240, Math.max(0, averageDeliveryMinutes)),
@@ -279,6 +284,7 @@ export async function POST(req: NextRequest) {
       description: payload.description,
       tax: payload.tax,
       courierFee: payload.courierFee,
+      freeDeliveryMinimumAmount: payload.freeDeliveryMinimumAmount,
       minimumOrderAmount: payload.minimumOrderAmount,
       averagePreparationMinutes: payload.averagePreparationMinutes,
       averageDeliveryMinutes: payload.averageDeliveryMinutes,
@@ -396,6 +402,7 @@ export async function PUT(req: NextRequest) {
         deliveryRadiusKm: updateData.deliveryRadiusKm,
         activeOrderLimit: updateData.activeOrderLimit,
         maxItemsPerOrder: updateData.maxItemsPerOrder,
+        freeDeliveryMinimumAmount: updateData.freeDeliveryMinimumAmount,
         minimumOrderAmount: updateData.minimumOrderAmount,
       },
     });

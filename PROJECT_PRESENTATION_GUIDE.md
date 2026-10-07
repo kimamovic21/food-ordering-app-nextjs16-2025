@@ -226,6 +226,7 @@ Cart:
 - Restaurant open/paused/radius/capacity checks are centralized server-side so the menu, cart, checkout, restaurant pages, availability alerts, and admin operations views report the same ordering state.
 - Cart and restaurant pages show dynamic prep/delivery ETA messaging that reflects current kitchen load and courier availability instead of only static restaurant averages.
 - If no courier is available, or courier coverage is tight compared with active kitchen demand, the UI shows a delivery-readiness warning and increases the delivery ETA before Stripe Checkout.
+- If the restaurant has a free delivery threshold, the cart shows how much more the customer needs to add or confirms that free delivery is unlocked.
 - Price changes are shown clearly and can be refreshed.
 - Deleted, unavailable, invalid, cross-restaurant, or blocked restaurant states prevent checkout.
 - Item notes are normalized and stored server-side at checkout, but they do not trigger repeated availability validation while the user is typing.
@@ -235,7 +236,7 @@ Cart:
 Checkout:
 
 - Checkout is server-authoritative.
-- The server recalculates item prices, totals, tax, delivery fee, coupon discounts, loyalty discounts, and restaurant availability.
+- The server recalculates item prices, totals, tax, customer delivery fee, courier payout, free delivery discount, coupon discounts, loyalty discounts, and restaurant availability.
 - Checkout uses the same cart validation and centralized restaurant ordering status helpers as cart preflight, so client-side warnings and final Stripe session creation follow the same rules.
 - Checkout saves the current load-adjusted preparation, delivery, and total estimate on the order so later order timelines and delay warnings use the estimate the customer saw before payment.
 - The customer cannot checkout with mixed restaurants.
@@ -244,7 +245,7 @@ Checkout:
 - The customer cannot checkout if the restaurant is closed, paused, on a blocked date, closing soon, outside delivery radius, below minimum order amount, or at active kitchen capacity.
 - The customer cannot checkout with an oversized cart: restaurants can cap total items per order up to 20, and menu items can cap their own quantity per order up to 20.
 - The server creates an unpaid `placed` order before redirecting to Stripe Checkout.
-- The order stores snapshots of cart items, tax, delivery fee, estimates, coupon, loyalty, delivery address, and Stripe session id.
+- The order stores snapshots of cart items, tax, customer delivery fee, courier payout, free delivery threshold/discount state, estimates, coupon, loyalty, delivery address, and Stripe session id.
 - If a matching unpaid order already exists recently, checkout can reuse or recover the existing Stripe Checkout session instead of creating duplicate orders.
 
 Payment:
@@ -331,6 +332,7 @@ Restaurant availability:
 - Max items per order prevents a customer from assigning one courier an unrealistic amount of food or drinks.
 - Delivery radius prevents checkout when the customer address is too far from the restaurant.
 - Customers can request a notification when a restaurant becomes available again.
+- Free delivery threshold controls when customers stop paying the delivery fee. This is a customer discount, not a courier pay cut; the courier payout is still snapshotted on the order.
 
 Menu items:
 
@@ -357,6 +359,7 @@ Coupons:
 
 - Customers can apply coupons manually.
 - Cart can suggest the best public coupon for the current restaurant subtotal.
+- Free delivery is calculated separately from coupons and loyalty so the cart can explain whether the restaurant covered delivery and how much courier payout remains attached to the order.
 - Coupon eligibility checks include active status, date windows, minimum order amount, usage limits, first-order-only rules, and per-customer usage limits.
 - Checkout revalidates the coupon server-side.
 - Coupon snapshots are stored on the order for historical accuracy.
@@ -625,6 +628,7 @@ Order queue:
 
 - Shows live operational order states.
 - Helps admins focus on late, unpaid, ready-without-courier, and courier-assignment issues.
+- Shows a compact kitchen item preview with quantities, sizes, and customer item notes so the restaurant can prepare orders without opening every detail page.
 - Can use SSE or polling-backed refresh depending on the current implementation.
 
 Restaurant reports:
@@ -791,6 +795,7 @@ Delivery radius:
 - Restaurant delivery radius is checked server-side.
 - The cart and checkout can show whether the customer's delivery location is inside the radius.
 - Development-only manual location controls help test this without changing real physical location.
+- Delivery pricing is not based on map distance in the current app. The restaurant sets a courier fee and an optional free delivery threshold, then checkout stores both the customer-facing delivery charge and courier payout snapshot.
 
 ## 19. Reports, Analytics, And Observability
 
@@ -943,6 +948,7 @@ Good short explanation:
 Technical strengths:
 
 - Server-side checkout validation protects money and order correctness.
+- Free delivery logic protects the customer experience while preserving courier payout accounting.
 - MongoDB schemas store durable operational timestamps and snapshots.
 - Stripe webhook keeps payment state authoritative.
 - Redis protects sensitive endpoints from abuse.

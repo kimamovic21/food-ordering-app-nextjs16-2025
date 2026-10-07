@@ -136,6 +136,7 @@ const openRestaurant = {
   _id: 'restaurant-1',
   tax: 10,
   courierFee: 5,
+  freeDeliveryMinimumAmount: 50,
   latitude: 43.8563,
   longitude: 18.4131,
   workingHours: openWorkingHours,
@@ -625,6 +626,49 @@ describe('POST /api/checkout', () => {
             price_data: expect.objectContaining({
               unit_amount: 1450,
               product_data: { name: 'Pizza (large)' },
+            }),
+          }),
+        ]),
+      })
+    );
+  });
+
+  it('waives the customer delivery fee over the restaurant free delivery threshold while preserving courier payout', async () => {
+    const POST = await loadCheckoutRoute();
+    const response = await POST(
+      createCheckoutRequest({
+        cartItems: [
+          {
+            _id: 'menu-item-1',
+            name: 'Pizza',
+            size: 'Large',
+            price: 14.5,
+            quantity: 4,
+            restaurantId: 'restaurant-1',
+          },
+        ],
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session/test-1' });
+    expect(Order.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        courierPayoutAmount: 5,
+        deliveryFee: 0,
+        freeDeliveryDiscount: 5,
+        freeDeliveryMinimumAmount: 50,
+        isFreeDelivery: true,
+        total: 58,
+      })
+    );
+    expect(stripeCreateSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        line_items: expect.not.arrayContaining([
+          expect.objectContaining({
+            price_data: expect.objectContaining({
+              product_data: { name: 'Delivery Fee' },
             }),
           }),
         ]),

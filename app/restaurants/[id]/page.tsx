@@ -367,6 +367,7 @@ const RestaurantDetailsPage = () => {
               </p>
               <p>Tax: {restaurant.tax}%</p>
               <p>Courier fee: ${restaurant.courierFee}</p>
+              <p>Free delivery over: ${restaurant.freeDeliveryMinimumAmount ?? 50}</p>
               {hasDynamicEta && (
                 <>
                   <p>Estimated prep: {restaurant.estimatedPreparationMinutes} min</p>

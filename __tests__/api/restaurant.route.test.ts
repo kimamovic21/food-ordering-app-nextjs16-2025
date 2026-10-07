@@ -77,6 +77,7 @@ const validRestaurantBody = {
   description: 'A restaurant description long enough for validation.',
   tax: 12,
   courierFee: 4,
+  freeDeliveryMinimumAmount: 60,
   totalEmployees: 3,
   images: ['https://res.cloudinary.com/demo/image/upload/restaurants/priority.jpg'],
 };

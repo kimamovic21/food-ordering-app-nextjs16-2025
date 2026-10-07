@@ -44,4 +44,26 @@ describe('OrderSummary', () => {
     expect(screen.getByRole('button', { name: 'Checking Restaurant' })).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Restaurant Closed' })).not.toBeInTheDocument();
   });
+
+  it('shows free delivery when the restaurant threshold is reached', () => {
+    render(
+      <OrderSummary
+        {...defaultProps}
+        subtotal={55}
+        deliveryFee={0}
+        courierPayoutAmount={5}
+        freeDeliveryMinimumAmount={50}
+        freeDeliveryDiscount={5}
+        isFreeDelivery
+        restaurantsOpen
+      />
+    );
+
+    expect(screen.getByText('Free')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Free delivery unlocked over $50.00. The restaurant covers the $5.00 courier payout.'
+      )
+    ).toBeInTheDocument();
+  });
 });

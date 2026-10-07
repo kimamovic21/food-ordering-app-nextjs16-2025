@@ -910,6 +910,7 @@ const OrderDetailPage = () => {
             stripeSessionId={order.stripeSessionId}
             deliveryPin={order.deliveryPin}
             deliveryFee={order.deliveryFee}
+            courierPayoutAmount={order.courierPayoutAmount}
             taxPercentage={order.taxPercentage}
             taxAmount={order.taxAmount}
           />
@@ -1505,8 +1506,8 @@ const OrderDetailPage = () => {
               <AlertDialogTitle>Mark this refund complete?</AlertDialogTitle>
               <AlertDialogDescription>
                 This will close the refund review for this canceled paid order and record a
-                simulated Stripe refund for ${refundAmount.toFixed(2)}. Use this only after you
-                have verified that the cancellation should be refunded.
+                simulated Stripe refund for ${refundAmount.toFixed(2)}. Use this only after you have
+                verified that the cancellation should be refunded.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

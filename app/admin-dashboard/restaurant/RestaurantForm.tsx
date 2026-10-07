@@ -14,10 +14,11 @@ import dynamic from 'next/dynamic';
 import RestaurantImagesUpload, { ImageItem } from './RestaurantImagesUpload';
 import DevRestaurantLocationDialog from './DevRestaurantLocationDialog';
 import { formatAppDate } from '@/libs/dateFormat';
+import { MAX_ITEMS_PER_ORDER_LIMIT, MIN_ITEMS_PER_ORDER_LIMIT } from '@/libs/orderQuantityLimits';
 import {
-  MAX_ITEMS_PER_ORDER_LIMIT,
-  MIN_ITEMS_PER_ORDER_LIMIT,
-} from '@/libs/orderQuantityLimits';
+  DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT,
+  MAX_FREE_DELIVERY_MINIMUM_AMOUNT,
+} from '@/libs/freeDelivery';
 import type { RestaurantFormData, RestaurantWorkingHour } from '@/types/restaurant';
 
 const RestaurantLocation = dynamic(() => import('@/components/shared/RestaurantLocation'), {
@@ -47,6 +48,8 @@ const formatRestaurantDataForForm = (restaurant: RestaurantFormData | undefined)
 
   return {
     ...restaurant,
+    freeDeliveryMinimumAmount:
+      restaurant.freeDeliveryMinimumAmount ?? DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT,
     minimumOrderAmount: restaurant.minimumOrderAmount ?? 10,
     averagePreparationMinutes: restaurant.averagePreparationMinutes ?? 25,
     averageDeliveryMinutes: restaurant.averageDeliveryMinutes ?? 20,
@@ -98,6 +101,7 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
     description: '',
     tax: 17,
     courierFee: 5,
+    freeDeliveryMinimumAmount: DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT,
     minimumOrderAmount: 10,
     averagePreparationMinutes: 25,
     averageDeliveryMinutes: 20,
@@ -181,6 +185,7 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
       description: data.description,
       tax: data.tax,
       courierFee: data.courierFee,
+      freeDeliveryMinimumAmount: data.freeDeliveryMinimumAmount,
       minimumOrderAmount: data.minimumOrderAmount,
       averagePreparationMinutes: data.averagePreparationMinutes,
       averageDeliveryMinutes: data.averageDeliveryMinutes,
@@ -447,6 +452,15 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
     }
     if (formData.minimumOrderAmount < 1 || formData.minimumOrderAmount > 100) {
       sonnerToast.error('Minimum order amount must be between $1 and $100');
+      return false;
+    }
+    if (
+      formData.freeDeliveryMinimumAmount < 0 ||
+      formData.freeDeliveryMinimumAmount > MAX_FREE_DELIVERY_MINIMUM_AMOUNT
+    ) {
+      sonnerToast.error(
+        `Free delivery threshold must be between $0 and $${MAX_FREE_DELIVERY_MINIMUM_AMOUNT}`
+      );
       return false;
     }
     if (formData.averageDeliveryMinutes < 0 || formData.averageDeliveryMinutes > 240) {
@@ -925,6 +939,32 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
                   <Plus className='h-4 w-4' />
                 </Button>
               </div>
+              <p className='mt-1 text-xs text-muted-foreground'>
+                This is the fixed courier payout for each completed delivery.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor='freeDeliveryMinimumAmount' className='mb-2'>
+                Free Delivery Over *
+              </Label>
+              <div className='flex items-center gap-2'>
+                <span className='text-sm text-muted-foreground'>$</span>
+                <Input
+                  id='freeDeliveryMinimumAmount'
+                  type='number'
+                  min='0'
+                  max={MAX_FREE_DELIVERY_MINIMUM_AMOUNT}
+                  step='1'
+                  value={formData.freeDeliveryMinimumAmount}
+                  onChange={(e) => handleNumberChange(e, 'freeDeliveryMinimumAmount')}
+                  required
+                />
+              </div>
+              <p className='mt-1 text-xs text-muted-foreground'>
+                Customers pay $0 delivery when the food subtotal reaches this amount. Courier payout
+                still uses the courier fee above.
+              </p>
             </div>
 
             <div>
@@ -1059,7 +1099,6 @@ const RestaurantForm = ({ restaurant, isEdit = false }: RestaurantFormProps) => 
                   order.
                 </p>
               </div>
-
             </div>
 
             <div className='grid gap-4 sm:grid-cols-2'>

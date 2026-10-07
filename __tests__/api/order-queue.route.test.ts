@@ -85,7 +85,20 @@ describe('GET /api/orders/queue', () => {
       total: 24,
       createdAt: new Date(),
       courierAssignmentStatus: 'expired',
-      cartProducts: [],
+      cartProducts: [
+        {
+          name: 'Pizza Four Cheese',
+          quantity: 2,
+          size: 'large',
+          note: 'No onions, cut into small slices',
+        },
+        {
+          name: 'Sparkling Water',
+          quantity: 1,
+          size: 'single',
+          note: '',
+        },
+      ],
       toObject() {
         return {
           _id: 'order-1',
@@ -115,7 +128,80 @@ describe('GET /api/orders/queue', () => {
         _id: 'order-1',
         courierAssignmentStatus: 'expired',
         isCourierAssignmentExpired: true,
+        itemCount: 3,
+        hasItemNotes: true,
+        cartProducts: [
+          {
+            name: 'Pizza Four Cheese',
+            quantity: 2,
+            size: 'large',
+            note: 'No onions, cut into small slices',
+          },
+          {
+            name: 'Sparkling Water',
+            quantity: 1,
+            size: 'single',
+            note: '',
+          },
+        ],
       }),
     ]);
+  });
+
+  it('normalizes incomplete cart product details for the kitchen queue', async () => {
+    const order = {
+      _id: { toString: () => 'order-2' },
+      email: 'customer@example.com',
+      orderStatus: 'processing',
+      orderPaid: true,
+      paid: true,
+      total: 12,
+      createdAt: new Date(),
+      courierAssignmentStatus: null,
+      cartProducts: [
+        {
+          name: '',
+          quantity: 0,
+          size: '',
+          note: null,
+        },
+      ],
+      toObject() {
+        return {
+          _id: 'order-2',
+          email: this.email,
+          orderStatus: this.orderStatus,
+          orderPaid: this.orderPaid,
+          paid: this.paid,
+          total: this.total,
+          createdAt: this.createdAt,
+          courierAssignmentStatus: this.courierAssignmentStatus,
+          cartProducts: this.cartProducts,
+        };
+      },
+    };
+
+    vi.mocked(Order.find).mockReturnValue(createOrderFindQuery([order]) as never);
+
+    const { GET } = await import('@/app/api/orders/queue/route');
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.orders[0]).toEqual(
+      expect.objectContaining({
+        _id: 'order-2',
+        itemCount: 1,
+        hasItemNotes: false,
+        cartProducts: [
+          {
+            name: 'Menu item',
+            quantity: 1,
+            size: 'single',
+            note: '',
+          },
+        ],
+      })
+    );
   });
 });

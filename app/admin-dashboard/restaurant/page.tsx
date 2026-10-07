@@ -493,6 +493,12 @@ const RestaurantPage = () => {
                 ${(restaurant.minimumOrderAmount || 10).toFixed(2)}
               </p>
             </div>
+            <div className='rounded-lg border p-3'>
+              <p className='text-sm text-muted-foreground'>Free Delivery Over</p>
+              <p className='text-lg font-semibold'>
+                ${(restaurant.freeDeliveryMinimumAmount ?? 50).toFixed(2)}
+              </p>
+            </div>
             <div className='grid gap-3 sm:grid-cols-2'>
               <div className='rounded-lg border p-3'>
                 <p className='text-sm text-muted-foreground'>Average Prep</p>

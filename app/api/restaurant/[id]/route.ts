@@ -52,6 +52,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
           images: restaurant.images,
           tax: restaurant.tax,
           courierFee: restaurant.courierFee,
+          freeDeliveryMinimumAmount: restaurant.freeDeliveryMinimumAmount ?? 50,
           minimumOrderAmount: orderingStatus.minimumOrderAmount,
           averagePreparationMinutes: restaurant.averagePreparationMinutes,
           averageDeliveryMinutes: restaurant.averageDeliveryMinutes,

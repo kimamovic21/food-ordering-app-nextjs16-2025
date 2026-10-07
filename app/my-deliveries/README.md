@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns the `/my-deliveries` UI area. It may include pages, loading states, nested route components, and client-side workflow helpers.
+This folder owns the `/my-deliveries` UI area. It may include pages, loading states, nested route components, courier payout summaries, and client-side workflow helpers.
 
 ## Route And Audience
 
@@ -19,6 +19,7 @@ This folder owns the `/my-deliveries` UI area. It may include pages, loading sta
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/my-deliveries`, `/api/my-deliveries/${orderId}`, `/api/my-orders?id=${encodeURIComponent(orderId)}`. Keep API response shapes aligned.
+- Earnings summaries should use `courierPayoutAmount` when present, not the customer-facing `deliveryFee`, because customers may unlock free delivery while the courier still earns the restaurant-funded payout.
 
 ## Important Files
 
@@ -49,6 +50,7 @@ This folder owns the `/my-deliveries` UI area. It may include pages, loading sta
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Do not calculate courier earnings from `deliveryFee` alone. Free delivery can make `deliveryFee` equal `0`, while `courierPayoutAmount` remains the amount the courier should see.
 
 ## How To Explain This In A Presentation
 

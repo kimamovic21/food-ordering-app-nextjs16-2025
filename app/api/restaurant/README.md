@@ -18,7 +18,7 @@ Handles get/post/put/delete work for the restaurant-owner operations area. The r
 
 - The route receives GET/POST/PUT/DELETE requests and converts request/session data into server-side business checks.
 - It uses `menuItem`, `restaurant`, `user` for persistence.
-- It delegates shared logic to `auditLog`, `authOptions`, `cloudinary`, `mongoConnect`, `orderDeletionGuards`, `orderQuantityLimits`, `restaurantAvailabilityRequests`, `restaurantOrderingStatus` so behavior stays consistent across the app.
+- It delegates shared logic to `auditLog`, `authOptions`, `cloudinary`, `freeDelivery`, `mongoConnect`, `orderDeletionGuards`, `orderQuantityLimits`, `restaurantAvailabilityRequests`, `restaurantOrderingStatus` so behavior stays consistent across the app.
 - Detected local functions/handlers: `normalizeBlockedDates`, `sanitizeRestaurantPayload`, `legacyTaxRules`, `legacyImage`.
 
 ## Request Inputs
@@ -33,6 +33,7 @@ Handles get/post/put/delete work for the restaurant-owner operations area. The r
 - `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
 - `mongoose` + MongoDB models: keep users, restaurants, menu items, orders, coupons, reviews, and audit data server-authoritative.
 - `cloudinary`: stores uploaded user, restaurant, category, and menu-item images; cleanup logic removes replaced or deleted assets by public id.
+- `libs/freeDelivery.ts`: normalizes the restaurant free delivery threshold before persistence so cart and checkout can calculate the same customer discount later.
 - `@react-pdf/renderer`: creates downloadable/report PDF output for admin reporting flows.
 
 ## Auth, Role, And Safety Checks
@@ -83,7 +84,7 @@ Handles get/post/put/delete work for the restaurant-owner operations area. The r
 ## Data Dependencies
 
 - Models: `menuItem`, `restaurant`, `user`
-- Shared libs: `auditLog`, `authOptions`, `cloudinary`, `mongoConnect`, `orderDeletionGuards`, `orderQuantityLimits`, `restaurantAvailabilityRequests`, `restaurantOrderingStatus`
+- Shared libs: `auditLog`, `authOptions`, `cloudinary`, `freeDelivery`, `mongoConnect`, `orderDeletionGuards`, `orderQuantityLimits`, `restaurantAvailabilityRequests`, `restaurantOrderingStatus`
 - Shared types: None detected
 
 ## Side Effects
@@ -97,7 +98,7 @@ Handles get/post/put/delete work for the restaurant-owner operations area. The r
 ## Response Behavior
 
 - Status codes detected: `200`, `201`, `400`, `401`, `403`, `404`, `409`, `500`
-- Common response fields detected: `blockedDates`, `date`, `reason`, `normalized`, `valid`, `body`, `includeId`, `tax`, `courierFee`, `minimumOrderAmount`, `averagePreparationMinutes`, `averageDeliveryMinutes`, `activeOrderLimit`, `maxItemsPerOrder`, `deliveryRadiusKm`, `totalEmployees`, `images`, `compatibility`, `payload`, `name`, `street`, `city`, `postalCode`, `country`, `latitude`, `longitude`, `contact`, `email`, `webAddress`, `description`, `isPaused`, `pauseReason`, `workingHours`, `error`, `ownerId`, `restaurant`, `percentage`, `set`, `unset`, `taxRules`, `image`, `includeCourierReadiness`, `orderingLoad`, `activeKitchenOrders`, `availableCouriers`
+- Common response fields detected: `blockedDates`, `date`, `reason`, `normalized`, `valid`, `body`, `includeId`, `tax`, `courierFee`, `freeDeliveryMinimumAmount`, `minimumOrderAmount`, `averagePreparationMinutes`, `averageDeliveryMinutes`, `activeOrderLimit`, `maxItemsPerOrder`, `deliveryRadiusKm`, `totalEmployees`, `images`, `compatibility`, `payload`, `name`, `street`, `city`, `postalCode`, `country`, `latitude`, `longitude`, `contact`, `email`, `webAddress`, `description`, `isPaused`, `pauseReason`, `workingHours`, `error`, `ownerId`, `restaurant`, `percentage`, `set`, `unset`, `taxRules`, `image`, `includeCourierReadiness`, `orderingLoad`, `activeKitchenOrders`, `availableCouriers`
 
 ## How To Explain This In A Presentation
 

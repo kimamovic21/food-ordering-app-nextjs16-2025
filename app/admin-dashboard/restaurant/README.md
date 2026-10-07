@@ -22,7 +22,7 @@ This folder owns admin-facing UI for `/admin-dashboard/restaurant`, including re
 
 ## Restaurant Management Workflow
 
-- Create/edit screens collect restaurant identity, contact, address, delivery radius, minimum order amount, preparation/delivery estimates, active order limit, pause status, working hours, blocked dates, and image gallery data.
+- Create/edit screens collect restaurant identity, contact, address, delivery radius, minimum order amount, courier fee, free delivery threshold, preparation/delivery estimates, active order limit, pause status, working hours, blocked dates, and image gallery data.
 - `RestaurantForm.tsx` normalizes coordinate input as strings so latitude/longitude fields can be emptied and pasted without forced leading zeroes.
 - In development, `DevRestaurantLocationDialog` lets the admin simulate restaurant coordinates without affecting production behavior.
 - `RestaurantImagesUpload.tsx` manages local image selection, removal, and drag-and-drop ordering before final form submission.
@@ -69,11 +69,11 @@ This folder owns admin-facing UI for `/admin-dashboard/restaurant`, including re
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
 - Keep Cloudinary upload errors visible to the admin because saving a restaurant with missing image URLs can create confusing partial state.
 - Do not trust client-side ownership checks; `/api/restaurant` and upload routes must still validate session/role/restaurant ownership.
-- Working hours, pause status, delivery radius, active order limits, and preparation/delivery estimates feed customer checkout UX, so update cart/ordering docs when those rules change.
+- Working hours, pause status, delivery radius, active order limits, free delivery threshold, courier fee, and preparation/delivery estimates feed customer checkout UX, so update cart/ordering docs when those rules change.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is where a restaurant owner configures the operational profile of their restaurant. It controls public restaurant details, Cloudinary image uploads, delivery settings, working hours, capacity limits, pause/busy behavior, and the values that later affect customer ordering and checkout validation.
+If someone asks what this folder does, say: this is where a restaurant owner configures the operational profile of their restaurant. It controls public restaurant details, Cloudinary image uploads, delivery settings, courier fee, free delivery threshold, working hours, capacity limits, pause/busy behavior, and the values that later affect customer ordering and checkout validation.
 
 ## Maintenance Notes For Future Work
 

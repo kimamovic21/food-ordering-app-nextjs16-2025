@@ -94,7 +94,8 @@ describe('GET /api/courier-earnings', () => {
             completedAt: new Date('2026-02-01T10:20:00.000Z'),
             updatedAt: new Date('2026-02-01T10:20:00.000Z'),
             estimatedDeliveryMinutes: 25,
-            deliveryFee: 6,
+            deliveryFee: 0,
+            courierPayoutAmount: 6,
           },
         ]) as never
       )

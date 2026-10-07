@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns the `/my-deliveries/[id]` UI area. It may include pages, loading states, nested route components, and client-side workflow helpers.
+This folder owns the `/my-deliveries/[id]` UI area. It may include pages, loading states, nested route components, courier payout display, and client-side workflow helpers.
 
 ## Route And Audience
 
@@ -19,6 +19,7 @@ This folder owns the `/my-deliveries/[id]` UI area. It may include pages, loadin
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/my-deliveries/${orderId}`, `/api/my-orders?id=${encodeURIComponent(orderId)}`. Keep API response shapes aligned.
+- The delivery details screen distinguishes the customer delivery fee from the courier payout. When free delivery is unlocked, the customer delivery fee can be `$0`, but the courier payout should still show the saved `courierPayoutAmount`.
 
 ## Important Files
 
@@ -44,6 +45,7 @@ This folder owns the `/my-deliveries/[id]` UI area. It may include pages, loadin
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Keep payout labels explicit so couriers do not confuse a customer discount with a missing earning.
 
 ## How To Explain This In A Presentation
 

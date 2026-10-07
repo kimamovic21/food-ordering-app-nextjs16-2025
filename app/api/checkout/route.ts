@@ -15,11 +15,9 @@ import {
 import { createAuditLog } from '@/libs/auditLog';
 import { addMoney, multiplyMoney, roundMoney, subtractMoney } from '@/libs/money';
 import { normalizeCartItemNote } from '@/libs/cartItemNotes';
+import { calculateFreeDeliveryPricing } from '@/libs/freeDelivery';
 import { normalizePhoneNumberForStorage } from '@/libs/phone';
-import {
-  normalizeDeliveryCoordinate,
-  validateCartForOrder,
-} from '@/libs/cartValidation';
+import { normalizeDeliveryCoordinate, validateCartForOrder } from '@/libs/cartValidation';
 import {
   createRateLimitKey,
   createRateLimitResponse,
@@ -124,6 +122,10 @@ const createCheckoutFingerprint = ({
     subtotal: number;
     taxAmount: number;
     deliveryFee: number;
+    courierPayoutAmount: number;
+    freeDeliveryMinimumAmount: number;
+    freeDeliveryDiscount: number;
+    isFreeDelivery: boolean;
     loyaltyDiscount: number;
     loyaltyDiscountPercentage: number;
     couponCode: string | null;
@@ -161,6 +163,10 @@ const createCheckoutFingerprint = ({
       subtotal: roundToTwoDecimals(pricing.subtotal),
       taxAmount: roundToTwoDecimals(pricing.taxAmount),
       deliveryFee: roundToTwoDecimals(pricing.deliveryFee),
+      courierPayoutAmount: roundToTwoDecimals(pricing.courierPayoutAmount),
+      freeDeliveryMinimumAmount: roundToTwoDecimals(pricing.freeDeliveryMinimumAmount),
+      freeDeliveryDiscount: roundToTwoDecimals(pricing.freeDeliveryDiscount),
+      isFreeDelivery: pricing.isFreeDelivery,
       loyaltyDiscount: roundToTwoDecimals(pricing.loyaltyDiscount),
       loyaltyDiscountPercentage: pricing.loyaltyDiscountPercentage,
       couponCode: pricing.couponCode,
@@ -198,16 +204,18 @@ const createStripeLineItems = ({
     }
   );
 
-  stripeLineItems.push({
-    quantity: 1,
-    price_data: {
-      currency: 'usd',
-      unit_amount: Math.round(deliveryFee * 100),
-      product_data: {
-        name: 'Delivery Fee',
+  if (deliveryFee > 0) {
+    stripeLineItems.push({
+      quantity: 1,
+      price_data: {
+        currency: 'usd',
+        unit_amount: Math.round(deliveryFee * 100),
+        product_data: {
+          name: 'Delivery Fee',
+        },
       },
-    },
-  });
+    });
+  }
 
   return stripeLineItems;
 };
@@ -652,7 +660,8 @@ export async function POST(req: Request) {
         user,
         restaurant,
         restaurantId,
-        message: restaurantValidation.message || 'This restaurant is not accepting orders right now.',
+        message:
+          restaurantValidation.message || 'This restaurant is not accepting orders right now.',
         reason: 'restaurant_not_accepting_orders',
         status: 409,
         metadata: {
@@ -746,7 +755,18 @@ export async function POST(req: Request) {
     verifiedLoyaltyPercentage / 100
   );
   const taxAmount = multiplyMoney(subtotal, restaurant.tax / 100);
-  const deliveryFee = roundToTwoDecimals(restaurant.courierFee || 5);
+  const deliveryPricing = calculateFreeDeliveryPricing({
+    subtotal,
+    courierFee: restaurant.courierFee || 5,
+    freeDeliveryMinimumAmount: (restaurant as any).freeDeliveryMinimumAmount,
+  });
+  const {
+    courierPayoutAmount,
+    deliveryFee,
+    freeDeliveryDiscount,
+    freeDeliveryMinimumAmount,
+    isFreeDelivery,
+  } = deliveryPricing;
   const estimatedPreparationMinutes = Math.max(
     0,
     Number(restaurantValidation?.estimatedPreparationMinutes) ||
@@ -808,6 +828,10 @@ export async function POST(req: Request) {
       subtotal,
       taxAmount,
       deliveryFee,
+      courierPayoutAmount,
+      freeDeliveryMinimumAmount,
+      freeDeliveryDiscount,
+      isFreeDelivery,
       loyaltyDiscount: verifiedLoyaltyDiscount,
       loyaltyDiscountPercentage: verifiedLoyaltyPercentage,
       couponCode: couponSnapshot.couponCode,
@@ -858,6 +882,10 @@ export async function POST(req: Request) {
     taxPercentage: restaurant.tax,
     taxAmount,
     deliveryFee,
+    courierPayoutAmount,
+    freeDeliveryMinimumAmount,
+    freeDeliveryDiscount,
+    isFreeDelivery,
     estimatedPreparationMinutes,
     estimatedDeliveryMinutes,
     estimatedTotalMinutes,

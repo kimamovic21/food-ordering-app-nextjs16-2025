@@ -23,6 +23,10 @@ import {
   normalizeCouponCode,
   type CouponLike,
 } from '@/libs/coupon';
+import {
+  DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT,
+  calculateFreeDeliveryPricing,
+} from '@/libs/freeDelivery';
 import { getCartTotalQuantity, normalizeItemsPerOrderLimit } from '@/libs/orderQuantityLimits';
 import useProfile from '@/hooks/useProfile';
 import useDeliveryAddresses from '@/hooks/useDeliveryAddresses';
@@ -529,13 +533,7 @@ const CartPage = () => {
     const { name, value } = e.target;
     if (
       selectedDeliveryAddressId &&
-      [
-        'phone',
-        'streetAddress',
-        'postalCode',
-        'city',
-        'country',
-      ].includes(name)
+      ['phone', 'streetAddress', 'postalCode', 'city', 'country'].includes(name)
     ) {
       setSelectedDeliveryAddressId('');
     }
@@ -579,20 +577,39 @@ const CartPage = () => {
   // Calculate included tax amount and delivery fee from the single restaurant
   const calculateTotals = () => {
     const restaurantId = cartItems[0]?.restaurantId;
+    const emptyTotals = {
+      courierPayoutAmount: 0,
+      freeDeliveryDiscount: 0,
+      freeDeliveryMinimumAmount: DEFAULT_FREE_DELIVERY_MINIMUM_AMOUNT,
+      includedTax: 0,
+      isFreeDelivery: false,
+      remainingForFreeDelivery: 0,
+      taxPercentage: 0,
+      totalDeliveryFee: 0,
+    };
 
     if (!restaurantId) {
-      return { includedTax: 0, taxPercentage: 0, totalDeliveryFee: 0 };
+      return emptyTotals;
     }
 
     const restaurant = restaurants.get(restaurantId);
     if (!restaurant) {
-      return { includedTax: 0, taxPercentage: 0, totalDeliveryFee: 0 };
+      return emptyTotals;
     }
 
     const includedTax = subtotal * (restaurant.tax / 100);
-    const totalDeliveryFee = restaurant.courierFee || 5;
+    const deliveryPricing = calculateFreeDeliveryPricing({
+      subtotal,
+      courierFee: restaurant.courierFee || 5,
+      freeDeliveryMinimumAmount: restaurant.freeDeliveryMinimumAmount,
+    });
 
-    return { includedTax, taxPercentage: restaurant.tax, totalDeliveryFee };
+    return {
+      includedTax,
+      taxPercentage: restaurant.tax,
+      totalDeliveryFee: deliveryPricing.deliveryFee,
+      ...deliveryPricing,
+    };
   };
 
   // Check if cart has items from multiple restaurants
@@ -1305,7 +1322,16 @@ const CartPage = () => {
     );
   }
 
-  const { includedTax, taxPercentage, totalDeliveryFee } = calculateTotals();
+  const {
+    courierPayoutAmount,
+    freeDeliveryDiscount,
+    freeDeliveryMinimumAmount,
+    includedTax,
+    isFreeDelivery,
+    remainingForFreeDelivery,
+    taxPercentage,
+    totalDeliveryFee,
+  } = calculateTotals();
   const multipleRestaurants = hasMultipleRestaurants();
   const restaurantOpen = isRestaurantOpen();
   const restaurantPaused = isRestaurantPaused();
@@ -1504,7 +1530,11 @@ const CartPage = () => {
         !restaurantPaused &&
         !restaurantBusy && (
           <CartAvailabilityBanner
-            tone={restaurantEtaTone === 'busy' || restaurantEtaTone === 'moderate' ? 'warning' : 'success'}
+            tone={
+              restaurantEtaTone === 'busy' || restaurantEtaTone === 'moderate'
+                ? 'warning'
+                : 'success'
+            }
             icon={
               restaurantEtaTone === 'busy' || restaurantEtaTone === 'moderate' ? (
                 <Clock3 className='size-5' aria-hidden='true' />
@@ -1543,7 +1573,8 @@ const CartPage = () => {
               </p>
               <p className='mt-1 text-sm text-amber-700 dark:text-amber-200'>
                 {restaurantName} accepts up to {maxItemsPerOrder} items in one order. Your cart has{' '}
-                {cartTotalQuantity} items. Please lower the quantity or place a separate order later.
+                {cartTotalQuantity} items. Please lower the quantity or place a separate order
+                later.
               </p>
             </div>
           </div>
@@ -1699,6 +1730,11 @@ const CartPage = () => {
             includedTax={includedTax}
             taxPercentage={taxPercentage}
             deliveryFee={totalDeliveryFee}
+            courierPayoutAmount={courierPayoutAmount}
+            freeDeliveryMinimumAmount={freeDeliveryMinimumAmount}
+            freeDeliveryDiscount={freeDeliveryDiscount}
+            isFreeDelivery={isFreeDelivery}
+            remainingForFreeDelivery={remainingForFreeDelivery}
             loyaltyDiscountPercentage={loyaltyDiscountPercentage}
             loyaltyDiscount={loyaltyDiscount}
             couponCode={couponCode}
