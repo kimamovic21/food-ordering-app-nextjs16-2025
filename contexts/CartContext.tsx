@@ -28,7 +28,11 @@ export type AddToCartResult =
   | { added: true }
   | {
       added: false;
-      reason: 'different_restaurant' | 'item_quantity_limit' | 'order_quantity_limit';
+      reason:
+        | 'different_restaurant'
+        | 'item_quantity_limit'
+        | 'item_stock_limit'
+        | 'order_quantity_limit';
       message: string;
     };
 

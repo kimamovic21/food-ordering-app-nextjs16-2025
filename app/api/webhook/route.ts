@@ -2,6 +2,7 @@ import { headers } from 'next/headers';
 import { Coupon } from '@/models/coupon';
 import { Order } from '@/models/order';
 import { MenuItem } from '@/models/menuItem';
+import { applyPaidOrderInventoryAdjustment } from '@/libs/menuItemInventoryServer';
 import { Restaurant } from '@/models/restaurant';
 import { notifyRestaurantAdminsAboutPaidOrder } from '@/libs/notifications';
 import { sendPurchaseReceiptEmail } from './sendPurchaseReceiptEmail';
@@ -53,6 +54,39 @@ export async function POST(req: Request) {
         }
 
         const wasPaid = Boolean((order as any).orderPaid ?? (order as any).paid);
+
+        if (!wasPaid) {
+          const inventoryResult = await applyPaidOrderInventoryAdjustment(order);
+
+          if (!inventoryResult.ok) {
+            const firstViolation = inventoryResult.violations[0];
+            const reason = firstViolation
+              ? `${firstViolation.menuItemName} has only ${firstViolation.stockQuantity} left, but the paid order requested ${firstViolation.requestedQuantity}.`
+              : 'Inventory was unavailable after payment.';
+
+            (order as any).orderPaid = true;
+            (order as any).paid = true;
+            (order as any).orderStatus = 'canceled';
+            (order as any).stripeSessionId = session.id;
+            (order as any).canceledBy = 'system';
+            (order as any).canceledAt = new Date();
+            (order as any).cancellationReason =
+              'Inventory changed before payment confirmation. Refund review required.';
+            (order as any).refundStatus = 'review_required';
+            (order as any).refundReason = reason;
+            (order as any).refundAmount = Number((order as any).total) || 0;
+            (order as any).refundRequestedAt = new Date();
+            (order as any).inventoryAdjustmentError = reason;
+            await order.save();
+
+            return new Response(JSON.stringify({ received: true }), { status: 200 });
+          }
+
+          if (inventoryResult.adjusted) {
+            (order as any).inventoryAdjustedAt = new Date();
+          }
+        }
+
         (order as any).orderPaid = true;
         (order as any).paid = true; // keep legacy flag in sync
         if (!(order as any).orderStatus) {

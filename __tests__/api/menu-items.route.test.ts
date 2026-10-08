@@ -185,6 +185,41 @@ describe('/api/menu-items route', () => {
     );
   });
 
+  it('creates tracked inventory settings when the admin enables stock tracking', async () => {
+    vi.mocked(MenuItem.create).mockResolvedValueOnce({
+      _id: 'menu-2',
+      name: 'Cheesecake',
+      stockQuantity: 8,
+      trackInventory: true,
+    } as never);
+
+    const { POST } = await loadMenuItemsRoute();
+    const res = await POST(
+      createRequest({
+        name: 'Cheesecake',
+        description: 'Limited dessert',
+        image: 'https://example.com/cake.jpg',
+        category: 'category-1',
+        priceType: 'single',
+        priceSmall: '4.50',
+        trackInventory: true,
+        stockQuantity: 8,
+        lowStockThreshold: 2,
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body._id).toBe('menu-2');
+    expect(MenuItem.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lowStockThreshold: 2,
+        stockQuantity: 8,
+        trackInventory: true,
+      })
+    );
+  });
+
   it('updates only menu item availability for the owning admin', async () => {
     vi.mocked(MenuItem.findById).mockResolvedValueOnce({
       _id: 'menu-1',

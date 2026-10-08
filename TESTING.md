@@ -34,6 +34,7 @@ Auth is a high-value and high-risk area. Testing register and login first gives 
   - credentials `authorize` handler in `libs/authOptions.ts`
   - restaurant availability helpers in `libs/restaurantAvailability.ts`
   - restaurant capacity, load-adjusted ETA, and capacity-aware ordering-status helpers in `libs/restaurantCapacity.ts`, `libs/restaurantEta.ts`, and `libs/restaurantOrderingStatus.ts`
+  - menu item inventory helpers in `libs/menuItemInventory.ts`
   - order quantity limit helpers in `libs/orderQuantityLimits.ts`
   - order capacity backfill helper behavior in `libs/orderCapacityBackfill.ts`
   - restaurant operations overview summaries in `libs/restaurantOperations.ts`
@@ -49,7 +50,7 @@ Auth is a high-value and high-risk area. Testing register and login first gives 
   - profile management flow (info update, image upload/remove, account deletion)
   - checkout & payment flow (order creation, coupon application, payment webhook)
 
-Recent high-priority coverage also checks best coupon suggestion rules, restaurant closed/busy/minimum/radius/cart-quantity validation helpers, checkout quantity-limit blockers, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, kitchen order queue item-note payloads, checkout blocked-attempt audit logs and reason filters, pre-cart ordering status checks, saved delivery address duplicate matching, active customer order lookup, restaurant operations overview summaries, internal admin order notes staying out of customer payloads, ETA-style notification copy, unpaid payment-expiry countdowns, order activity events, order delay warnings, courier delivery summaries, delete protection for active restaurant/menu orders, Redis rate-limit helper behavior, Stripe Checkout session expiration for stale unpaid/customer-canceled orders, and app date formatting helpers.
+Recent high-priority coverage also checks best coupon suggestion rules, restaurant closed/busy/minimum/radius/cart-quantity validation helpers, checkout quantity-limit blockers, menu item sold-out/stock-limit blockers, webhook inventory decrement/refund-review behavior, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, kitchen order queue item-note payloads, checkout blocked-attempt audit logs and reason filters, pre-cart ordering status checks, saved delivery address duplicate matching, active customer order lookup, restaurant operations overview summaries, internal admin order notes staying out of customer payloads, ETA-style notification copy, unpaid payment-expiry countdowns, order activity events, order delay warnings, courier delivery summaries, delete protection for active restaurant/menu orders, Redis rate-limit helper behavior, Stripe Checkout session expiration for stale unpaid/customer-canceled orders, and app date formatting helpers.
 
 ## Folder Layout
 
@@ -115,6 +116,12 @@ Useful focused command after order quantity-limit changes:
 
 ```bash
 npm run test:file -- __tests__/libs/orderQuantityLimits.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/models/menuItem.model.test.ts __tests__/models/restaurant.model.test.ts
+```
+
+Useful focused command after menu item inventory/sold-out changes:
+
+```bash
+npm run test:file -- __tests__/libs/menuItemInventory.test.ts __tests__/libs/orderQuantityLimits.test.ts __tests__/libs/cartValidation.test.ts __tests__/models/menuItem.model.test.ts __tests__/api/menu-items.route.test.ts __tests__/api/checkout.route.test.ts __tests__/api/webhook.route.test.ts
 ```
 
 Useful focused command after shared cart/checkout validation or order-index changes:

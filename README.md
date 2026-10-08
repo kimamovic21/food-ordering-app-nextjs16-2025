@@ -8,11 +8,12 @@ This is a full-stack food ordering platform built with Next.js App Router and Ty
 
 It includes:
 
-- customer authentication, profile management, saved delivery addresses, cart with per-item notes, checkout, active order quick access, and order history
+- customer authentication, profile management, saved delivery addresses, cart with per-item notes, inventory-aware checkout, active order quick access, and order history
 - restaurant browsing with search/filter/sort/pagination and shareable URLs
 - favorites for meals and restaurants
 - restaurant ordering-status checks before add-to-cart plus availability alerts when checkout is blocked by closed, paused, closing-soon, or busy restaurants
 - restaurant-controlled free delivery thresholds where customers can pay `$0` delivery after the configured subtotal while courier payout is still preserved
+- admin-controlled menu item inventory tracking with low-stock and sold-out automation
 - loyalty rewards with delivery fee discounts, tier progress, and an auditable rewards ledger
 - ratings and review flows
 - approved in-app messaging between customers, restaurant owners, admins, and couriers
@@ -45,7 +46,7 @@ It includes:
 - Authentication with credentials and Google OAuth
 - Profile editing (name, phone, address, avatar) and up to five saved delivery addresses for checkout reuse
 - Menu and restaurant discovery with filtering/sorting/search
-- Menu item availability indicators with disabled ordering for sold-out items
+- Menu item availability indicators with disabled ordering for unavailable, low-stock, and sold-out items
 - Add-to-cart restaurant ordering checks, prefetched for visible menu items, so closed, paused, closing-soon, or busy restaurants are blocked before the cart is changed
 - Cart with per-item special notes, checkout, best coupon suggestion, free delivery threshold messaging, busy/closed/radius restaurant checks, restaurant availability alerts, active order quick access, and order tracking
 - Favorites for menu items and restaurants
@@ -64,7 +65,7 @@ It includes:
 - Super-admin protected management actions
 - CRUD for categories, menu items, restaurants, and users
 - Super-admin user deletion with confirmation, active-order guards, Cloudinary cleanup, restaurant/menu/coupon cascade cleanup, review cleanup, and preserved historical orders
-- Menu item availability controls for temporarily unavailable or sold-out items, with delete protection while active orders still reference an item
+- Menu item availability and inventory controls for temporarily unavailable, low-stock, or sold-out items, with delete protection while active orders still reference an item
 - Restaurant preparation/delivery estimate settings, working-hours checkout protection, active order limit controls, free delivery threshold settings, and max-items-per-order controls
 - Courier management and order assignment with optional courier-only assignment notes
 - Order lifecycle management, internal admin order notes, operations overview, late-order operational alerts, kitchen order queue with item-note visibility, and dashboards/statistics
@@ -280,6 +281,7 @@ This project uses many dependencies; below are the main packages actively used i
 
 - Restaurants can configure average preparation time, average delivery time, and an active kitchen order limit in the admin restaurant form.
 - Restaurants can configure `maxItemsPerOrder` up to 20 items, and each menu item can configure `maxQuantityPerOrder` up to 20 units per order.
+- Menu items can optionally track stock. Existing items stay untracked until an admin enables inventory; newly tracked items default to 10 in stock, show low-stock warnings near the configured threshold, and automatically block sold-out checkout.
 - Restaurants can configure a free delivery threshold. When the food subtotal reaches the threshold, the customer delivery fee becomes `$0`, but the order still stores `courierPayoutAmount` from the restaurant courier fee so courier earnings and admin reporting do not disappear.
 - Checkout snapshots load-adjusted restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
 - Public menu item pages check the restaurant ordering status before adding to cart, while checkout remains the final server-side source of truth.
@@ -288,7 +290,8 @@ This project uses many dependencies; below are the main packages actively used i
 - `libs/restaurantEta.ts` increases preparation estimates as the active kitchen load rises, and exposes customer-facing busy messaging plus remaining active order slots.
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
-- Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits and total order item limits so oversized courier-unfriendly orders cannot bypass the UI.
+- Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits, tracked stock limits, sold-out blockers, and total order item limits so oversized or unavailable orders cannot bypass the UI.
+- Stripe webhooks decrement tracked menu item stock after payment confirmation. If inventory changes between checkout creation and payment confirmation, the paid order is system-canceled and marked for refund review instead of silently over-selling.
 - Blocked checkout attempts for active-order, restaurant-availability, capacity, unavailable-item, and quantity-limit reasons are written to audit logs as `checkout.blocked` without exposing secrets.
 - `libs/orderCapacityBackfill.ts` provides a server-only helper to dry-run or repair older restaurant/menu item documents that are missing or have out-of-range order capacity fields.
 - Checkout deduplicates recent identical unpaid `placed` order attempts by reusing or recovering the existing Stripe Checkout session instead of creating another order.

@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including restaurant operations, platform management, and protected dashboard workflows.
+This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including menu item creation/editing, image upload, price setup, availability toggles, quantity limits, optional inventory tracking, and protected dashboard workflows.
 
 ## Route And Audience
 
@@ -27,6 +27,9 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including re
 - New/edit pages load categories from `/api/categories`, upload selected images through `/api/upload/menu-items`, and save final menu item fields through `/api/menu-items`.
 - The AI description action calls `/api/ai/menu-item-description`, which uses the OpenAI integration to suggest polished item copy from the item context.
 - Price display respects `priceType` and saved price fields so single/double/triple-size items do not show misleading size labels.
+- Inventory tracking is optional per menu item. Existing menu items remain untracked until the admin enables stock tracking; new tracked items default to 10 units in stock and a low-stock threshold of 3.
+- When inventory tracking is enabled, the form saves `trackInventory`, `stockQuantity`, and `lowStockThreshold`. The table then shows in-stock, low-stock, sold-out, or untracked inventory state next to the manual availability state.
+- A manually unavailable item is still unavailable even if stock exists. A tracked item with zero stock is treated as sold out even if the manual availability toggle is still on.
 - The description preview intentionally truncates long descriptions and links to the public menu item detail route for full text.
 
 ## Important Files
@@ -38,7 +41,7 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including re
 - `app/admin-dashboard/menu-items/loading.tsx`: functions/components: `Skeleton`, `MenuItemsLoading`
 - `app/admin-dashboard/menu-items/MenuItemForm.tsx`: functions/components: `MenuItemForm`, `handleDescriptionIconKeyDown`; client component
 - `app/admin-dashboard/menu-items/MenuItemImage.tsx`: functions/components: `MenuItemImage`, `isValidImage`
-- `app/admin-dashboard/menu-items/MenuItems.tsx`: functions/components: `AvailabilityBadge`, `ItemImage`, `PricesCell`, `DescriptionPreview`, `AvailabilityCell`, `MenuItemActions`, `getCategoryId`, `getCategoryName`, `formatPrice`, `getDescriptionPreview`, `getLowestPrice`, `getEffectivePriceType`, `getPriceRows`, `handleConfirmDelete`, `MenuItems`; client component
+- `app/admin-dashboard/menu-items/MenuItems.tsx`: functions/components: `AvailabilityBadge`, `ItemImage`, `InventoryBadge`, `PricesCell`, `DescriptionPreview`, `AvailabilityCell`, `MenuItemActions`, `getCategoryId`, `getCategoryName`, `formatPrice`, `getDescriptionPreview`, `getLowestPrice`, `getEffectivePriceType`, `getPriceRows`, `handleConfirmDelete`, `MenuItems`; client component
 - `app/admin-dashboard/menu-items/new/layout.tsx`: functions/components: `AdminNewMenuItemLayout`
 - `app/admin-dashboard/menu-items/new/loading.tsx`: functions/components: `Skeleton`, `NewMenuItemLoading`
 - `app/admin-dashboard/menu-items/new/page.tsx`: functions/components: `NewMenuItemPage`, `fetchCategories`, `handleImageSelect`, `uploadImage`, `handleGenerateDescription`, `handleSubmit`, `resetForm`, `handlePriceTypeChange`; API calls: `/api/categories`, `/api/upload/menu-items`, `/api/ai/menu-item-description`, `/api/menu-items`; client component; form validation
@@ -52,6 +55,7 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including re
 - Calls `/api/menu-items`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/menu-items?_id=${id}`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/upload/menu-items`; inspect the matching API README/source before changing its response shape.
+- Uses `libs/menuItemInventory.ts` for client-safe stock labels/status. Do not import the server inventory helper into client components.
 
 ## Packages And Services Used
 
@@ -76,10 +80,11 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including re
 - Keep category ids/names aligned with `/api/categories` because filtering and badges depend on that relationship.
 - Preserve disabled/loading states during image upload, AI generation, save, delete, and availability toggles to avoid duplicate mutations.
 - When changing price logic, verify both the admin table and customer menu cards because the same saved fields feed both surfaces.
+- When changing inventory logic, verify admin table badges, public menu cards, cart validation, checkout, and Stripe webhook stock adjustment together. UI warnings improve UX, but checkout/webhook remain authoritative.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the restaurant inventory workspace. Admins manage menu items, categories, images, availability, size-based prices, and AI-assisted descriptions. Cloudinary handles the images, OpenAI helps generate descriptions, TanStack improves the table UX, and the API remains the authority for what is saved.
+If someone asks what this folder does, say: this is the restaurant inventory workspace. Admins manage menu items, categories, images, availability, size-based prices, max-per-order limits, and optional stock tracking. Cloudinary handles images, OpenAI helps generate descriptions, TanStack improves the table UX, and the API remains the authority for what is saved. Existing menu items are intentionally not forced into stock tracking; a restaurant opts in item by item.
 
 ## Maintenance Notes For Future Work
 

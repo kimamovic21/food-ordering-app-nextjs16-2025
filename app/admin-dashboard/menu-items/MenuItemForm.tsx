@@ -14,6 +14,11 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  MAX_LOW_STOCK_THRESHOLD,
+  MAX_MENU_ITEM_STOCK_QUANTITY,
+} from '@/libs/menuItemInventory';
 import { AI_MENU_DESCRIPTION_MAX_CHARS } from '@/libs/menuItemDescription';
 import {
   MAX_MENU_ITEM_QUANTITY_LIMIT,
@@ -32,6 +37,9 @@ interface MenuItemFormProps {
   priceMedium: string;
   priceLarge: string;
   maxQuantityPerOrder: string;
+  trackInventory: boolean;
+  stockQuantity: string;
+  lowStockThreshold: string;
   isAvailable: boolean;
   editingItem: string | null;
   isSaving: boolean;
@@ -45,6 +53,9 @@ interface MenuItemFormProps {
   onPriceMediumChange: (value: string) => void;
   onPriceLargeChange: (value: string) => void;
   onMaxQuantityPerOrderChange: (value: string) => void;
+  onTrackInventoryChange: (value: boolean) => void;
+  onStockQuantityChange: (value: string) => void;
+  onLowStockThresholdChange: (value: string) => void;
   onAvailabilityChange: (value: boolean) => void;
   onCancel: () => void;
 }
@@ -59,6 +70,9 @@ const MenuItemForm = ({
   priceMedium,
   priceLarge,
   maxQuantityPerOrder,
+  trackInventory,
+  stockQuantity,
+  lowStockThreshold,
   isAvailable,
   editingItem,
   isSaving,
@@ -72,6 +86,9 @@ const MenuItemForm = ({
   onPriceMediumChange,
   onPriceLargeChange,
   onMaxQuantityPerOrderChange,
+  onTrackInventoryChange,
+  onStockQuantityChange,
+  onLowStockThresholdChange,
   onAvailabilityChange,
   onCancel,
 }: MenuItemFormProps) => {
@@ -385,6 +402,68 @@ const MenuItemForm = ({
             Limit how many times this item can be added to one customer order. Allowed range is{' '}
             {MIN_MENU_ITEM_QUANTITY_LIMIT}-{MAX_MENU_ITEM_QUANTITY_LIMIT}.
           </p>
+        </div>
+
+        <div className='space-y-3 rounded-lg border bg-muted/20 p-3'>
+          <label className='flex items-start gap-3'>
+            <Checkbox
+              checked={trackInventory}
+              onCheckedChange={(checked) => onTrackInventoryChange(checked === true)}
+              disabled={isSaving}
+              className='mt-0.5'
+            />
+            <span className='space-y-1'>
+              <span className='block text-sm font-semibold'>Track inventory for this item</span>
+              <span className='block text-xs text-muted-foreground'>
+                Use this for limited batches. Existing menu items stay unlimited until this is
+                enabled.
+              </span>
+            </span>
+          </label>
+
+          {trackInventory && (
+            <div className='grid gap-3 sm:grid-cols-2'>
+              <div>
+                <Label htmlFor='stockQuantity' className='mb-2 block'>
+                  Current stock
+                </Label>
+                <Input
+                  id='stockQuantity'
+                  type='number'
+                  min='0'
+                  max={MAX_MENU_ITEM_STOCK_QUANTITY}
+                  step='1'
+                  value={stockQuantity}
+                  onChange={(e) => onStockQuantityChange(e.target.value)}
+                  placeholder='10'
+                  disabled={isSaving}
+                />
+                <p className='mt-1 text-xs text-muted-foreground'>
+                  Set `0` when this item is sold out.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor='lowStockThreshold' className='mb-2 block'>
+                  Low stock alert
+                </Label>
+                <Input
+                  id='lowStockThreshold'
+                  type='number'
+                  min='0'
+                  max={MAX_LOW_STOCK_THRESHOLD}
+                  step='1'
+                  value={lowStockThreshold}
+                  onChange={(e) => onLowStockThresholdChange(e.target.value)}
+                  placeholder={String(DEFAULT_LOW_STOCK_THRESHOLD)}
+                  disabled={isSaving}
+                />
+                <p className='mt-1 text-xs text-muted-foreground'>
+                  Public UI can show “Only a few left” when stock reaches this number.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         <label className='flex items-start gap-3 rounded-lg border bg-muted/30 p-3'>

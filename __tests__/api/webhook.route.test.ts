@@ -65,6 +65,7 @@ vi.mock('@/models/restaurant', () => ({
 vi.mock('@/models/menuItem', () => ({
   MenuItem: {
     find: vi.fn(),
+    updateOne: vi.fn(),
   },
 }));
 
@@ -80,6 +81,13 @@ const loadWebhookRoute = async () => {
   const mod = await import('@/app/api/webhook/route');
   return mod.POST;
 };
+
+const createMenuItemFindQuery = (items: unknown[]) =>
+  ({
+    select: vi.fn().mockReturnValue({
+      lean: vi.fn().mockResolvedValue(items),
+    }),
+  }) as never;
 
 describe('POST /api/webhook', () => {
   beforeEach(() => {
@@ -107,16 +115,19 @@ describe('POST /api/webhook', () => {
       }),
     } as never);
 
-    vi.mocked(MenuItem.find).mockReturnValue({
-      select: vi.fn().mockReturnValue({
-        lean: vi.fn().mockResolvedValue([
-          {
-            _id: { toString: () => 'menu-item-1' },
-            image: 'https://example.com/item.jpg',
-          },
-        ]),
-      }),
-    } as never);
+    vi.mocked(MenuItem.find).mockImplementation((query?: any) => {
+      if (query?.trackInventory === true) {
+        return createMenuItemFindQuery([]);
+      }
+
+      return createMenuItemFindQuery([
+        {
+          _id: { toString: () => 'menu-item-1' },
+          image: 'https://example.com/item.jpg',
+        },
+      ]);
+    });
+    vi.mocked(MenuItem.updateOne).mockResolvedValue({ modifiedCount: 1 } as never);
 
     stripeConstructEvent.mockReturnValue({
       type: 'checkout.session.completed',
@@ -225,6 +236,144 @@ describe('POST /api/webhook', () => {
         specialInstructions: 'Cut pizza into small slices.',
       })
     );
+  });
+
+  it('decrements tracked menu item inventory once when a checkout payment is confirmed', async () => {
+    vi.mocked(MenuItem.find).mockImplementation((query?: any) => {
+      if (query?.trackInventory === true) {
+        return createMenuItemFindQuery([
+          {
+            _id: { toString: () => 'menu-item-1' },
+            name: 'Pizza',
+            stockQuantity: 5,
+            trackInventory: true,
+          },
+        ]);
+      }
+
+      return createMenuItemFindQuery([
+        {
+          _id: { toString: () => 'menu-item-1' },
+          image: 'https://example.com/item.jpg',
+        },
+      ]);
+    });
+
+    const orderDocument = {
+      _id: { toString: () => 'order-1' },
+      restaurantId: 'restaurant-1',
+      email: 'customer@example.com',
+      cartProducts: [
+        {
+          productId: 'menu-item-1',
+          name: 'Pizza',
+          size: 'Large',
+          quantity: 2,
+          price: 12,
+        },
+      ],
+      taxAmount: 1,
+      deliveryFee: 2,
+      total: 27,
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      orderPaid: false,
+      paid: false,
+      orderStatus: '',
+      stripeSessionId: null,
+      receiptEmailSentAt: null,
+      inventoryAdjustedAt: null,
+      save: vi.fn(async function save(this: Record<string, unknown>) {
+        if (this.paid) {
+          this.receiptEmailSentAt = this.receiptEmailSentAt || new Date('2026-01-01T00:01:00.000Z');
+        }
+      }),
+    };
+
+    vi.mocked(Order.findById).mockResolvedValue(orderDocument as never);
+
+    const POST = await loadWebhookRoute();
+    const response = await POST(
+      new Request('http://localhost/api/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(MenuItem.updateOne).toHaveBeenCalledWith(
+      {
+        _id: 'menu-item-1',
+        stockQuantity: { $gte: 2 },
+        trackInventory: true,
+      },
+      {
+        $inc: { stockQuantity: -2 },
+        $set: { stockLastAdjustedAt: expect.any(Date) },
+      }
+    );
+    expect(orderDocument.inventoryAdjustedAt).toBeInstanceOf(Date);
+    expect(orderDocument.orderStatus).toBe('processing');
+    expect(notifyRestaurantAdminsAboutPaidOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a paid order for refund review when inventory disappears before webhook confirmation', async () => {
+    vi.mocked(MenuItem.find).mockImplementation((query?: any) => {
+      if (query?.trackInventory === true) {
+        return createMenuItemFindQuery([
+          {
+            _id: { toString: () => 'menu-item-1' },
+            name: 'Pizza',
+            stockQuantity: 0,
+            trackInventory: true,
+          },
+        ]);
+      }
+
+      return createMenuItemFindQuery([]);
+    });
+
+    const orderDocument = {
+      _id: { toString: () => 'order-1' },
+      restaurantId: 'restaurant-1',
+      email: 'customer@example.com',
+      cartProducts: [
+        {
+          productId: 'menu-item-1',
+          name: 'Pizza',
+          size: 'Large',
+          quantity: 1,
+          price: 12,
+        },
+      ],
+      total: 12,
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      orderPaid: false,
+      paid: false,
+      orderStatus: '',
+      stripeSessionId: null,
+      save: vi.fn(),
+    };
+
+    vi.mocked(Order.findById).mockResolvedValue(orderDocument as never);
+
+    const POST = await loadWebhookRoute();
+    const response = await POST(
+      new Request('http://localhost/api/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(orderDocument.orderPaid).toBe(true);
+    expect(orderDocument.paid).toBe(true);
+    expect(orderDocument.orderStatus).toBe('canceled');
+    expect((orderDocument as any).refundStatus).toBe('review_required');
+    expect((orderDocument as any).canceledBy).toBe('system');
+    expect((orderDocument as any).inventoryAdjustmentError).toContain('Pizza has only 0 left');
+    expect(MenuItem.updateOne).not.toHaveBeenCalled();
+    expect(notifyRestaurantAdminsAboutPaidOrder).not.toHaveBeenCalled();
+    expect(sendPurchaseReceiptEmail).not.toHaveBeenCalled();
   });
 
   it('returns success and does not mutate orders when metadata.orderId is missing', async () => {

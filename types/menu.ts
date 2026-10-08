@@ -20,6 +20,10 @@ export type MenuItemListItem = {
   priceMedium: number | null;
   priceLarge: number | null;
   maxQuantityPerOrder?: number;
+  trackInventory?: boolean;
+  stockQuantity?: number | null;
+  lowStockThreshold?: number | null;
+  stockLastAdjustedAt?: string | null;
   adminId?: EntityId;
   restaurantId: EntityId;
   isAvailable?: boolean;

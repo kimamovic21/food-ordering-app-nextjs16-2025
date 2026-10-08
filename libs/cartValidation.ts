@@ -1,10 +1,12 @@
 import mongoose from 'mongoose';
 
 import { normalizeCartItemNote } from '@/libs/cartItemNotes';
+import { getCartTotalQuantity, normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import {
-  getCartTotalQuantity,
-  normalizeMenuItemQuantityLimit,
-} from '@/libs/orderQuantityLimits';
+  getTrackedStockQuantity,
+  isInventoryTracked,
+  normalizeLowStockThreshold,
+} from '@/libs/menuItemInventory';
 import {
   getRestaurantCartValidationMessage,
   getRestaurantCartValidationStatus,
@@ -46,6 +48,7 @@ type CartValidationMenuItem = {
   description?: string | null;
   image?: string | null;
   isAvailable?: boolean;
+  lowStockThreshold?: unknown;
   maxQuantityPerOrder?: unknown;
   name?: string;
   priceLarge?: unknown;
@@ -53,6 +56,8 @@ type CartValidationMenuItem = {
   priceSmall?: unknown;
   priceType?: string;
   restaurantId?: unknown;
+  stockQuantity?: unknown;
+  trackInventory?: unknown;
 };
 
 export type CartOrderValidationResult = CartValidationResponse & {
@@ -183,7 +188,7 @@ export async function validateCartForOrder({
   const menuItems = uniqueIds.length
     ? await MenuItem.find({ _id: { $in: uniqueIds } })
         .select(
-          '_id name description image restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder'
+          '_id name description image restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder trackInventory stockQuantity lowStockThreshold'
         )
         .lean()
     : [];
@@ -226,6 +231,23 @@ export async function validateCartForOrder({
       };
     }
 
+    const stockQuantity = getTrackedStockQuantity(menuItem);
+
+    if (isInventoryTracked(menuItem) && stockQuantity != null && stockQuantity <= 0) {
+      return {
+        ...cartItem,
+        image: menuItem.image || null,
+        isAvailable: false,
+        lowStockThreshold: normalizeLowStockThreshold(menuItem.lowStockThreshold),
+        message: `${menuItem.name || 'This item'} is sold out.`,
+        name: menuItem.name,
+        restaurantId: serializeRestaurantId(menuItem.restaurantId) || cartItem.restaurantId,
+        status: 'sold_out' as const,
+        stockQuantity,
+        trackInventory: true,
+      };
+    }
+
     const sizePrice = getMenuItemSizePrice(menuItem, cartItem.requestedSize);
     if (!sizePrice) {
       return {
@@ -248,6 +270,7 @@ export async function validateCartForOrder({
       image: menuItem.image || null,
       isAvailable: true,
       maxQuantityPerOrder: normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder),
+      lowStockThreshold: normalizeLowStockThreshold(menuItem.lowStockThreshold),
       message: priceChanged
         ? `${menuItem.name || 'This item'} price changed from $${cartPrice?.toFixed(
             2
@@ -260,6 +283,8 @@ export async function validateCartForOrder({
       restaurantId: serializeRestaurantId(menuItem.restaurantId) || cartItem.restaurantId,
       size: sizePrice.size,
       status: 'valid' as const,
+      stockQuantity,
+      trackInventory: isInventoryTracked(menuItem),
     };
   });
 
@@ -293,6 +318,28 @@ export async function validateCartForOrder({
       isAvailable: false,
       message: `${item.name || 'This item'} is limited to ${maxQuantityPerOrder} per order. Your cart has ${itemQuantity}.`,
       status: 'quantity_limit' as const,
+    };
+  });
+
+  items = items.map((item) => {
+    if (item.status !== 'valid' || item.trackInventory !== true || item.stockQuantity == null) {
+      return item;
+    }
+
+    const itemQuantity = validItemQuantityById.get(item._id) || 0;
+
+    if (itemQuantity <= item.stockQuantity) {
+      return item;
+    }
+
+    return {
+      ...item,
+      isAvailable: false,
+      message:
+        item.stockQuantity <= 0
+          ? `${item.name || 'This item'} is sold out.`
+          : `${item.name || 'This item'} has only ${item.stockQuantity} left in stock. Your cart has ${itemQuantity}.`,
+      status: 'stock_limit' as const,
     };
   });
 

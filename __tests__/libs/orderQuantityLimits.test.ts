@@ -71,6 +71,27 @@ describe('order quantity limits', () => {
     );
   });
 
+  it('blocks adding another item when tracked stock would be exceeded', () => {
+    const violation = canAddItemToCart({
+      cartItems: [{ _id: 'cake-1', name: 'Cake', quantity: 2 }],
+      item: {
+        _id: 'cake-1',
+        name: 'Cake',
+        stockQuantity: 2,
+        trackInventory: true,
+      },
+      maxItemsPerOrder: 20,
+    });
+
+    expect(violation).toEqual(
+      expect.objectContaining({
+        itemQuantity: 3,
+        stockQuantity: 2,
+        type: 'item_stock_limit',
+      })
+    );
+  });
+
   it('validates existing carts against item and restaurant limits', () => {
     expect(
       validateCartQuantityLimits({

@@ -14,6 +14,7 @@ import Pizza from '@/public/pizza.png';
 import FavoriteToggleButton from '@/components/shared/FavoriteToggleButton';
 import HeartRating from '@/components/shared/HeartRating';
 import useRestaurantOrderingGate from '@/hooks/useRestaurantOrderingGate';
+import { getMenuItemInventoryLabel, getMenuItemInventoryStatus } from '@/libs/menuItemInventory';
 import type { CartSize } from '@/types/cart';
 import type { MenuItemListItem } from '@/types/menu';
 
@@ -40,7 +41,9 @@ const MenuItem = ({ item, href }: MenuItemProps) => {
     restaurantId: 'default',
     isAvailable: true,
   };
-  const isAvailable = displayItem.isAvailable !== false;
+  const inventoryStatus = getMenuItemInventoryStatus(displayItem);
+  const isSoldOut = inventoryStatus === 'sold_out';
+  const isAvailable = displayItem.isAvailable !== false && !isSoldOut;
 
   const imageUrl = displayItem.image || Pizza.src;
   const isRemoteImage =
@@ -141,6 +144,9 @@ const MenuItem = ({ item, href }: MenuItemProps) => {
         price,
         restaurantId: itemRestaurantId,
         maxQuantityPerOrder: displayItem.maxQuantityPerOrder,
+        trackInventory: displayItem.trackInventory,
+        stockQuantity: displayItem.stockQuantity,
+        lowStockThreshold: displayItem.lowStockThreshold,
       },
       { maxItemsPerOrder: orderingStatus.maxItemsPerOrder }
     );
@@ -190,7 +196,7 @@ const MenuItem = ({ item, href }: MenuItemProps) => {
           {!isAvailable && (
             <div className='absolute inset-0 flex items-center justify-center bg-black/65 text-white'>
               <span className='rounded-full border border-white/40 bg-black/40 px-4 py-2 text-sm font-semibold'>
-                Currently unavailable
+                {isSoldOut ? 'Sold out' : 'Currently unavailable'}
               </span>
             </div>
           )}
@@ -206,9 +212,14 @@ const MenuItem = ({ item, href }: MenuItemProps) => {
                   : undefined
               }
             >
-              {isAvailable ? 'Available' : 'Unavailable'}
+              {isAvailable ? 'Available' : isSoldOut ? 'Sold out' : 'Unavailable'}
             </Badge>
           </div>
+          {inventoryStatus === 'low_stock' && (
+            <p className='mb-2 text-center text-xs font-semibold text-amber-500'>
+              {getMenuItemInventoryLabel(displayItem)}
+            </p>
+          )}
           <Link href={href || `/menu/${displayItem._id}`} className='group'>
             <h4 className='text-center text-lg font-semibold transition-colors group-hover:text-primary'>
               {displayItem.name}
@@ -232,7 +243,9 @@ const MenuItem = ({ item, href }: MenuItemProps) => {
                 ? 'Checking...'
                 : isAvailable
                   ? `Add to cart $${getPrice()?.toFixed(2) || '0.00'}`
-                  : 'Unavailable'}
+                  : isSoldOut
+                    ? 'Sold out'
+                    : 'Unavailable'}
             </Button>
             <FavoriteToggleButton
               type='menu-item'

@@ -222,6 +222,13 @@ const OrderSchema = new Schema(
       default: null,
       index: true,
     },
+    inventoryAdjustedAt: { type: Date, default: null },
+    inventoryAdjustmentError: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 500,
+    },
     stripeSessionId: { type: String },
     receiptEmailSentAt: { type: Date, default: null },
     deliveryPin: { type: String, default: createDeliveryPin },

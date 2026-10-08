@@ -539,6 +539,22 @@ export async function POST(req: Request) {
         });
       }
 
+      if (blockingItem.status === 'sold_out') {
+        return createCheckoutBlockResponse({
+          user,
+          restaurant,
+          restaurantId,
+          message: blockingItem.message || `${blockingItem.name || 'This menu item'} is sold out.`,
+          reason: 'menu_item_sold_out',
+          status: 400,
+          metadata: {
+            menuItemId: menuItem?._id || blockingItem._id,
+            menuItemName: blockingItem.name,
+            stockQuantity: blockingItem.stockQuantity,
+          },
+        });
+      }
+
       if (blockingItem.status === 'invalid_size') {
         return createCheckoutBlockResponse({
           user,
@@ -550,6 +566,29 @@ export async function POST(req: Request) {
           metadata: {
             menuItemId: menuItem?._id || blockingItem._id,
             requestedSize: blockingItem.requestedSize,
+          },
+        });
+      }
+
+      if (blockingItem.status === 'stock_limit') {
+        const requestedItemQuantity = cartValidation.normalizedItems
+          .filter((item) => item._id === blockingItem._id)
+          .reduce((total, item) => total + Math.max(1, Number(item.quantity) || 1), 0);
+
+        return createCheckoutBlockResponse({
+          user,
+          restaurant,
+          restaurantId,
+          message:
+            blockingItem.message ||
+            `${blockingItem.name || 'This menu item'} has only ${blockingItem.stockQuantity ?? 0} left in stock.`,
+          reason: 'menu_item_stock_limit_exceeded',
+          status: 400,
+          metadata: {
+            menuItemId: menuItem?._id || blockingItem._id,
+            menuItemName: blockingItem.name,
+            requestedItemQuantity,
+            stockQuantity: blockingItem.stockQuantity,
           },
         });
       }

@@ -19,6 +19,9 @@ describe('MenuItem model validation', () => {
     const m: any = new MenuItem(data);
     await expect(m.validate()).resolves.toBeUndefined();
     expect(m.maxQuantityPerOrder).toBe(20);
+    expect(m.trackInventory).toBe(false);
+    expect(m.stockQuantity).toBeNull();
+    expect(m.lowStockThreshold).toBe(3);
   });
 
   it('rejects invalid priceType', async () => {
@@ -44,6 +47,21 @@ describe('MenuItem model validation', () => {
       adminId: '507f1f77bcf86cd799439011',
       restaurantId: '507f1f77bcf86cd799439011',
       maxQuantityPerOrder: 21,
+    };
+    const m: any = new MenuItem(data);
+    await expect(m.validate()).rejects.toBeTruthy();
+  });
+
+  it('rejects tracked stock above the inventory maximum', async () => {
+    const data: any = {
+      image: 'http://x.png',
+      name: 'Burger',
+      description: 'Tasty',
+      category: '507f1f77bcf86cd799439011',
+      adminId: '507f1f77bcf86cd799439011',
+      restaurantId: '507f1f77bcf86cd799439011',
+      stockQuantity: 1001,
+      trackInventory: true,
     };
     const m: any = new MenuItem(data);
     await expect(m.validate()).rejects.toBeTruthy();

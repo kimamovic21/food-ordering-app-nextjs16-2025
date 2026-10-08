@@ -1,3 +1,5 @@
+import { getTrackedStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
+
 export const MIN_ITEMS_PER_ORDER_LIMIT = 1;
 export const DEFAULT_ITEMS_PER_ORDER_LIMIT = 20;
 export const MAX_ITEMS_PER_ORDER_LIMIT = 20;
@@ -11,6 +13,8 @@ type QuantityLimitCartItem = {
   name?: string;
   quantity?: unknown;
   maxQuantityPerOrder?: unknown;
+  trackInventory?: unknown;
+  stockQuantity?: unknown;
 };
 
 export type CartQuantityLimitViolation =
@@ -26,6 +30,14 @@ export type CartQuantityLimitViolation =
       itemName: string;
       itemQuantity: number;
       maxQuantityPerOrder: number;
+      message: string;
+    }
+  | {
+      type: 'item_stock_limit';
+      itemId: string;
+      itemName: string;
+      itemQuantity: number;
+      stockQuantity: number;
       message: string;
     };
 
@@ -147,6 +159,7 @@ export const canAddItemToCart = ({
 }): CartQuantityLimitViolation | null => {
   const nextItemQuantity = getCartQuantityForMenuItem(cartItems, item._id) + 1;
   const itemLimit = normalizeMenuItemQuantityLimit(item.maxQuantityPerOrder);
+  const stockQuantity = getTrackedStockQuantity(item);
 
   if (nextItemQuantity > itemLimit) {
     return {
@@ -156,6 +169,20 @@ export const canAddItemToCart = ({
       itemQuantity: nextItemQuantity,
       maxQuantityPerOrder: itemLimit,
       message: `${item.name || 'This item'} is limited to ${itemLimit} per order.`,
+    };
+  }
+
+  if (isInventoryTracked(item) && stockQuantity != null && nextItemQuantity > stockQuantity) {
+    return {
+      type: 'item_stock_limit',
+      itemId: String(item._id || ''),
+      itemName: item.name || 'This item',
+      itemQuantity: nextItemQuantity,
+      stockQuantity,
+      message:
+        stockQuantity <= 0
+          ? `${item.name || 'This item'} is sold out.`
+          : `${item.name || 'This item'} has only ${stockQuantity} left in stock.`,
     };
   }
 
