@@ -12,13 +12,16 @@
 
 ## Plain-English Summary
 
-Receives Stripe webhook events, verifies the Stripe signature, marks orders paid, updates coupon usage, and triggers purchase notifications/receipt work.
+Receives Stripe webhook events, verifies the Stripe signature, marks orders paid, decrements tracked menu item stock, updates coupon usage, and triggers purchase notifications/receipt work.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
 - It uses `coupon`, `menuItem`, `order`, `restaurant` for persistence.
-- It delegates shared logic to `notifications` so behavior stays consistent across the app.
+- It delegates shared logic to `menuItemInventoryServer` and `notifications` so behavior stays consistent across the app.
+- On the first successful `checkout.session.completed` event for an unpaid order, tracked menu item stock is decremented once and the order stores `inventoryAdjustedAt`.
+- If stock changed after checkout creation but before payment confirmation, the webhook marks the paid order as system-canceled with `refundStatus: review_required` instead of allowing a silent over-sale.
+- Duplicate paid webhook events skip stock adjustment because `wasPaid`/`inventoryAdjustedAt` make the side effects idempotent.
 - Detected local functions/handlers: `productIds`, `items`.
 
 ## Request Inputs
@@ -32,6 +35,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 - `resend`: sends transactional emails such as verification links, password reset links, and purchase receipts.
 - `@react-email/components` and `@react-email/render`: define the email templates that Resend sends.
 - `stripe`: creates Checkout sessions, verifies webhooks, reuses open payment links, and records payment session ids on orders.
+- `libs/menuItemInventoryServer.ts`: performs server-only paid-order inventory adjustment with rollback if a concurrent stock update fails.
 
 ## Auth, Role, And Safety Checks
 
@@ -55,7 +59,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 ## Data Dependencies
 
 - Models: `coupon`, `menuItem`, `order`, `restaurant`
-- Shared libs: `notifications`
+- Shared libs: `menuItemInventoryServer`, `notifications`
 - Shared types: None detected
 
 ## Side Effects
@@ -63,6 +67,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 - Updates existing MongoDB documents.
 - Touches Stripe payment/session/webhook behavior.
 - May send email or app notifications.
+- Decrements tracked menu item stock after payment confirmation and records refund-review metadata when stock is gone.
 
 ## Response Behavior
 
@@ -71,7 +76,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/webhook` does. Explain that it belongs to the Stripe webhook workflow, serves `Stripe system`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/webhook` does. Explain that it belongs to the Stripe webhook workflow, serves `Stripe system`, verifies Stripe signatures, reconciles paid orders, adjusts tracked inventory exactly once, handles paid-but-out-of-stock refund review, and then sends admin notifications/receipts when appropriate.
 
 ## Maintenance Notes For Future Work
 

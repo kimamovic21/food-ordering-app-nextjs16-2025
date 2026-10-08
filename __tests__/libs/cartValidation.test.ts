@@ -212,6 +212,50 @@ describe('cart validation helpers', () => {
     expect(Restaurant.findById).not.toHaveBeenCalled();
   });
 
+  it('blocks sold out tracked inventory before restaurant validation', async () => {
+    mockMenuItems([createMenuItem({ stockQuantity: 0, trackInventory: true })]);
+
+    const result = await validateCartForOrder({
+      cartItems: [createCartItem()],
+      deliveryLatitude: 43.01,
+      deliveryLongitude: 18.01,
+    });
+
+    expect(result.canCheckout).toBe(false);
+    expect(result.message).toBe('Pizza is sold out.');
+    expect(result.blockingItems[0]).toEqual(
+      expect.objectContaining({
+        isAvailable: false,
+        status: 'sold_out',
+        stockQuantity: 0,
+        trackInventory: true,
+      })
+    );
+    expect(Restaurant.findById).not.toHaveBeenCalled();
+  });
+
+  it('blocks tracked inventory quantities that exceed current stock', async () => {
+    mockMenuItems([createMenuItem({ stockQuantity: 2, trackInventory: true })]);
+
+    const result = await validateCartForOrder({
+      cartItems: [createCartItem({ quantity: 3 })],
+      deliveryLatitude: 43.01,
+      deliveryLongitude: 18.01,
+    });
+
+    expect(result.canCheckout).toBe(false);
+    expect(result.message).toBe('Pizza has only 2 left in stock. Your cart has 3.');
+    expect(result.blockingItems[0]).toEqual(
+      expect.objectContaining({
+        isAvailable: false,
+        status: 'stock_limit',
+        stockQuantity: 2,
+        trackInventory: true,
+      })
+    );
+    expect(Restaurant.findById).not.toHaveBeenCalled();
+  });
+
   it('blocks quantity limits across repeated sizes of the same menu item', async () => {
     mockMenuItems([createMenuItem({ maxQuantityPerOrder: 2 })]);
 

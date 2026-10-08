@@ -12,13 +12,15 @@
 
 ## Plain-English Summary
 
-Handles post/get/put/patch/delete work for the menu items area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Handles post/get/put/patch/delete work for the menu items area. The route keeps the local workflow server-authoritative, saves optional inventory-tracking fields, and delegates shared business rules to models and libs.
 
 ## What Happens In This File
 
 - The route receives POST/GET/PUT/PATCH/DELETE requests and converts request/session data into server-side business checks.
 - It uses `category`, `menuItem`, `user` for persistence.
-- It delegates shared logic to `authGuards`, `authOptions`, `cloudinary`, `orderDeletionGuards`, `orderQuantityLimits`, `reviewSummary` so behavior stays consistent across the app.
+- It delegates shared logic to `authGuards`, `authOptions`, `cloudinary`, `menuItemInventory`, `orderDeletionGuards`, `orderQuantityLimits`, `reviewSummary` so behavior stays consistent across the app.
+- `POST` and `PUT` normalize `trackInventory`, `stockQuantity`, and `lowStockThreshold` through `buildMenuItemInventoryFields`. When tracking is disabled, stock is saved as `null` so older/existing menu items remain unlimited until an admin opts in.
+- `PATCH` remains scoped to manual availability only. Inventory sold-out state is derived from stock quantity, not from this manual toggle.
 - Detected local functions/handlers: `escapeRegex`, `parseNumber`, `parsePositiveInt`, `isValidPriceType`, `resolvePriceType`, `hasRequiredPricesByType`, `toCategorySlug`, `buildSort`, `skip`.
 
 ## Request Inputs
@@ -32,6 +34,7 @@ Handles post/get/put/patch/delete work for the menu items area. The route keeps 
 - `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
 - `mongoose` + MongoDB models: keep users, restaurants, menu items, orders, coupons, reviews, and audit data server-authoritative.
 - `cloudinary`: stores uploaded user, restaurant, category, and menu-item images; cleanup logic removes replaced or deleted assets by public id.
+- `libs/menuItemInventory.ts`: normalizes stock defaults/ranges and keeps inventory status labels shared across API, cart, and UI consumers.
 
 ## Auth, Role, And Safety Checks
 
@@ -80,7 +83,7 @@ Handles post/get/put/patch/delete work for the menu items area. The route keeps 
 ## Data Dependencies
 
 - Models: `category`, `menuItem`, `user`
-- Shared libs: `authGuards`, `authOptions`, `cloudinary`, `orderDeletionGuards`, `orderQuantityLimits`, `reviewSummary`
+- Shared libs: `authGuards`, `authOptions`, `cloudinary`, `menuItemInventory`, `orderDeletionGuards`, `orderQuantityLimits`, `reviewSummary`
 - Shared types: None detected
 
 ## Side Effects
@@ -89,6 +92,7 @@ Handles post/get/put/patch/delete work for the menu items area. The route keeps 
 - Updates existing MongoDB documents.
 - Deletes or cleans up MongoDB data.
 - Touches Cloudinary media upload/delete behavior.
+- Saves optional inventory fields used by cart validation, checkout blockers, public sold-out UI, and Stripe webhook stock decrementing.
 
 ## Response Behavior
 
@@ -97,7 +101,7 @@ Handles post/get/put/patch/delete work for the menu items area. The route keeps 
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/menu-items` does. Explain that it belongs to the menu items workflow, serves `admin`, `restaurant admin`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/menu-items` does. Explain that it belongs to the menu items workflow, serves `admin`, `restaurant admin`, validates ownership and price inputs, persists optional inventory settings, and returns a stable JSON response or a clear error status. Existing items are not migrated into stock tracking automatically.
 
 ## Maintenance Notes For Future Work
 

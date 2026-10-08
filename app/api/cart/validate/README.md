@@ -12,14 +12,15 @@
 
 ## Plain-English Summary
 
-Handles post work for the cart validation area. The route keeps menu/restaurant validation server-authoritative and delegates shared business rules to models and libs.
+Handles post work for the cart validation area. The route keeps menu/restaurant validation server-authoritative, including optional tracked-stock validation, and delegates shared business rules to models and libs.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
 - It uses no direct Mongoose model imports for persistence.
 - It delegates shared logic to `cartValidation` so behavior stays consistent across the app.
-- Item notes can pass through shared cart item types, but this validation route is intentionally focused on item identity, size, price, quantity, restaurant, and delivery location. Note typing in the cart should not create extra availability validation calls.
+- Item notes can pass through shared cart item types, but this validation route is intentionally focused on item identity, size, price, quantity, tracked stock, restaurant, and delivery location. Note typing in the cart should not create extra availability validation calls.
+- Tracked inventory can return `sold_out` or `stock_limit` item statuses. Existing untracked menu items remain valid from an inventory perspective unless normal availability/price/restaurant checks fail.
 - Detected local functions/handlers: only exported HTTP handlers.
 
 ## Request Inputs
@@ -42,7 +43,7 @@ Handles post work for the cart validation area. The route keeps menu/restaurant 
 ## Data Dependencies
 
 - Models: None detected
-- Shared libs: `cartValidation`
+- Shared libs: `cartValidation`, `menuItemInventory`, `orderQuantityLimits`, `restaurantOrderingStatus`
 - Shared types: `cart`
 
 ## Side Effects
@@ -56,7 +57,7 @@ Handles post work for the cart validation area. The route keeps menu/restaurant 
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/cart/validate` does. Explain that it belongs to the cart validation workflow, serves `customer`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/cart/validate` does. Explain that it belongs to the cart validation workflow, serves `customer`, rechecks menu item availability, current price, valid size, quantity limits, optional tracked stock, and restaurant readiness, then returns a stable JSON response or a clear error status.
 
 ## Maintenance Notes For Future Work
 

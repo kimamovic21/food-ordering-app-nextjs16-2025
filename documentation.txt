@@ -1215,3 +1215,5 @@ Polish saved delivery addresses and courier simulator
 Add per-item cart notes
 
 Add free delivery threshold and courier payout split
+
+Add menu item inventory and sold-out automation

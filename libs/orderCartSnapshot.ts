@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { MenuItem } from '@/models/menuItem';
+import { getTrackedStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
 import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { CartSize } from '@/types/cart';
@@ -44,7 +45,7 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
 
   const menuItems = await MenuItem.find({ _id: { $in: productIds } })
     .select(
-      '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable'
+      '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable trackInventory stockQuantity lowStockThreshold'
     )
     .lean();
   const menuItemsById = new Map(menuItems.map((item: any) => [item._id.toString(), item]));
@@ -63,6 +64,17 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
       );
     }
 
+    const quantity = Math.max(1, Number(product.quantity) || 1);
+    const stockQuantity = getTrackedStockQuantity(menuItem);
+
+    if (isInventoryTracked(menuItem) && stockQuantity != null && stockQuantity < quantity) {
+      throw new Error(
+        stockQuantity <= 0
+          ? `${menuItem.name || product.name || 'A menu item'} is sold out.`
+          : `${menuItem.name || product.name || 'A menu item'} has only ${stockQuantity} left in stock.`
+      );
+    }
+
     const size = normalizeSize(product.size, menuItem.priceType);
     const price = getMenuItemPrice(menuItem, size, Number(product.price) || 0);
 
@@ -73,9 +85,12 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
       image: menuItem.image || '',
       size,
       price,
-      quantity: Math.max(1, Number(product.quantity) || 1),
+      quantity,
       restaurantId: menuItem.restaurantId?.toString?.() || String(menuItem.restaurantId || ''),
       maxQuantityPerOrder: normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder),
+      trackInventory: menuItem.trackInventory === true,
+      stockQuantity,
+      lowStockThreshold: menuItem.lowStockThreshold,
       note: limitCartItemNoteInput(product.note),
     };
   });

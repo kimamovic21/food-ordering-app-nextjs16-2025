@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns cart review, per-item cart notes, cart validation, delivery address/location checks, free delivery threshold messaging, coupon handling, dynamic ETA messaging, and the final handoff into Stripe Checkout.
+This folder owns cart review, per-item cart notes, cart validation, tracked-stock warnings, delivery address/location checks, free delivery threshold messaging, coupon handling, dynamic ETA messaging, and the final handoff into Stripe Checkout.
 
 ## Route And Audience
 
@@ -24,7 +24,8 @@ This folder owns cart review, per-item cart notes, cart validation, delivery add
 
 - The cart UI reads local cart items, groups them by restaurant, and prevents the user from silently mixing restaurants in one order.
 - Each cart line can carry a short item note, such as an ingredient or packaging request. The note is stored in local cart state and sent to checkout, but it is not part of availability validation so typing does not spam `/api/cart/validate`.
-- `/api/cart/validate` checks whether selected items still exist, remain available, use valid sizes/prices, and stay within item/order quantity limits.
+- `/api/cart/validate` checks whether selected items still exist, remain available, use valid sizes/prices, stay within item/order quantity limits, and do not exceed tracked stock.
+- Cart quantity controls also check tracked stock locally so a customer sees a friendly "stock limit reached" toast before sending another checkout request. This is UX-only; `/api/cart/validate`, `/api/checkout`, and the Stripe webhook still remain authoritative.
 - Restaurant status data powers the visible checkout messaging: open/closed, paused, busy, outside delivery radius, minimum order amount, ETA tone, courier readiness, and capacity warnings.
 - Restaurant pricing data powers free delivery messaging: below the threshold the summary shows how much more is needed, and above the threshold it shows customer delivery as free while preserving the courier payout for the order.
 - Saved delivery addresses and manual/current location controls prepare the delivery fields before checkout. Customers can give saved addresses a friendly label such as `Home` or `Work`, rename that label without changing the address coordinates, and must confirm before deleting a saved address.
@@ -71,6 +72,7 @@ This folder owns cart review, per-item cart notes, cart validation, delivery add
 - Keep item notes short and optional. They are preparation hints for a specific item, while `specialInstructions` stays the order-level delivery/request field.
 - Keep the "checking restaurant status" style states stable so hard refreshes do not briefly show wrong closed/open messages.
 - Keep courier-readiness and busy/capacity messaging aligned with `/api/checkout`; the API must block the same critical cases the UI warns about.
+- Keep tracked inventory messaging aligned with `/api/cart/validate` and `/api/checkout`. Existing untracked menu items should behave as unlimited stock until an admin enables tracking.
 - Keep free delivery copy aligned with `/api/checkout`; cart may preview the discount, but checkout must be the final source of truth for `deliveryFee`, `courierPayoutAmount`, `freeDeliveryDiscount`, and `isFreeDelivery`.
 - Keep saved-address labels optional and UI-only for checkout. The checkout payload should include the delivery address snapshot, but not require an address-book label to place an order.
 - Keep destructive saved-address actions behind a confirmation dialog so users do not lose frequently reused addresses by accident.
@@ -78,7 +80,7 @@ This folder owns cart review, per-item cart notes, cart validation, delivery add
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the customer decision screen before payment. It shows cart items, delivery address/location, discounts, free delivery progress, ETA, restaurant status, courier readiness, and capacity warnings. It improves UX before payment, but it still sends everything to `/api/checkout`, where Stripe and server-side validation make the final decision.
+If someone asks what this folder does, say: this is the customer decision screen before payment. It shows cart items, item notes, delivery address/location, discounts, free delivery progress, ETA, restaurant status, courier readiness, capacity warnings, and inventory blockers. It improves UX before payment, but it still sends everything to `/api/checkout`, where Stripe and server-side validation make the final decision.
 
 ## Maintenance Notes For Future Work
 

@@ -12,6 +12,9 @@ export interface CartItem {
   quantity: number;
   restaurantId: EntityId;
   maxQuantityPerOrder?: number;
+  trackInventory?: boolean;
+  stockQuantity?: number | null;
+  lowStockThreshold?: number | null;
   note?: string;
 }
 
@@ -50,6 +53,8 @@ export type CartValidationStatus =
   | 'deleted'
   | 'invalid_size'
   | 'quantity_limit'
+  | 'stock_limit'
+  | 'sold_out'
   | 'invalid';
 
 export type CartValidationRestaurantStatus =
@@ -79,6 +84,9 @@ export type CartValidationItem = {
   previousPrice?: number | null;
   priceChanged?: boolean;
   maxQuantityPerOrder?: number;
+  trackInventory?: boolean;
+  stockQuantity?: number | null;
+  lowStockThreshold?: number | null;
   message?: string | null;
   note?: string;
 };

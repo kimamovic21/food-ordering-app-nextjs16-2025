@@ -12,6 +12,7 @@ import {
   normalizeItemsPerOrderLimit,
   normalizeMenuItemQuantityLimit,
 } from '@/libs/orderQuantityLimits';
+import { getTrackedStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
 import type { CartItem, CartValidationItem } from '@/types/cart';
 
 interface CartItemsProps {
@@ -91,6 +92,7 @@ const CartItems: React.FC<CartItemsProps> = ({
         {cartItems.map((item) => {
           const validation = validationByKey.get(getCartItemKey(item));
           const isUnavailable = validation ? validation.status !== 'valid' : false;
+          const stockQuantity = getTrackedStockQuantity(validation || item);
           const displayName = validation?.name || item.name;
           const displayPrice =
             validation?.status === 'valid' &&
@@ -193,9 +195,7 @@ const CartItems: React.FC<CartItemsProps> = ({
                       id={`cart-note-${item._id}-${item.size}`}
                       value={item.note || ''}
                       maxLength={CART_ITEM_NOTE_MAX_LENGTH}
-                      onChange={(event) =>
-                        updateItemNote(item._id, item.size, event.target.value)
-                      }
+                      onChange={(event) => updateItemNote(item._id, item.size, event.target.value)}
                       placeholder='Example: no onions, extra spicy, sauce on the side...'
                       className='min-h-20 resize-none rounded-lg border-border bg-background/70 text-sm'
                     />
@@ -226,12 +226,26 @@ const CartItems: React.FC<CartItemsProps> = ({
                     const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(
                       validation?.maxQuantityPerOrder ?? item.maxQuantityPerOrder
                     );
-                    const nextItemQuantity =
-                      getCartQuantityForMenuItem(cartItems, item._id) + 1;
+                    const nextItemQuantity = getCartQuantityForMenuItem(cartItems, item._id) + 1;
 
                     if (nextItemQuantity > maxQuantityPerOrder) {
                       sonnerToast.info('Cart limit reached', {
                         description: `${displayName} is limited to ${maxQuantityPerOrder} per order.`,
+                        duration: 5000,
+                      });
+                      return;
+                    }
+
+                    if (
+                      isInventoryTracked(validation || item) &&
+                      stockQuantity != null &&
+                      nextItemQuantity > stockQuantity
+                    ) {
+                      sonnerToast.info('Stock limit reached', {
+                        description:
+                          stockQuantity <= 0
+                            ? `${displayName} is sold out.`
+                            : `${displayName} has only ${stockQuantity} left in stock.`,
                         duration: 5000,
                       });
                       return;

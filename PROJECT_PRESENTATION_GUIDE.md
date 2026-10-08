@@ -1127,6 +1127,7 @@ The app is already beyond a simple CRUD demo. It has:
 - order lifecycle
 - delivery workflow
 - restaurant operational rules
+- menu item inventory tracking with low-stock and sold-out automation
 - support tickets
 - messaging
 - notifications
@@ -1141,7 +1142,7 @@ The main remaining future improvements could be:
 - real driver routing/distance provider instead of basic map coordinates
 - production-grade refund workflow when real payments are used
 - more granular restaurant staff roles
-- inventory-aware menu availability
+- real stock reservation windows for abandoned unpaid Stripe sessions
 - admin-configurable notification templates
 - more advanced fraud/suspicious-review detection
 - push notifications through a dedicated browser/mobile notification service

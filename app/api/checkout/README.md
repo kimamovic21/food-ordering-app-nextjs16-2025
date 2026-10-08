@@ -12,7 +12,7 @@
 
 ## Plain-English Summary
 
-Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, free delivery threshold, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
+Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, tracked inventory, free delivery threshold, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
 
 ## What Happens In This File
 
@@ -25,7 +25,8 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 
 - NextAuth identifies the customer and blocks anonymous checkout.
 - Upstash rate limiting slows repeated checkout attempts.
-- Cart validation re-checks menu item existence, availability, size/price validity, quantity limits, one-restaurant-per-cart behavior, and restaurant capacity.
+- Cart validation re-checks menu item existence, availability, tracked stock, size/price validity, quantity limits, one-restaurant-per-cart behavior, and restaurant capacity.
+- Tracked-stock blockers return specific sold-out or stock-limit responses before Stripe Checkout is created. This prevents stale local cart state from charging the customer for inventory that the server already knows is unavailable.
 - Per-item cart notes are trimmed, whitespace-normalized, capped, included in the checkout fingerprint, and saved into `Order.cartProducts` so restaurant/admin/customer/courier views can see item-specific preparation requests.
 - Restaurant checks verify open/closed state, pause reason, delivery radius, delivery location, busy/capacity state, and courier readiness before money is collected.
 - Coupon and loyalty helpers recalculate discounts server-side so the browser cannot fake cheaper totals.
@@ -51,6 +52,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 - `libphonenumber-js`: normalizes and validates phone numbers before checkout/profile data is accepted.
 - `currency.js` and money helpers: keep prices, discounts, customer delivery fees, courier payout, and totals rounded consistently.
 - `libs/freeDelivery.ts`: keeps free delivery threshold, customer delivery fee, restaurant-covered discount, and courier payout calculations shared and testable.
+- `libs/menuItemInventory.ts`: normalizes optional stock-tracking fields used by cart validation and checkout blockers.
 
 ## Auth, Role, And Safety Checks
 
@@ -100,7 +102,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 ## Data Dependencies
 
 - Models: `coupon`, `order`, `user`
-- Shared libs: `auditLog`, `authOptions`, `cartValidation`, `coupon`, `deliveryPin`, `loyaltyCalculator`, `money`, `notifications`, `phone`, `qstash`, `rateLimit`
+- Shared libs: `auditLog`, `authOptions`, `cartValidation`, `coupon`, `deliveryPin`, `loyaltyCalculator`, `menuItemInventory`, `money`, `notifications`, `phone`, `qstash`, `rateLimit`
 - Shared types: `cart`
 
 ## Side Effects
@@ -119,7 +121,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/checkout` does. Explain that it is the final server-side gate before payment. The cart page can warn the user, but this API makes the authoritative decision: it validates user, cart, restaurant, courier readiness, free delivery threshold, coupons, loyalty, totals, duplicate payment sessions, and only then creates or reuses a Stripe Checkout URL.
+Open this file when someone asks what `/api/checkout` does. Explain that it is the final server-side gate before payment. The cart page can warn the user, but this API makes the authoritative decision: it validates user, cart, menu item stock, restaurant, courier readiness, free delivery threshold, coupons, loyalty, totals, duplicate payment sessions, and only then creates or reuses a Stripe Checkout URL.
 
 ## Maintenance Notes For Future Work
 

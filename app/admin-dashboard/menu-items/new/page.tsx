@@ -18,6 +18,12 @@ import MenuItemImage from '../MenuItemImage';
 import MenuItemForm from '../MenuItemForm';
 import { AI_MENU_DESCRIPTION_MAX_CHARS } from '@/libs/menuItemDescription';
 import {
+  DEFAULT_LOW_STOCK_THRESHOLD,
+  DEFAULT_MENU_ITEM_STOCK_QUANTITY,
+  MAX_LOW_STOCK_THRESHOLD,
+  MAX_MENU_ITEM_STOCK_QUANTITY,
+} from '@/libs/menuItemInventory';
+import {
   DEFAULT_MENU_ITEM_QUANTITY_LIMIT,
   MAX_MENU_ITEM_QUANTITY_LIMIT,
   MIN_MENU_ITEM_QUANTITY_LIMIT,
@@ -39,6 +45,9 @@ const NewMenuItemPage = () => {
   const [maxQuantityPerOrder, setMaxQuantityPerOrder] = useState(
     String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT)
   );
+  const [trackInventory, setTrackInventory] = useState(false);
+  const [stockQuantity, setStockQuantity] = useState(String(DEFAULT_MENU_ITEM_STOCK_QUANTITY));
+  const [lowStockThreshold, setLowStockThreshold] = useState(String(DEFAULT_LOW_STOCK_THRESHOLD));
   const [isAvailable, setIsAvailable] = useState(true);
   const [image, setImage] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -181,6 +190,8 @@ const NewMenuItemPage = () => {
       const m = priceMedium.trim() ? Number(priceMedium) : null;
       const l = priceLarge.trim() ? Number(priceLarge) : null;
       const maxQuantity = Number(maxQuantityPerOrder);
+      const stock = Number(stockQuantity);
+      const lowStock = Number(lowStockThreshold);
 
       // Validate that all prices (if provided) are valid numbers
       if (
@@ -205,6 +216,24 @@ const NewMenuItemPage = () => {
         return;
       }
 
+      if (
+        trackInventory &&
+        (!Number.isFinite(stock) || stock < 0 || stock > MAX_MENU_ITEM_STOCK_QUANTITY)
+      ) {
+        sonnerToast.error(`Current stock must be between 0 and ${MAX_MENU_ITEM_STOCK_QUANTITY}`);
+        setIsSaving(false);
+        return;
+      }
+
+      if (
+        trackInventory &&
+        (!Number.isFinite(lowStock) || lowStock < 0 || lowStock > MAX_LOW_STOCK_THRESHOLD)
+      ) {
+        sonnerToast.error(`Low stock alert must be between 0 and ${MAX_LOW_STOCK_THRESHOLD}`);
+        setIsSaving(false);
+        return;
+      }
+
       let imageUrl = '';
       if (imageFile) {
         const uploadPromise = uploadImage(imageFile);
@@ -225,6 +254,9 @@ const NewMenuItemPage = () => {
         priceMedium: priceType === 'single' ? null : m,
         priceLarge: priceType === 'triple' ? l : null,
         maxQuantityPerOrder: Math.floor(maxQuantity),
+        trackInventory,
+        stockQuantity: trackInventory ? Math.floor(stock) : null,
+        lowStockThreshold: Math.floor(lowStock),
         isAvailable,
         image: imageUrl || '',
       };
@@ -266,6 +298,9 @@ const NewMenuItemPage = () => {
     setPriceMedium('');
     setPriceLarge('');
     setMaxQuantityPerOrder(String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT));
+    setTrackInventory(false);
+    setStockQuantity(String(DEFAULT_MENU_ITEM_STOCK_QUANTITY));
+    setLowStockThreshold(String(DEFAULT_LOW_STOCK_THRESHOLD));
     setIsAvailable(true);
     setImage('');
     setImageFile(null);
@@ -382,6 +417,9 @@ const NewMenuItemPage = () => {
                   priceMedium={priceMedium}
                   priceLarge={priceLarge}
                   maxQuantityPerOrder={maxQuantityPerOrder}
+                  trackInventory={trackInventory}
+                  stockQuantity={stockQuantity}
+                  lowStockThreshold={lowStockThreshold}
                   isAvailable={isAvailable}
                   editingItem={null}
                   isSaving={isSaving}
@@ -395,6 +433,9 @@ const NewMenuItemPage = () => {
                   onPriceMediumChange={setPriceMedium}
                   onPriceLargeChange={setPriceLarge}
                   onMaxQuantityPerOrderChange={setMaxQuantityPerOrder}
+                  onTrackInventoryChange={setTrackInventory}
+                  onStockQuantityChange={setStockQuantity}
+                  onLowStockThresholdChange={setLowStockThreshold}
                   onAvailabilityChange={setIsAvailable}
                   onCancel={resetForm}
                 />

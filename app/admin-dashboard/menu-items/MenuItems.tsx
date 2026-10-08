@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { getMenuItemInventoryLabel, getMenuItemInventoryStatus } from '@/libs/menuItemInventory';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { MenuItemCategory, MenuItemListItem } from '@/types/menu';
 
@@ -127,7 +128,12 @@ const getPriceRows = (item: MenuItemRow) => {
   ];
 };
 
-function AvailabilityBadge({ isAvailable }: { isAvailable: boolean }) {
+function AvailabilityBadge({ item }: { item: MenuItemRow }) {
+  const isManuallyAvailable = item.isAvailable !== false;
+  const inventoryStatus = getMenuItemInventoryStatus(item);
+  const isSoldOut = inventoryStatus === 'sold_out';
+  const isAvailable = isManuallyAvailable && !isSoldOut;
+
   return (
     <Badge
       variant={isAvailable ? 'outline' : 'destructive'}
@@ -137,13 +143,14 @@ function AvailabilityBadge({ isAvailable }: { isAvailable: boolean }) {
           : 'bg-red-600 text-white hover:bg-red-600 dark:bg-red-500'
       }
     >
-      {isAvailable ? 'Available' : 'Unavailable'}
+      {isAvailable ? 'Available' : isSoldOut ? 'Sold out' : 'Unavailable'}
     </Badge>
   );
 }
 
 function ItemImage({ item }: { item: MenuItemRow }) {
-  const isAvailable = item.isAvailable !== false;
+  const inventoryStatus = getMenuItemInventoryStatus(item);
+  const isAvailable = item.isAvailable !== false && inventoryStatus !== 'sold_out';
   const hasRemoteImage = typeof item.image === 'string' && item.image.trim().startsWith('http');
 
   return (
@@ -166,10 +173,31 @@ function ItemImage({ item }: { item: MenuItemRow }) {
       )}
       {!isAvailable ? (
         <div className='absolute inset-0 flex items-center justify-center bg-black/65 text-[10px] font-semibold uppercase tracking-wide text-white'>
-          Off
+          {inventoryStatus === 'sold_out' ? 'Sold out' : 'Off'}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function InventoryBadge({ item }: { item: MenuItemRow }) {
+  const inventoryStatus = getMenuItemInventoryStatus(item);
+
+  if (inventoryStatus === 'untracked') {
+    return <p className='text-xs font-medium text-muted-foreground'>Inventory not tracked</p>;
+  }
+
+  const className =
+    inventoryStatus === 'sold_out'
+      ? 'border-red-500/30 bg-red-500/10 text-red-300'
+      : inventoryStatus === 'low_stock'
+        ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+        : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300';
+
+  return (
+    <Badge variant='outline' className={className}>
+      {getMenuItemInventoryLabel(item)}
+    </Badge>
   );
 }
 
@@ -230,7 +258,8 @@ function AvailabilityCell({
 
   return (
     <div className='space-y-2'>
-      <AvailabilityBadge isAvailable={isAvailable} />
+      <AvailabilityBadge item={item} />
+      <InventoryBadge item={item} />
       {isAdmin ? (
         <label className='flex w-fit cursor-pointer items-center gap-2 rounded-md border border-white/10 bg-muted/30 px-3 py-2 text-xs text-muted-foreground transition hover:bg-muted/50'>
           <Checkbox
@@ -337,8 +366,16 @@ const MenuItems = ({
     [categories, menuItems]
   );
 
-  const availableCount = rows.filter((item) => item.isAvailable !== false).length;
-  const unavailableCount = rows.length - availableCount;
+  const soldOutCount = rows.filter(
+    (item) => getMenuItemInventoryStatus(item) === 'sold_out'
+  ).length;
+  const lowStockCount = rows.filter(
+    (item) => getMenuItemInventoryStatus(item) === 'low_stock'
+  ).length;
+  const availableCount = rows.filter(
+    (item) => item.isAvailable !== false && getMenuItemInventoryStatus(item) !== 'sold_out'
+  ).length;
+  const unavailableCount = rows.filter((item) => item.isAvailable === false).length;
 
   const columns = useMemo(
     () =>
@@ -350,24 +387,29 @@ const MenuItems = ({
           enableGlobalFilter: false,
           enableSorting: false,
         }),
-        columnHelper.accessor((item) => `${item.name} ${item.categoryName} ${item.description}`, {
-          id: 'item',
-          header: 'Item',
-          cell: ({ row }) => (
-            <div className='min-w-0 max-w-[360px] space-y-1 whitespace-normal'>
-              <div className='flex flex-wrap items-center gap-2'>
-                <span className='font-semibold leading-tight'>{row.original.name}</span>
-                <Badge variant='secondary' className='capitalize'>
-                  {row.original.categoryName}
-                </Badge>
+        columnHelper.accessor(
+          (item) =>
+            `${item.name} ${item.categoryName} ${item.description} ${getMenuItemInventoryLabel(item)}`,
+          {
+            id: 'item',
+            header: 'Item',
+            cell: ({ row }) => (
+              <div className='min-w-0 max-w-[360px] space-y-1 whitespace-normal'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <span className='font-semibold leading-tight'>{row.original.name}</span>
+                  <Badge variant='secondary' className='capitalize'>
+                    {row.original.categoryName}
+                  </Badge>
+                </div>
+                <DescriptionPreview item={row.original} />
+                <p className='text-xs font-medium text-muted-foreground'>
+                  Max {normalizeMenuItemQuantityLimit(row.original.maxQuantityPerOrder)} per order
+                </p>
+                <InventoryBadge item={row.original} />
               </div>
-              <DescriptionPreview item={row.original} />
-              <p className='text-xs font-medium text-muted-foreground'>
-                Max {normalizeMenuItemQuantityLimit(row.original.maxQuantityPerOrder)} per order
-              </p>
-            </div>
-          ),
-        }),
+            ),
+          }
+        ),
         columnHelper.accessor((item) => item.categoryName, {
           id: 'category',
           header: 'Category',
@@ -428,10 +470,22 @@ const MenuItems = ({
             <Badge className='bg-green-600 text-white hover:bg-green-700'>
               {availableCount} available
             </Badge>
+            <Badge className='bg-amber-500 text-white hover:bg-amber-600'>
+              {lowStockCount} low stock
+            </Badge>
+            <Badge className='bg-red-600 text-white hover:bg-red-700'>
+              {soldOutCount} sold out
+            </Badge>
             <Badge variant='destructive'>{unavailableCount} unavailable</Badge>
           </div>
         }
-        getRowClassName={(row) => (row.isAvailable === false ? 'bg-red-500/[0.04]' : '')}
+        getRowClassName={(row) =>
+          row.isAvailable === false || getMenuItemInventoryStatus(row) === 'sold_out'
+            ? 'bg-red-500/[0.04]'
+            : getMenuItemInventoryStatus(row) === 'low_stock'
+              ? 'bg-amber-500/[0.04]'
+              : ''
+        }
         getHeaderClassName={(columnId) =>
           columnId === 'image'
             ? 'w-24'

@@ -10,6 +10,7 @@ import useFavorites from '@/hooks/useFavorites';
 import FavoriteToggleButton from '@/components/shared/FavoriteToggleButton';
 import ShareActions from '@/components/shared/ShareActions';
 import useRestaurantOrderingGate from '@/hooks/useRestaurantOrderingGate';
+import { getMenuItemInventoryLabel, getMenuItemInventoryStatus } from '@/libs/menuItemInventory';
 import { Clock, MapPin, Phone, Mail, Globe } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -32,7 +33,9 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
   const { data: profileData } = useProfile();
   const { data: favorites, setMenuItemFavorite, setRestaurantFavorite } = useFavorites();
   const { assertRestaurantCanAcceptOrders, checkingRestaurantId } = useRestaurantOrderingGate();
-  const isAvailable = item.isAvailable !== false;
+  const inventoryStatus = getMenuItemInventoryStatus(item);
+  const isSoldOut = inventoryStatus === 'sold_out';
+  const isAvailable = item.isAvailable !== false && !isSoldOut;
 
   const imageUrl = item.image || Pizza.src;
   const isRemoteImage =
@@ -130,6 +133,9 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
         price,
         restaurantId: item.restaurantId,
         maxQuantityPerOrder: item.maxQuantityPerOrder,
+        trackInventory: item.trackInventory,
+        stockQuantity: item.stockQuantity,
+        lowStockThreshold: item.lowStockThreshold,
       },
       { maxItemsPerOrder: orderingStatus.maxItemsPerOrder }
     );
@@ -210,7 +216,7 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
           {!isAvailable && (
             <div className='absolute inset-0 flex items-center justify-center bg-black/65 text-white'>
               <span className='rounded-full border border-white/40 bg-black/40 px-4 py-2 text-sm font-semibold'>
-                Currently unavailable
+                {isSoldOut ? 'Sold out' : 'Currently unavailable'}
               </span>
             </div>
           )}
@@ -229,9 +235,14 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
                       : undefined
                   }
                 >
-                  {isAvailable ? 'Available' : 'Unavailable'}
+                  {isAvailable ? 'Available' : isSoldOut ? 'Sold out' : 'Unavailable'}
                 </Badge>
               </div>
+              {inventoryStatus === 'low_stock' && (
+                <Badge className='mb-3 bg-amber-500 text-white hover:bg-amber-600'>
+                  {getMenuItemInventoryLabel(item)}
+                </Badge>
+              )}
               <p className='text-gray-600 dark:text-gray-300 text-base leading-relaxed'>
                 {item.description}
               </p>
@@ -284,7 +295,9 @@ const MenuItemModal = ({ item, isOpen, onClose }: MenuItemModalProps) => {
                 ? 'Checking...'
                 : isAvailable
                   ? `Add to cart $${getPrice()?.toFixed(2) || '0.00'}`
-                  : 'Unavailable'}
+                  : isSoldOut
+                    ? 'Sold out'
+                    : 'Unavailable'}
             </Button>
 
             {isLoading ? (

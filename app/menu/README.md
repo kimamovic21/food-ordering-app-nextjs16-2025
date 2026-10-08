@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns public menu browsing and menu item detail flows, including add-to-cart readiness checks, favorites, categories, and search/filter UI.
+This folder owns public menu browsing and menu item detail flows, including add-to-cart readiness checks, inventory-aware sold-out UI, favorites, categories, and search/filter UI.
 
 ## Route And Audience
 
@@ -19,6 +19,7 @@ This folder owns public menu browsing and menu item detail flows, including add-
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/categories`, `/api/menu-items?${params.toString()}`, `/api/menu-items?_id=${itemId}`, `/api/menu-items?groupBy=category&perCategory=3`, `/api/restaurant/${item.restaurantId}`. Keep API response shapes aligned.
+- Menu cards and detail pages use `libs/menuItemInventory.ts` to show low-stock/sold-out state before a customer tries to add the item. This is a customer-facing hint; checkout and webhook still enforce final stock.
 
 ## Important Files
 
@@ -56,10 +57,11 @@ This folder owns public menu browsing and menu item detail flows, including add-
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- Do not treat untracked legacy items as sold out. Only `trackInventory: true` with `stockQuantity <= 0` should show sold-out inventory UI.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `customer` UI for `/menu`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `customer` UI for `/menu`; it lets users browse/search/filter menu items, see availability and stock hints, pick a size, favorite items, and add valid items to the cart. It delegates server-authoritative checks to API routes/helpers instead of trusting only the browser.
 
 ## Maintenance Notes For Future Work
 
