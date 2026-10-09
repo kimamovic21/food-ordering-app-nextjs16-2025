@@ -21,6 +21,7 @@ const NotificationSchema = new Schema(
         'restaurant_available',
         'support_ticket',
         'late_order',
+        'inventory_alert',
       ],
       required: true,
     },

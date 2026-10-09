@@ -42,6 +42,8 @@ type MenuItemRow = MenuItemListItem & {
   categoryName: string;
 };
 
+type InventoryFilter = 'all' | 'low_stock' | 'sold_out' | 'untracked';
+
 const columnHelper = createDataTableColumnHelper<MenuItemRow>();
 const DESCRIPTION_PREVIEW_LENGTH = 82;
 
@@ -357,6 +359,8 @@ const MenuItems = ({
   onToggleAvailability,
   isAdmin = true,
 }: MenuItemsProps) => {
+  const [inventoryFilter, setInventoryFilter] = useState<InventoryFilter>('all');
+
   const rows = useMemo(
     () =>
       menuItems.map((item) => ({
@@ -376,6 +380,17 @@ const MenuItems = ({
     (item) => item.isAvailable !== false && getMenuItemInventoryStatus(item) !== 'sold_out'
   ).length;
   const unavailableCount = rows.filter((item) => item.isAvailable === false).length;
+  const untrackedCount = rows.filter(
+    (item) => getMenuItemInventoryStatus(item) === 'untracked'
+  ).length;
+
+  const filteredRows = useMemo(() => {
+    if (inventoryFilter === 'all') {
+      return rows;
+    }
+
+    return rows.filter((item) => getMenuItemInventoryStatus(item) === inventoryFilter);
+  }, [inventoryFilter, rows]);
 
   const columns = useMemo(
     () =>
@@ -455,7 +470,7 @@ const MenuItems = ({
     <div className='mt-8'>
       <TanStackDataTable
         columns={columns}
-        data={rows}
+        data={filteredRows}
         tableKey='admin-menu-items'
         searchPlaceholder='Search menu items by name, category, description, or status...'
         emptyMessage='No menu items found. Create your first one.'
@@ -467,15 +482,53 @@ const MenuItems = ({
         columnLabels={menuItemColumnLabels}
         toolbarContent={
           <div className='flex flex-wrap items-center gap-2'>
+            <Button
+              type='button'
+              size='sm'
+              variant={inventoryFilter === 'all' ? 'default' : 'outline'}
+              className='h-8 rounded-full px-3 text-xs'
+              onClick={() => setInventoryFilter('all')}
+            >
+              All {rows.length}
+            </Button>
             <Badge className='bg-green-600 text-white hover:bg-green-700'>
               {availableCount} available
             </Badge>
-            <Badge className='bg-amber-500 text-white hover:bg-amber-600'>
+            <Button
+              type='button'
+              size='sm'
+              variant={inventoryFilter === 'low_stock' ? 'default' : 'outline'}
+              className={`h-8 rounded-full px-3 text-xs ${
+                inventoryFilter === 'low_stock'
+                  ? ''
+                  : 'border-amber-500/40 text-amber-300 hover:bg-amber-500/10'
+              }`}
+              onClick={() => setInventoryFilter('low_stock')}
+            >
               {lowStockCount} low stock
-            </Badge>
-            <Badge className='bg-red-600 text-white hover:bg-red-700'>
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              variant={inventoryFilter === 'sold_out' ? 'default' : 'outline'}
+              className={`h-8 rounded-full px-3 text-xs ${
+                inventoryFilter === 'sold_out'
+                  ? ''
+                  : 'border-red-500/40 text-red-300 hover:bg-red-500/10'
+              }`}
+              onClick={() => setInventoryFilter('sold_out')}
+            >
               {soldOutCount} sold out
-            </Badge>
+            </Button>
+            <Button
+              type='button'
+              size='sm'
+              variant={inventoryFilter === 'untracked' ? 'default' : 'outline'}
+              className='h-8 rounded-full px-3 text-xs'
+              onClick={() => setInventoryFilter('untracked')}
+            >
+              {untrackedCount} untracked
+            </Button>
             <Badge variant='destructive'>{unavailableCount} unavailable</Badge>
           </div>
         }

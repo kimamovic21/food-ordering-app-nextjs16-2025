@@ -64,4 +64,19 @@ describe('resolveNotificationTargetPath', () => {
       '/my-reports?ticketId=6a564350622d630bb92decbd'
     );
   });
+
+  it('routes admin inventory alerts to the menu item inventory table', () => {
+    expect(
+      resolveNotificationTargetPath(
+        {
+          type: 'inventory_alert',
+          metadata: {
+            inventoryStatus: 'low_stock',
+            menuItemId: '6a564350622d630bb92decbe',
+          },
+        },
+        'admin'
+      )
+    ).toBe('/admin-dashboard/menu-items');
+  });
 });

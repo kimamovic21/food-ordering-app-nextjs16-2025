@@ -47,6 +47,10 @@ export const resolveNotificationTargetPath = (
     return `/restaurants/${notification.metadata.restaurantId}`;
   }
 
+  if (notification.type === 'inventory_alert' && role === 'admin') {
+    return '/admin-dashboard/menu-items';
+  }
+
   if (!notification.orderId) {
     return null;
   }

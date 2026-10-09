@@ -19,6 +19,7 @@ This folder owns notification inbox/settings UI and refresh behavior for user-fa
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - No direct `fetch()` calls were detected here; data may come from hooks, server components, contexts, or child components.
+- Notification routing is centralized in `libs/notificationClient.ts`. Inventory alerts use this routing to send restaurant admins back to `/admin-dashboard/menu-items`.
 
 ## Important Files
 
@@ -49,7 +50,7 @@ This folder owns notification inbox/settings UI and refresh behavior for user-fa
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `signed-in customer`, `admin`, `courier` UI for `/notifications`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `signed-in customer`, `admin`, `courier` UI for `/notifications`; it coordinates the files above, routes order/courier/support/restaurant/inventory updates to the right screen, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
 
 ## Maintenance Notes For Future Work
 

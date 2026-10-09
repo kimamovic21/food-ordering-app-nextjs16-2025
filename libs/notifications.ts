@@ -574,6 +574,43 @@ export const notifyRestaurantAdminsAboutLateOrder = async (params: {
   });
 };
 
+export const notifyRestaurantAdminsAboutInventoryAlert = async (params: {
+  restaurantId: string | mongoose.Types.ObjectId;
+  orderId: string | mongoose.Types.ObjectId;
+  menuItemId: string | mongoose.Types.ObjectId;
+  menuItemName: string;
+  status: 'low_stock' | 'sold_out';
+  stockQuantity: number;
+  lowStockThreshold: number;
+}) => {
+  const adminIds = await findRestaurantAdminIds(params.restaurantId);
+
+  if (adminIds.length === 0) {
+    return;
+  }
+
+  const orderNumber = params.orderId.toString().slice(-6);
+  const isSoldOut = params.status === 'sold_out';
+
+  await createNotifications({
+    recipientUserIds: adminIds,
+    type: 'inventory_alert',
+    title: isSoldOut ? 'Menu item sold out' : 'Low stock alert',
+    message: isSoldOut
+      ? `${params.menuItemName} is sold out after paid order #${orderNumber}.`
+      : `${params.menuItemName} has only ${params.stockQuantity} left after paid order #${orderNumber}.`,
+    orderId: params.orderId,
+    metadata: {
+      restaurantId: params.restaurantId.toString(),
+      menuItemId: params.menuItemId.toString(),
+      menuItemName: params.menuItemName,
+      inventoryStatus: params.status,
+      stockQuantity: params.stockQuantity,
+      lowStockThreshold: params.lowStockThreshold,
+    },
+  });
+};
+
 export const notifyOrderAutoCanceled = async (params: {
   userId?: string | mongoose.Types.ObjectId | null;
   restaurantId?: string | mongoose.Types.ObjectId | null;

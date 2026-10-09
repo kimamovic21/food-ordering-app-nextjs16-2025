@@ -1127,7 +1127,7 @@ The app is already beyond a simple CRUD demo. It has:
 - order lifecycle
 - delivery workflow
 - restaurant operational rules
-- menu item inventory tracking with low-stock and sold-out automation
+- menu item inventory tracking with low-stock/sold-out automation, admin alerts, and audit activity
 - support tickets
 - messaging
 - notifications

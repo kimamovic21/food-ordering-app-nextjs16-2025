@@ -13,7 +13,8 @@ export type NotificationType =
   | 'order_refunded'
   | 'restaurant_available'
   | 'support_ticket'
-  | 'late_order';
+  | 'late_order'
+  | 'inventory_alert';
 
 export type AppNotification = {
   _id: EntityId;

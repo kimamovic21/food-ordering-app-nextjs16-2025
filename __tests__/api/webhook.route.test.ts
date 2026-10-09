@@ -4,7 +4,11 @@ import { Order } from '@/models/order';
 import { Coupon } from '@/models/coupon';
 import { Restaurant } from '@/models/restaurant';
 import { MenuItem } from '@/models/menuItem';
-import { notifyRestaurantAdminsAboutPaidOrder } from '@/libs/notifications';
+import {
+  notifyRestaurantAdminsAboutInventoryAlert,
+  notifyRestaurantAdminsAboutPaidOrder,
+} from '@/libs/notifications';
+import { createAuditLog } from '@/libs/auditLog';
 import { sendPurchaseReceiptEmail } from '@/app/api/webhook/sendPurchaseReceiptEmail';
 
 const stripeConstructEvent = vi.fn();
@@ -70,7 +74,12 @@ vi.mock('@/models/menuItem', () => ({
 }));
 
 vi.mock('@/libs/notifications', () => ({
+  notifyRestaurantAdminsAboutInventoryAlert: vi.fn(),
   notifyRestaurantAdminsAboutPaidOrder: vi.fn(),
+}));
+
+vi.mock('@/libs/auditLog', () => ({
+  createAuditLog: vi.fn(),
 }));
 
 vi.mock('@/app/api/webhook/sendPurchaseReceiptEmail', () => ({
@@ -244,7 +253,9 @@ describe('POST /api/webhook', () => {
         return createMenuItemFindQuery([
           {
             _id: { toString: () => 'menu-item-1' },
+            lowStockThreshold: 3,
             name: 'Pizza',
+            restaurantId: { toString: () => 'restaurant-1' },
             stockQuantity: 5,
             trackInventory: true,
           },
@@ -313,6 +324,29 @@ describe('POST /api/webhook', () => {
     );
     expect(orderDocument.inventoryAdjustedAt).toBeInstanceOf(Date);
     expect(orderDocument.orderStatus).toBe('processing');
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'menu_item.inventory_alert',
+        entityId: 'menu-item-1',
+        entityType: 'menu_item',
+        metadata: expect.objectContaining({
+          inventoryStatus: 'low_stock',
+          lowStockThreshold: 3,
+          stockQuantity: 3,
+        }),
+        restaurantId: 'restaurant-1',
+      })
+    );
+    expect(notifyRestaurantAdminsAboutInventoryAlert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lowStockThreshold: 3,
+        menuItemId: 'menu-item-1',
+        menuItemName: 'Pizza',
+        restaurantId: 'restaurant-1',
+        status: 'low_stock',
+        stockQuantity: 3,
+      })
+    );
     expect(notifyRestaurantAdminsAboutPaidOrder).toHaveBeenCalledTimes(1);
   });
 

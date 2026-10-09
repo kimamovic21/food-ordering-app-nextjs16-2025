@@ -22,7 +22,12 @@ vi.mock('@/models/order', () => ({
 }));
 
 vi.mock('@/libs/notifications', () => ({
+  notifyRestaurantAdminsAboutInventoryAlert: vi.fn(),
   notifyRestaurantAdminsAboutPaidOrder: vi.fn(),
+}));
+
+vi.mock('@/libs/auditLog', () => ({
+  createAuditLog: vi.fn(),
 }));
 
 vi.mock('@/app/api/webhook/sendPurchaseReceiptEmail', () => ({
