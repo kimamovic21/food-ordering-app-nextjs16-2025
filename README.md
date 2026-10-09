@@ -13,7 +13,7 @@ It includes:
 - favorites for meals and restaurants
 - restaurant ordering-status checks before add-to-cart plus availability alerts when checkout is blocked by closed, paused, closing-soon, or busy restaurants
 - restaurant-controlled free delivery thresholds where customers can pay `$0` delivery after the configured subtotal while courier payout is still preserved
-- admin-controlled menu item inventory tracking with low-stock and sold-out automation
+- admin-controlled menu item inventory tracking with low-stock/sold-out automation, alerts, and activity logs
 - loyalty rewards with delivery fee discounts, tier progress, and an auditable rewards ledger
 - ratings and review flows
 - approved in-app messaging between customers, restaurant owners, admins, and couriers
@@ -65,7 +65,7 @@ It includes:
 - Super-admin protected management actions
 - CRUD for categories, menu items, restaurants, and users
 - Super-admin user deletion with confirmation, active-order guards, Cloudinary cleanup, restaurant/menu/coupon cascade cleanup, review cleanup, and preserved historical orders
-- Menu item availability and inventory controls for temporarily unavailable, low-stock, or sold-out items, with delete protection while active orders still reference an item
+- Menu item availability and inventory controls for temporarily unavailable, low-stock, or sold-out items, plus focused admin filters and delete protection while active orders still reference an item
 - Restaurant preparation/delivery estimate settings, working-hours checkout protection, active order limit controls, free delivery threshold settings, and max-items-per-order controls
 - Courier management and order assignment with optional courier-only assignment notes
 - Order lifecycle management, internal admin order notes, operations overview, late-order operational alerts, kitchen order queue with item-note visibility, and dashboards/statistics
@@ -291,7 +291,8 @@ This project uses many dependencies; below are the main packages actively used i
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
 - Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits, tracked stock limits, sold-out blockers, and total order item limits so oversized or unavailable orders cannot bypass the UI.
-- Stripe webhooks decrement tracked menu item stock after payment confirmation. If inventory changes between checkout creation and payment confirmation, the paid order is system-canceled and marked for refund review instead of silently over-selling.
+- Stripe webhooks decrement tracked menu item stock after payment confirmation. If a paid order moves an item into low-stock or sold-out status, restaurant admins receive an inventory notification and an audit-log entry is written.
+- If inventory changes between checkout creation and payment confirmation, the paid order is system-canceled and marked for refund review instead of silently over-selling.
 - Blocked checkout attempts for active-order, restaurant-availability, capacity, unavailable-item, and quantity-limit reasons are written to audit logs as `checkout.blocked` without exposing secrets.
 - `libs/orderCapacityBackfill.ts` provides a server-only helper to dry-run or repair older restaurant/menu item documents that are missing or have out-of-range order capacity fields.
 - Checkout deduplicates recent identical unpaid `placed` order attempts by reusing or recovering the existing Stripe Checkout session instead of creating another order.

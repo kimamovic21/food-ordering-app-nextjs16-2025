@@ -4,8 +4,12 @@ import { Order } from '@/models/order';
 import { MenuItem } from '@/models/menuItem';
 import { applyPaidOrderInventoryAdjustment } from '@/libs/menuItemInventoryServer';
 import { Restaurant } from '@/models/restaurant';
-import { notifyRestaurantAdminsAboutPaidOrder } from '@/libs/notifications';
+import {
+  notifyRestaurantAdminsAboutInventoryAlert,
+  notifyRestaurantAdminsAboutPaidOrder,
+} from '@/libs/notifications';
 import { sendPurchaseReceiptEmail } from './sendPurchaseReceiptEmail';
+import { createAuditLog } from '@/libs/auditLog';
 import mongoose from 'mongoose';
 import Stripe from 'stripe';
 
@@ -54,9 +58,11 @@ export async function POST(req: Request) {
         }
 
         const wasPaid = Boolean((order as any).orderPaid ?? (order as any).paid);
+        let inventoryResult: Awaited<ReturnType<typeof applyPaidOrderInventoryAdjustment>> | null =
+          null;
 
         if (!wasPaid) {
-          const inventoryResult = await applyPaidOrderInventoryAdjustment(order);
+          inventoryResult = await applyPaidOrderInventoryAdjustment(order);
 
           if (!inventoryResult.ok) {
             const firstViolation = inventoryResult.violations[0];
@@ -96,6 +102,45 @@ export async function POST(req: Request) {
         await order.save();
 
         if (!wasPaid) {
+          if (inventoryResult?.alerts?.length) {
+            try {
+              await Promise.all(
+                inventoryResult.alerts.map(async (alert) => {
+                  await createAuditLog({
+                    actor: null,
+                    action: 'menu_item.inventory_alert',
+                    entityType: 'menu_item',
+                    entityId: alert.menuItemId,
+                    restaurantId: alert.restaurantId || order.restaurantId,
+                    orderId: order._id,
+                    metadata: {
+                      inventoryStatus: alert.status,
+                      lowStockThreshold: alert.lowStockThreshold,
+                      menuItemName: alert.menuItemName,
+                      requestedQuantity: alert.requestedQuantity,
+                      stockQuantity: alert.stockQuantity,
+                    },
+                  });
+
+                  await notifyRestaurantAdminsAboutInventoryAlert({
+                    lowStockThreshold: alert.lowStockThreshold,
+                    menuItemId: alert.menuItemId,
+                    menuItemName: alert.menuItemName,
+                    orderId: order._id,
+                    restaurantId: alert.restaurantId || order.restaurantId,
+                    status: alert.status,
+                    stockQuantity: alert.stockQuantity,
+                  });
+                })
+              );
+            } catch (inventoryAlertError) {
+              console.error(
+                'Failed to create inventory alert after paid order:',
+                inventoryAlertError
+              );
+            }
+          }
+
           try {
             await notifyRestaurantAdminsAboutPaidOrder({
               restaurantId: order.restaurantId,

@@ -1,6 +1,10 @@
 import mongoose from 'mongoose';
 
-import { normalizeMenuItemStockQuantity } from '@/libs/menuItemInventory';
+import {
+  getMenuItemInventoryStatus,
+  normalizeLowStockThreshold,
+  normalizeMenuItemStockQuantity,
+} from '@/libs/menuItemInventory';
 import { MenuItem } from '@/models/menuItem';
 
 export type InventoryAdjustmentViolation = {
@@ -10,9 +14,24 @@ export type InventoryAdjustmentViolation = {
   stockQuantity: number;
 };
 
+export type InventoryAdjustmentAlert = {
+  lowStockThreshold: number;
+  menuItemId: string;
+  menuItemName: string;
+  requestedQuantity: number;
+  restaurantId: string;
+  status: 'low_stock' | 'sold_out';
+  stockQuantity: number;
+};
+
 export const applyPaidOrderInventoryAdjustment = async (order: any) => {
   if (!order || order.inventoryAdjustedAt) {
-    return { adjusted: false, ok: true as const, violations: [] as InventoryAdjustmentViolation[] };
+    return {
+      adjusted: false,
+      alerts: [] as InventoryAdjustmentAlert[],
+      ok: true as const,
+      violations: [] as InventoryAdjustmentViolation[],
+    };
   }
 
   const products = Array.isArray(order.cartProducts) ? order.cartProducts : [];
@@ -35,20 +54,27 @@ export const applyPaidOrderInventoryAdjustment = async (order: any) => {
   const ids = Array.from(quantityByMenuItemId.keys());
 
   if (ids.length === 0) {
-    return { adjusted: false, ok: true as const, violations: [] as InventoryAdjustmentViolation[] };
+    return {
+      adjusted: false,
+      alerts: [] as InventoryAdjustmentAlert[],
+      ok: true as const,
+      violations: [] as InventoryAdjustmentViolation[],
+    };
   }
 
   const menuItems = await MenuItem.find({
     _id: { $in: ids.map((id) => new mongoose.Types.ObjectId(id)) },
     trackInventory: true,
   })
-    .select('_id name trackInventory stockQuantity')
+    .select('_id name restaurantId trackInventory stockQuantity lowStockThreshold')
     .lean();
 
   const trackedItems = menuItems.map((item: any) => ({
     id: item._id.toString(),
+    lowStockThreshold: normalizeLowStockThreshold(item.lowStockThreshold),
     name: item.name || 'Menu item',
     requestedQuantity: quantityByMenuItemId.get(item._id.toString()) || 0,
+    restaurantId: item.restaurantId?.toString?.() || String(item.restaurantId || ''),
     stockQuantity: normalizeMenuItemStockQuantity(item.stockQuantity, 0),
   }));
 
@@ -62,10 +88,16 @@ export const applyPaidOrderInventoryAdjustment = async (order: any) => {
     }));
 
   if (violations.length > 0) {
-    return { adjusted: false, ok: false as const, violations };
+    return {
+      adjusted: false,
+      alerts: [] as InventoryAdjustmentAlert[],
+      ok: false as const,
+      violations,
+    };
   }
 
   const adjustedItems: Array<{ id: string; quantity: number }> = [];
+  const alerts: InventoryAdjustmentAlert[] = [];
 
   for (const item of trackedItems) {
     if (item.requestedQuantity <= 0) {
@@ -96,6 +128,7 @@ export const applyPaidOrderInventoryAdjustment = async (order: any) => {
 
       return {
         adjusted: false,
+        alerts: [] as InventoryAdjustmentAlert[],
         ok: false as const,
         violations: [
           {
@@ -108,11 +141,39 @@ export const applyPaidOrderInventoryAdjustment = async (order: any) => {
       };
     }
 
+    const previousStatus = getMenuItemInventoryStatus({
+      lowStockThreshold: item.lowStockThreshold,
+      stockQuantity: item.stockQuantity,
+      trackInventory: true,
+    });
+    const nextStockQuantity = Math.max(0, item.stockQuantity - item.requestedQuantity);
+    const nextStatus = getMenuItemInventoryStatus({
+      lowStockThreshold: item.lowStockThreshold,
+      stockQuantity: nextStockQuantity,
+      trackInventory: true,
+    });
+
+    if (
+      (nextStatus === 'low_stock' || nextStatus === 'sold_out') &&
+      previousStatus !== nextStatus
+    ) {
+      alerts.push({
+        lowStockThreshold: item.lowStockThreshold,
+        menuItemId: item.id,
+        menuItemName: item.name,
+        requestedQuantity: item.requestedQuantity,
+        restaurantId: item.restaurantId,
+        status: nextStatus,
+        stockQuantity: nextStockQuantity,
+      });
+    }
+
     adjustedItems.push({ id: item.id, quantity: item.requestedQuantity });
   }
 
   return {
     adjusted: adjustedItems.length > 0,
+    alerts,
     ok: true as const,
     violations: [] as InventoryAdjustmentViolation[],
   };

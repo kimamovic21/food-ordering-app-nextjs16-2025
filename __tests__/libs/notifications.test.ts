@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import {
   createNotifications,
+  notifyRestaurantAdminsAboutInventoryAlert,
   notifySupportTicketCreated,
   notifyUserAboutOrderCompletion,
   notifyUserAboutOrderStatusChange,
@@ -181,6 +182,39 @@ describe('notification helpers', () => {
         metadata: { orderStatus: 'completed', reviewPrompt: true },
         isRead: false,
         readAt: null,
+      }),
+    ]);
+  });
+
+  it('notifies restaurant admins when menu item inventory needs attention', async () => {
+    mockUserFindResult([{ _id: restaurantAdminId }]);
+
+    await notifyRestaurantAdminsAboutInventoryAlert({
+      lowStockThreshold: 3,
+      menuItemId: new mongoose.Types.ObjectId('64a000000000000000000007'),
+      menuItemName: 'Cheesecake',
+      orderId,
+      restaurantId,
+      status: 'low_stock',
+      stockQuantity: 2,
+    });
+
+    expect(User.find).toHaveBeenCalledWith({
+      role: 'admin',
+      restaurantId,
+    });
+    expect(Notification.insertMany).toHaveBeenCalledWith([
+      expect.objectContaining({
+        type: 'inventory_alert',
+        title: 'Low stock alert',
+        message: `Cheesecake has only 2 left after paid order #${orderId.toString().slice(-6)}.`,
+        orderId,
+        metadata: expect.objectContaining({
+          inventoryStatus: 'low_stock',
+          lowStockThreshold: 3,
+          menuItemName: 'Cheesecake',
+          stockQuantity: 2,
+        }),
       }),
     ]);
   });

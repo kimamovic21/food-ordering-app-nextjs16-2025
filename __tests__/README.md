@@ -27,7 +27,7 @@ This folder contains unit tests grouped by feature area.
 - `api/restaurants-public.route.test.ts`: validates public restaurant discovery search, filters, sorting, distance ordering, and pagination.
 - `api/admin-restaurants-detail.route.test.ts`: validates superadmin-only restaurant detail access and operational summaries.
 - `api/restaurant-operations.route.test.ts`: validates restaurant operations overview API summaries and admin restaurant scoping.
-- `api/webhook.route.test.ts`: validates webhook signature/idempotency behavior, tracked-stock decrementing, and refund-review fallback when paid inventory disappears before webhook confirmation.
+- `api/webhook.route.test.ts`: validates webhook signature/idempotency behavior, tracked-stock decrementing, low-stock inventory alert side effects, and refund-review fallback when paid inventory disappears before webhook confirmation.
 - `api/payment.test.ts`: validates payment-related helper logic and utility contracts.
 - `libs/courier-assignment-timeout.test.ts`: validates stale pending courier assignment expiry and courier release rules.
 - `libs/courier-assignment-history.test.ts`: validates finalized courier assignment attempt history.
@@ -39,6 +39,8 @@ This folder contains unit tests grouped by feature area.
 - `libs/restaurantEta.test.ts`: validates load-adjusted restaurant preparation/delivery estimates and customer-facing busy timing messages.
 - `libs/restaurantOrderingStatus.test.ts`: validates capacity-aware ordering status, busy copy, active-order counting, and cart validation status mapping.
 - `libs/menuItemInventory.test.ts`: validates optional menu item stock tracking defaults, normalization, low-stock status, and sold-out status.
+- `libs/notificationClient.test.ts`: validates role-aware notification routing, including inventory alerts to the admin menu-items table.
+- `libs/notifications.test.ts`: validates notification creation helpers, including inventory alerts for restaurant admins.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item, per-order, and tracked-stock quantity helpers used by cart UI and checkout APIs.
 - `libs/freeDelivery.test.ts`: validates customer free-delivery threshold calculations, disabled thresholds, remaining-to-free-delivery copy, and courier payout preservation.
 - `libs/orderCapacityBackfill.test.ts`: validates server-side maintenance helpers for backfilling restaurant/menu item quantity-limit fields.
