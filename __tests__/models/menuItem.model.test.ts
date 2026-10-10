@@ -21,6 +21,7 @@ describe('MenuItem model validation', () => {
     expect(m.maxQuantityPerOrder).toBe(20);
     expect(m.trackInventory).toBe(false);
     expect(m.stockQuantity).toBeNull();
+    expect(m.reservedStockQuantity).toBe(0);
     expect(m.lowStockThreshold).toBe(3);
   });
 

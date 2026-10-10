@@ -22,6 +22,7 @@ export type MenuItemListItem = {
   maxQuantityPerOrder?: number;
   trackInventory?: boolean;
   stockQuantity?: number | null;
+  reservedStockQuantity?: number | null;
   lowStockThreshold?: number | null;
   stockLastAdjustedAt?: string | null;
   adminId?: EntityId;

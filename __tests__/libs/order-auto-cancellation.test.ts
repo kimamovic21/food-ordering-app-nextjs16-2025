@@ -7,6 +7,7 @@ import {
 } from '@/libs/orderAutoCancellation';
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
 import { expireOpenStripeCheckoutSession } from '@/libs/stripeCheckoutSession';
+import { releaseOrderInventoryReservation } from '@/libs/menuItemInventoryServer';
 
 vi.mock('@/libs/auditLog', () => ({
   createAuditLog: vi.fn(),
@@ -22,6 +23,10 @@ vi.mock('@/libs/restaurantAvailabilityRequests', () => ({
 
 vi.mock('@/libs/stripeCheckoutSession', () => ({
   expireOpenStripeCheckoutSession: vi.fn(),
+}));
+
+vi.mock('@/libs/menuItemInventoryServer', () => ({
+  releaseOrderInventoryReservation: vi.fn(async () => ({ released: false, reservedItems: [] })),
 }));
 
 const minutesAgo = (minutes: number) => new Date(Date.now() - minutes * 60 * 1000);
@@ -70,6 +75,10 @@ describe('order auto cancellation', () => {
     expect(order.canceledBy).toBe('system');
     expect(order.cancellationReason).toContain('payment was not completed');
     expect(expireOpenStripeCheckoutSession).toHaveBeenCalledWith('cs_test_order_auto_1');
+    expect(releaseOrderInventoryReservation).toHaveBeenCalledWith(
+      order,
+      expect.stringContaining('payment was not completed')
+    );
     expect(order.save).toHaveBeenCalled();
     expect(createAuditLog).toHaveBeenCalledWith(
       expect.objectContaining({

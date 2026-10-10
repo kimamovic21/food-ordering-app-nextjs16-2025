@@ -1,4 +1,4 @@
-import { getTrackedStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
+import { getTrackedAvailableStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
 
 export const MIN_ITEMS_PER_ORDER_LIMIT = 1;
 export const DEFAULT_ITEMS_PER_ORDER_LIMIT = 20;
@@ -13,6 +13,7 @@ type QuantityLimitCartItem = {
   name?: string;
   quantity?: unknown;
   maxQuantityPerOrder?: unknown;
+  reservedStockQuantity?: unknown;
   trackInventory?: unknown;
   stockQuantity?: unknown;
 };
@@ -159,7 +160,7 @@ export const canAddItemToCart = ({
 }): CartQuantityLimitViolation | null => {
   const nextItemQuantity = getCartQuantityForMenuItem(cartItems, item._id) + 1;
   const itemLimit = normalizeMenuItemQuantityLimit(item.maxQuantityPerOrder);
-  const stockQuantity = getTrackedStockQuantity(item);
+  const stockQuantity = getTrackedAvailableStockQuantity(item);
 
   if (nextItemQuantity > itemLimit) {
     return {

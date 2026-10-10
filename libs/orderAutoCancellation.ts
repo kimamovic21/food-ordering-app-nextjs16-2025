@@ -9,6 +9,7 @@ import {
 import { notifyWaitingUsersIfRestaurantCanAcceptOrders } from '@/libs/restaurantAvailabilityRequests';
 import { markOrderRefundReviewRequired } from '@/libs/orderRefund';
 import { expireOpenStripeCheckoutSession } from '@/libs/stripeCheckoutSession';
+import { releaseOrderInventoryReservation } from '@/libs/menuItemInventoryServer';
 import type { OrderPhaseDurationOffsets } from '@/types/order-timeline';
 
 export { READY_WITHOUT_COURIER_AUTO_CANCEL_MINUTES, UNPAID_ORDER_AUTO_CANCEL_MINUTES };
@@ -51,6 +52,10 @@ const markOrderCanceledBySystem = async (order: OrderDocument, reason: string) =
     ? null
     : await expireOpenStripeCheckoutSession(order.stripeSessionId);
 
+  if (!wasPaidBeforeCancellation) {
+    await releaseOrderInventoryReservation(order, reason);
+  }
+
   await order.save();
 
   await createAuditLog({
@@ -64,6 +69,8 @@ const markOrderCanceledBySystem = async (order: OrderDocument, reason: string) =
       reason,
       ...(stripeCheckoutExpiration
         ? {
+            inventoryReservationReleased:
+              (order as any).inventoryReservationStatus === 'released',
             stripeCheckoutSessionExpired: stripeCheckoutExpiration.expired,
             stripeCheckoutSessionExpirationReason: stripeCheckoutExpiration.reason,
             stripeCheckoutSessionId: stripeCheckoutExpiration.sessionId,

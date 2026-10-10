@@ -83,6 +83,9 @@ export async function POST(req: Request) {
             (order as any).refundAmount = Number((order as any).total) || 0;
             (order as any).refundRequestedAt = new Date();
             (order as any).inventoryAdjustmentError = reason;
+            if ((order as any).inventoryReservationStatus === 'reserved') {
+              (order as any).inventoryReservationStatus = 'failed';
+            }
             await order.save();
 
             return new Response(JSON.stringify({ received: true }), { status: 200 });
@@ -90,6 +93,9 @@ export async function POST(req: Request) {
 
           if (inventoryResult.adjusted) {
             (order as any).inventoryAdjustedAt = new Date();
+            if ((order as any).inventoryReservationStatus === 'reserved') {
+              (order as any).inventoryReservationStatus = 'captured';
+            }
           }
         }
 

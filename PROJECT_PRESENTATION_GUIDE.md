@@ -246,12 +246,14 @@ Checkout:
 - The customer cannot checkout with an oversized cart: restaurants can cap total items per order up to 20, and menu items can cap their own quantity per order up to 20.
 - The server creates an unpaid `placed` order before redirecting to Stripe Checkout.
 - The order stores snapshots of cart items, tax, customer delivery fee, courier payout, free delivery threshold/discount state, estimates, coupon, loyalty, delivery address, and Stripe session id.
+- For tracked menu items, checkout temporarily reserves the required stock for the same unpaid payment window. This reduces the real-world oversell case where two customers open Stripe Checkout for the last available items at the same time.
 - If a matching unpaid order already exists recently, checkout can reuse or recover the existing Stripe Checkout session instead of creating duplicate orders.
 
 Payment:
 
 - Stripe Checkout is used for card payment.
 - Stripe webhook marks the order as paid after `checkout.session.completed`.
+- When an order had a stock reservation, the webhook captures that reservation by decrementing both physical stock and reserved stock. Older unpaid orders without reservations still use the direct inventory adjustment path.
 - Payment is idempotent, so repeated webhook events should not duplicate side effects.
 - If the user leaves Stripe and comes back later, the payment-link endpoint can recover or recreate the hosted checkout link when valid.
 - Old expired or canceled payment flows are blocked from incorrectly marking canceled orders as paid.
@@ -467,6 +469,7 @@ Stale unpaid orders:
 
 - Unpaid `placed` orders can auto-cancel after 30 minutes.
 - The app attempts to expire the matching open Stripe Checkout session.
+- Any reserved tracked stock is released back to the menu item.
 - The order becomes `canceled`.
 - The order is marked unpaid.
 - A cancellation reason is stored.

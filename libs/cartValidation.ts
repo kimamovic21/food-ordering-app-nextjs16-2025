@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 import { normalizeCartItemNote } from '@/libs/cartItemNotes';
 import { getCartTotalQuantity, normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import {
-  getTrackedStockQuantity,
+  getTrackedAvailableStockQuantity,
   isInventoryTracked,
   normalizeLowStockThreshold,
 } from '@/libs/menuItemInventory';
@@ -56,6 +56,7 @@ type CartValidationMenuItem = {
   priceSmall?: unknown;
   priceType?: string;
   restaurantId?: unknown;
+  reservedStockQuantity?: unknown;
   stockQuantity?: unknown;
   trackInventory?: unknown;
 };
@@ -188,7 +189,7 @@ export async function validateCartForOrder({
   const menuItems = uniqueIds.length
     ? await MenuItem.find({ _id: { $in: uniqueIds } })
         .select(
-          '_id name description image restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder trackInventory stockQuantity lowStockThreshold'
+          '_id name description image restaurantId adminId isAvailable priceType priceSmall priceMedium priceLarge maxQuantityPerOrder trackInventory stockQuantity reservedStockQuantity lowStockThreshold'
         )
         .lean()
     : [];
@@ -231,7 +232,7 @@ export async function validateCartForOrder({
       };
     }
 
-    const stockQuantity = getTrackedStockQuantity(menuItem);
+    const stockQuantity = getTrackedAvailableStockQuantity(menuItem);
 
     if (isInventoryTracked(menuItem) && stockQuantity != null && stockQuantity <= 0) {
       return {

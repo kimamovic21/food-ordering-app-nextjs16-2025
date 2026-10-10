@@ -23,7 +23,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { getMenuItemInventoryLabel, getMenuItemInventoryStatus } from '@/libs/menuItemInventory';
+import {
+  getMenuItemInventoryLabel,
+  getMenuItemInventoryStatus,
+  getTrackedReservedStockQuantity,
+} from '@/libs/menuItemInventory';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { MenuItemCategory, MenuItemListItem } from '@/types/menu';
 
@@ -184,6 +188,7 @@ function ItemImage({ item }: { item: MenuItemRow }) {
 
 function InventoryBadge({ item }: { item: MenuItemRow }) {
   const inventoryStatus = getMenuItemInventoryStatus(item);
+  const reservedStockQuantity = getTrackedReservedStockQuantity(item) || 0;
 
   if (inventoryStatus === 'untracked') {
     return <p className='text-xs font-medium text-muted-foreground'>Inventory not tracked</p>;
@@ -199,6 +204,7 @@ function InventoryBadge({ item }: { item: MenuItemRow }) {
   return (
     <Badge variant='outline' className={className}>
       {getMenuItemInventoryLabel(item)}
+      {reservedStockQuantity > 0 ? ` - ${reservedStockQuantity} reserved` : ''}
     </Badge>
   );
 }

@@ -12,13 +12,13 @@
 
 ## Plain-English Summary
 
-Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, tracked inventory, free delivery threshold, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
+Creates or recovers a Stripe Checkout session after server-side cart, per-item note normalization, user, restaurant, tracked inventory, temporary stock reservation, free delivery threshold, coupon, loyalty, radius, capacity, delivery-readiness, and duplicate-payment validation.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
 - It uses `coupon`, `order`, `user` for persistence.
-- It delegates shared logic to `auditLog`, `authOptions`, `cartValidation`, `coupon`, `deliveryPin`, `loyaltyCalculator`, `money`, `notifications`, `phone`, `qstash`, `rateLimit` so behavior stays consistent across the app.
+- It delegates shared logic to `auditLog`, `authOptions`, `cartValidation`, `coupon`, `deliveryPin`, `loyaltyCalculator`, `menuItemInventoryServer`, `money`, `notifications`, `phone`, `qstash`, `rateLimit` so behavior stays consistent across the app.
 - Detected local functions/handlers: `createCheckoutBlockResponse`, `canRecoverFromStripeSessionLookupError`, `getCheckoutOrigin`, `normalizeFingerprintText`, `normalizeFingerprintCoordinate`, `createCheckoutFingerprint`, `createStripeLineItems`, `createStripeCheckoutSessionForOrder`, `createAndSaveCheckoutSessionResponse`, `getExistingCheckoutSessionResponse`.
 
 ## Checkout Integration Flow
@@ -27,13 +27,15 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 - Upstash rate limiting slows repeated checkout attempts.
 - Cart validation re-checks menu item existence, availability, tracked stock, size/price validity, quantity limits, one-restaurant-per-cart behavior, and restaurant capacity.
 - Tracked-stock blockers return specific sold-out or stock-limit responses before Stripe Checkout is created. This prevents stale local cart state from charging the customer for inventory that the server already knows is unavailable.
+- After validation, tracked menu item stock is temporarily reserved against `reservedStockQuantity` for the unpaid payment window. This means later carts and checkouts see the remaining available stock instead of the full physical stock.
+- If Stripe Checkout session creation fails after reservation, the route releases the reservation and cancels the temporary order so stock is not left locked.
 - Per-item cart notes are trimmed, whitespace-normalized, capped, included in the checkout fingerprint, and saved into `Order.cartProducts` so restaurant/admin/customer/courier views can see item-specific preparation requests.
 - Restaurant checks verify open/closed state, pause reason, delivery radius, delivery location, busy/capacity state, and courier readiness before money is collected.
 - Coupon and loyalty helpers recalculate discounts server-side so the browser cannot fake cheaper totals.
 - Free delivery pricing is calculated server-side from the restaurant threshold. If unlocked, the customer delivery fee becomes `0`, the free delivery discount is snapshotted, and the courier payout still uses the restaurant courier fee.
 - Stripe line items are built from verified items and server-calculated totals.
 - If the user already has an open Stripe session for the same checkout fingerprint, the route can reuse it instead of creating duplicate unpaid orders.
-- QStash schedules post-checkout maintenance so stale unpaid orders or delivery readiness issues can be cleaned up later.
+- QStash schedules post-checkout maintenance so stale unpaid orders, open Stripe sessions, and reserved stock can be cleaned up later.
 - Audit logs record blocked or sensitive checkout outcomes for admin visibility.
 
 ## Request Inputs
@@ -53,6 +55,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 - `currency.js` and money helpers: keep prices, discounts, customer delivery fees, courier payout, and totals rounded consistently.
 - `libs/freeDelivery.ts`: keeps free delivery threshold, customer delivery fee, restaurant-covered discount, and courier payout calculations shared and testable.
 - `libs/menuItemInventory.ts`: normalizes optional stock-tracking fields used by cart validation and checkout blockers.
+- `libs/menuItemInventoryServer.ts`: reserves tracked stock before Stripe redirect and releases it if checkout setup fails.
 
 ## Auth, Role, And Safety Checks
 
@@ -113,6 +116,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 - Writes or reads audit-log records.
 - May reuse an existing open Stripe Checkout session instead of creating a new one.
 - Saves `stripeSessionId` on the order so later webhook, invoice, and payment-link flows can reconnect Stripe state to MongoDB state.
+- Saves inventory reservation metadata on unpaid orders so webhooks can capture the reservation and auto-cancel/customer-cancel flows can release it.
 
 ## Response Behavior
 
@@ -121,7 +125,7 @@ Creates or recovers a Stripe Checkout session after server-side cart, per-item n
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/checkout` does. Explain that it is the final server-side gate before payment. The cart page can warn the user, but this API makes the authoritative decision: it validates user, cart, menu item stock, restaurant, courier readiness, free delivery threshold, coupons, loyalty, totals, duplicate payment sessions, and only then creates or reuses a Stripe Checkout URL.
+Open this file when someone asks what `/api/checkout` does. Explain that it is the final server-side gate before payment. The cart page can warn the user, but this API makes the authoritative decision: it validates user, cart, menu item stock, restaurant, courier readiness, free delivery threshold, coupons, loyalty, totals, duplicate payment sessions, temporarily reserves tracked stock, and only then creates or reuses a Stripe Checkout URL.
 
 ## Maintenance Notes For Future Work
 

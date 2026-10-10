@@ -13,7 +13,7 @@ It includes:
 - favorites for meals and restaurants
 - restaurant ordering-status checks before add-to-cart plus availability alerts when checkout is blocked by closed, paused, closing-soon, or busy restaurants
 - restaurant-controlled free delivery thresholds where customers can pay `$0` delivery after the configured subtotal while courier payout is still preserved
-- admin-controlled menu item inventory tracking with low-stock/sold-out automation, alerts, and activity logs
+- admin-controlled menu item inventory tracking with checkout reservations, low-stock/sold-out automation, alerts, and activity logs
 - loyalty rewards with delivery fee discounts, tier progress, and an auditable rewards ledger
 - ratings and review flows
 - approved in-app messaging between customers, restaurant owners, admins, and couriers
@@ -282,6 +282,7 @@ This project uses many dependencies; below are the main packages actively used i
 - Restaurants can configure average preparation time, average delivery time, and an active kitchen order limit in the admin restaurant form.
 - Restaurants can configure `maxItemsPerOrder` up to 20 items, and each menu item can configure `maxQuantityPerOrder` up to 20 units per order.
 - Menu items can optionally track stock. Existing items stay untracked until an admin enables inventory; newly tracked items default to 10 in stock, show low-stock warnings near the configured threshold, and automatically block sold-out checkout.
+- Checkout temporarily reserves tracked stock for the unpaid Stripe window, so another customer cannot take the same last items while the first customer is already on the Stripe payment page.
 - Restaurants can configure a free delivery threshold. When the food subtotal reaches the threshold, the customer delivery fee becomes `$0`, but the order still stores `courierPayoutAmount` from the restaurant courier fee so courier earnings and admin reporting do not disappear.
 - Checkout snapshots load-adjusted restaurant estimates onto each order, so order detail timelines can show expected timing alongside actual phase durations.
 - Public menu item pages check the restaurant ordering status before adding to cart, while checkout remains the final server-side source of truth.
@@ -290,15 +291,15 @@ This project uses many dependencies; below are the main packages actively used i
 - `libs/restaurantEta.ts` increases preparation estimates as the active kitchen load rises, and exposes customer-facing busy messaging plus remaining active order slots.
 - Checkout blocks restaurants that are closed, paused, outside delivery radius, blocked by working hours, or inside the final 60 minutes before closing, and surfaces the next opening time when available.
 - Checkout blocks new orders when the restaurant has reached its paid active kitchen order limit (`placed`, `processing`, or `ready` orders).
-- Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits, tracked stock limits, sold-out blockers, and total order item limits so oversized or unavailable orders cannot bypass the UI.
-- Stripe webhooks decrement tracked menu item stock after payment confirmation. If a paid order moves an item into low-stock or sold-out status, restaurant admins receive an inventory notification and an audit-log entry is written.
+- Add-to-cart, cart validation, and `/api/checkout` all enforce item quantity limits, tracked available stock limits, sold-out blockers, and total order item limits so oversized or unavailable orders cannot bypass the UI.
+- Stripe webhooks capture reserved tracked stock after payment confirmation or fall back to direct stock decrement for older unpaid orders. If a paid order moves an item into low-stock or sold-out status, restaurant admins receive an inventory notification and an audit-log entry is written.
 - If inventory changes between checkout creation and payment confirmation, the paid order is system-canceled and marked for refund review instead of silently over-selling.
 - Blocked checkout attempts for active-order, restaurant-availability, capacity, unavailable-item, and quantity-limit reasons are written to audit logs as `checkout.blocked` without exposing secrets.
 - `libs/orderCapacityBackfill.ts` provides a server-only helper to dry-run or repair older restaurant/menu item documents that are missing or have out-of-range order capacity fields.
 - Checkout deduplicates recent identical unpaid `placed` order attempts by reusing or recovering the existing Stripe Checkout session instead of creating another order.
 - Unpaid `placed` orders show the customer a countdown based on the same 30-minute auto-cancel window used by background maintenance.
-- When a stale unpaid `placed` order is system-canceled, the app also attempts to expire the still-open Stripe Checkout session so old payment tabs cannot complete canceled orders.
-- When a customer manually cancels an unpaid `placed` order, the app also attempts to expire that order's Stripe Checkout session.
+- When a stale unpaid `placed` order is system-canceled, the app also attempts to expire the still-open Stripe Checkout session and releases any reserved tracked stock so old payment tabs cannot complete canceled orders.
+- When a customer manually cancels an unpaid `placed` order, the app also attempts to expire that order's Stripe Checkout session and releases any reserved tracked stock.
 - Cart validation shows item-specific unavailable/deleted-item blockers, server-side restaurant preflight blockers, delivery-radius blockers, and non-blocking price-change warnings before Stripe Checkout.
 - Cart can suggest the best public coupon for the current restaurant subtotal and let the customer apply it directly.
 - Checkout blocks customers from starting another paid active order until the previous order is completed or canceled.
@@ -325,7 +326,7 @@ This project uses many dependencies; below are the main packages actively used i
 
 - `@upstash/qstash` is used for delayed order-maintenance checks that should run later without relying only on someone opening an order page.
 - Checkout schedules a 30-minute unpaid-order check after a Stripe Checkout session is created.
-- When that delayed check cancels an unpaid order, the order-maintenance helper tries to expire the open Stripe Checkout session before writing the cancellation audit metadata.
+- When that delayed check cancels an unpaid order, the order-maintenance helper tries to expire the open Stripe Checkout session, releases reserved tracked stock, and then writes cancellation audit metadata.
 - Assigning a courier schedules a 10-minute courier-assignment timeout check. If the courier does not accept or decline in time, the assignment is marked `expired`, the courier is released, and restaurant admins are notified to choose another courier.
 - Courier assignment history records accepted, declined, and expired attempts so admin and courier performance views can show missed assignments, response rate, acceptance rate, and average response time.
 - Moving an order to `ready` schedules a 60-minute ready-without-courier check.

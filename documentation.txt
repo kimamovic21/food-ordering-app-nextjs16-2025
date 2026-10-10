@@ -1219,3 +1219,5 @@ Add free delivery threshold and courier payout split
 Add menu item inventory and sold-out automation
 
 Add inventory alerts and menu item stock filters
+
+Add checkout stock reservation window

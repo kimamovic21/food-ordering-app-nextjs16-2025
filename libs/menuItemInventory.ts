@@ -8,6 +8,7 @@ export type MenuItemInventoryStatus = 'untracked' | 'in_stock' | 'low_stock' | '
 type InventoryLike = {
   trackInventory?: unknown;
   stockQuantity?: unknown;
+  reservedStockQuantity?: unknown;
   lowStockThreshold?: unknown;
 };
 
@@ -42,10 +43,30 @@ export const getTrackedStockQuantity = (item: InventoryLike | null | undefined) 
   return normalizeMenuItemStockQuantity(item?.stockQuantity, 0);
 };
 
+export const getTrackedReservedStockQuantity = (item: InventoryLike | null | undefined) => {
+  if (!isInventoryTracked(item)) {
+    return null;
+  }
+
+  return normalizeMenuItemStockQuantity(item?.reservedStockQuantity, 0);
+};
+
+export const getTrackedAvailableStockQuantity = (item: InventoryLike | null | undefined) => {
+  const stockQuantity = getTrackedStockQuantity(item);
+
+  if (stockQuantity == null) {
+    return null;
+  }
+
+  const reservedStockQuantity = getTrackedReservedStockQuantity(item) || 0;
+
+  return Math.max(0, stockQuantity - reservedStockQuantity);
+};
+
 export const getMenuItemInventoryStatus = (
   item: InventoryLike | null | undefined
 ): MenuItemInventoryStatus => {
-  const stockQuantity = getTrackedStockQuantity(item);
+  const stockQuantity = getTrackedAvailableStockQuantity(item);
 
   if (stockQuantity == null) {
     return 'untracked';
@@ -61,7 +82,7 @@ export const getMenuItemInventoryStatus = (
 };
 
 export const getMenuItemInventoryLabel = (item: InventoryLike | null | undefined) => {
-  const stockQuantity = getTrackedStockQuantity(item);
+  const stockQuantity = getTrackedAvailableStockQuantity(item);
 
   if (stockQuantity == null) {
     return 'Inventory not tracked';
