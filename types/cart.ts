@@ -14,6 +14,7 @@ export interface CartItem {
   maxQuantityPerOrder?: number;
   trackInventory?: boolean;
   stockQuantity?: number | null;
+  reservedStockQuantity?: number | null;
   lowStockThreshold?: number | null;
   note?: string;
 }
@@ -86,6 +87,7 @@ export type CartValidationItem = {
   maxQuantityPerOrder?: number;
   trackInventory?: boolean;
   stockQuantity?: number | null;
+  reservedStockQuantity?: number | null;
   lowStockThreshold?: number | null;
   message?: string | null;
   note?: string;

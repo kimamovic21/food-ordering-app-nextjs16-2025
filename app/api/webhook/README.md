@@ -12,14 +12,16 @@
 
 ## Plain-English Summary
 
-Receives Stripe webhook events, verifies the Stripe signature, marks orders paid, decrements tracked menu item stock, updates coupon usage, and triggers purchase notifications/receipt work.
+Receives Stripe webhook events, verifies the Stripe signature, marks orders paid, captures tracked inventory reservations or decrements tracked menu item stock, updates coupon usage, and triggers purchase notifications/receipt work.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
 - It uses `coupon`, `menuItem`, `order`, `restaurant` for persistence.
 - It delegates shared logic to `menuItemInventoryServer` and `notifications` so behavior stays consistent across the app.
-- On the first successful `checkout.session.completed` event for an unpaid order, tracked menu item stock is decremented once and the order stores `inventoryAdjustedAt`.
+- On the first successful `checkout.session.completed` event for an unpaid order, tracked menu item stock is adjusted once and the order stores `inventoryAdjustedAt`.
+- Newer checkout orders usually arrive with `inventoryReservationStatus: reserved`; the webhook captures that reservation by decrementing both `stockQuantity` and `reservedStockQuantity`, then marks the reservation `captured`.
+- Older unpaid orders without reservation metadata still use the direct stock-decrement path so legacy payment links continue to reconcile safely.
 - If that decrement moves a tracked item into `low_stock` or `sold_out`, the route creates a `menu_item.inventory_alert` audit log and sends an `inventory_alert` notification to restaurant admins.
 - If stock changed after checkout creation but before payment confirmation, the webhook marks the paid order as system-canceled with `refundStatus: review_required` instead of allowing a silent over-sale.
 - Duplicate paid webhook events skip stock adjustment because `wasPaid`/`inventoryAdjustedAt` make the side effects idempotent.
@@ -36,7 +38,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 - `resend`: sends transactional emails such as verification links, password reset links, and purchase receipts.
 - `@react-email/components` and `@react-email/render`: define the email templates that Resend sends.
 - `stripe`: creates Checkout sessions, verifies webhooks, reuses open payment links, and records payment session ids on orders.
-- `libs/menuItemInventoryServer.ts`: performs server-only paid-order inventory adjustment with rollback if a concurrent stock update fails.
+- `libs/menuItemInventoryServer.ts`: performs server-only paid-order inventory reservation capture/direct adjustment with rollback if a concurrent stock update fails.
 
 ## Auth, Role, And Safety Checks
 
@@ -68,7 +70,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 - Updates existing MongoDB documents.
 - Touches Stripe payment/session/webhook behavior.
 - May send email or app notifications.
-- Decrements tracked menu item stock after payment confirmation and records refund-review metadata when stock is gone.
+- Captures reserved tracked menu item stock after payment confirmation and records refund-review metadata when stock is gone.
 - Emits low-stock/sold-out inventory notifications and audit activity for restaurant admins.
 
 ## Response Behavior
@@ -78,7 +80,7 @@ Receives Stripe webhook events, verifies the Stripe signature, marks orders paid
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/webhook` does. Explain that it belongs to the Stripe webhook workflow, serves `Stripe system`, verifies Stripe signatures, reconciles paid orders, adjusts tracked inventory exactly once, writes inventory alerts when stock needs attention, handles paid-but-out-of-stock refund review, and then sends admin notifications/receipts when appropriate.
+Open this file when someone asks what `/api/webhook` does. Explain that it belongs to the Stripe webhook workflow, serves `Stripe system`, verifies Stripe signatures, reconciles paid orders, captures reserved inventory or adjusts tracked inventory exactly once, writes inventory alerts when stock needs attention, handles paid-but-out-of-stock refund review, and then sends admin notifications/receipts when appropriate.
 
 ## Maintenance Notes For Future Work
 

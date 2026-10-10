@@ -15,7 +15,7 @@ This folder contains unit tests grouped by feature area.
 - `api/restaurant-ordering-status.route.test.ts`: validates public restaurant ordering status and active capacity responses.
 - `api/profile-change-password.route.test.ts`: validates password change API behavior.
 - `api/upload-users.route.test.ts`: validates profile image upload/remove behavior.
-- `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit and tracked-stock blockers, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, and failure handling.
+- `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit and tracked-stock blockers, temporary inventory reservation, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, and failure handling.
 - `api/order-queue.route.test.ts`: validates restaurant queue access, courier timeout handling, and kitchen item-note payload normalization.
 - `api/cart-validate.route.test.ts`: validates cart item revalidation plus restaurant minimum, busy, delivery-radius, and quantity-limit preflight blockers.
 - `api/courier-assignment.route.test.ts`: validates courier assignment guardrails, courier-only assignment notes, and assignable courier schedule/status checks.
@@ -27,7 +27,7 @@ This folder contains unit tests grouped by feature area.
 - `api/restaurants-public.route.test.ts`: validates public restaurant discovery search, filters, sorting, distance ordering, and pagination.
 - `api/admin-restaurants-detail.route.test.ts`: validates superadmin-only restaurant detail access and operational summaries.
 - `api/restaurant-operations.route.test.ts`: validates restaurant operations overview API summaries and admin restaurant scoping.
-- `api/webhook.route.test.ts`: validates webhook signature/idempotency behavior, tracked-stock decrementing, low-stock inventory alert side effects, and refund-review fallback when paid inventory disappears before webhook confirmation.
+- `api/webhook.route.test.ts`: validates webhook signature/idempotency behavior, tracked-stock reservation capture/direct decrementing, low-stock inventory alert side effects, and refund-review fallback when paid inventory disappears before webhook confirmation.
 - `api/payment.test.ts`: validates payment-related helper logic and utility contracts.
 - `libs/courier-assignment-timeout.test.ts`: validates stale pending courier assignment expiry and courier release rules.
 - `libs/courier-assignment-history.test.ts`: validates finalized courier assignment attempt history.
@@ -38,7 +38,7 @@ This folder contains unit tests grouped by feature area.
 - `libs/restaurantCapacity.test.ts`: validates shared active kitchen capacity normalization and near-capacity snapshot behavior.
 - `libs/restaurantEta.test.ts`: validates load-adjusted restaurant preparation/delivery estimates and customer-facing busy timing messages.
 - `libs/restaurantOrderingStatus.test.ts`: validates capacity-aware ordering status, busy copy, active-order counting, and cart validation status mapping.
-- `libs/menuItemInventory.test.ts`: validates optional menu item stock tracking defaults, normalization, low-stock status, and sold-out status.
+- `libs/menuItemInventory.test.ts`: validates optional menu item stock tracking defaults, normalization, checkout-reserved stock math, low-stock status, and sold-out status.
 - `libs/notificationClient.test.ts`: validates role-aware notification routing, including inventory alerts to the admin menu-items table.
 - `libs/notifications.test.ts`: validates notification creation helpers, including inventory alerts for restaurant admins.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item, per-order, and tracked-stock quantity helpers used by cart UI and checkout APIs.

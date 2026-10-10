@@ -312,11 +312,11 @@ describe('POST /api/webhook', () => {
 
     expect(response.status).toBe(200);
     expect(MenuItem.updateOne).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         _id: 'menu-item-1',
-        stockQuantity: { $gte: 2 },
         trackInventory: true,
-      },
+        $expr: expect.any(Object),
+      }),
       {
         $inc: { stockQuantity: -2 },
         $set: { stockLastAdjustedAt: expect.any(Date) },
@@ -347,6 +347,101 @@ describe('POST /api/webhook', () => {
         stockQuantity: 3,
       })
     );
+    expect(notifyRestaurantAdminsAboutPaidOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('captures reserved inventory instead of decrementing unreserved stock again', async () => {
+    vi.mocked(MenuItem.find).mockImplementation((query?: any) => {
+      if (query?.trackInventory === true) {
+        return createMenuItemFindQuery([
+          {
+            _id: { toString: () => 'menu-item-1' },
+            lowStockThreshold: 3,
+            name: 'Pizza',
+            restaurantId: { toString: () => 'restaurant-1' },
+            reservedStockQuantity: 2,
+            stockQuantity: 5,
+            trackInventory: true,
+          },
+        ]);
+      }
+
+      return createMenuItemFindQuery([
+        {
+          _id: { toString: () => 'menu-item-1' },
+          image: 'https://example.com/item.jpg',
+        },
+      ]);
+    });
+
+    const orderDocument = {
+      _id: { toString: () => 'order-1' },
+      restaurantId: 'restaurant-1',
+      email: 'customer@example.com',
+      cartProducts: [
+        {
+          productId: 'menu-item-1',
+          name: 'Pizza',
+          size: 'Large',
+          quantity: 2,
+          price: 12,
+        },
+      ],
+      taxAmount: 1,
+      deliveryFee: 2,
+      total: 27,
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      orderPaid: false,
+      paid: false,
+      orderStatus: '',
+      stripeSessionId: null,
+      receiptEmailSentAt: null,
+      inventoryAdjustedAt: null,
+      inventoryReservationStatus: 'reserved',
+      inventoryReservedItems: [
+        {
+          menuItemId: { toString: () => 'menu-item-1' },
+          menuItemName: 'Pizza',
+          quantity: 2,
+        },
+      ],
+      save: vi.fn(async function save(this: Record<string, unknown>) {
+        if (this.paid) {
+          this.receiptEmailSentAt = this.receiptEmailSentAt || new Date('2026-01-01T00:01:00.000Z');
+        }
+      }),
+    };
+
+    vi.mocked(Order.findById).mockResolvedValue(orderDocument as never);
+
+    const POST = await loadWebhookRoute();
+    const response = await POST(
+      new Request('http://localhost/api/webhook', {
+        method: 'POST',
+        body: JSON.stringify({}),
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(MenuItem.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: 'menu-item-1',
+        trackInventory: true,
+        $expr: expect.any(Object),
+      }),
+      {
+        $inc: {
+          reservedStockQuantity: -2,
+          stockQuantity: -2,
+        },
+        $set: {
+          stockLastAdjustedAt: expect.any(Date),
+          stockReservationUpdatedAt: expect.any(Date),
+        },
+      }
+    );
+    expect(orderDocument.inventoryAdjustedAt).toBeInstanceOf(Date);
+    expect(orderDocument.inventoryReservationStatus).toBe('captured');
     expect(notifyRestaurantAdminsAboutPaidOrder).toHaveBeenCalledTimes(1);
   });
 

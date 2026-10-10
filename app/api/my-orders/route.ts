@@ -7,6 +7,7 @@ import { authOptions } from '@/libs/authOptions';
 import { createAuditLog } from '@/libs/auditLog';
 import { applyOrderAutoCancellation } from '@/libs/orderAutoCancellation';
 import { expireOpenStripeCheckoutSession } from '@/libs/stripeCheckoutSession';
+import { releaseOrderInventoryReservation } from '@/libs/menuItemInventoryServer';
 import {
   notifyRestaurantAdminsAboutCanceledOrder,
   notifyUserAboutOrderCompletion,
@@ -200,6 +201,10 @@ export async function PATCH(request: Request) {
     const stripeCheckoutExpiration = await expireOpenStripeCheckoutSession(
       (order as any).stripeSessionId
     );
+    const inventoryReservationRelease = await releaseOrderInventoryReservation(
+      order,
+      'Customer canceled the unpaid checkout order.'
+    );
 
     await order.save();
     await notifyWaitingUsersIfRestaurantCanAcceptOrders(order.restaurantId);
@@ -216,6 +221,7 @@ export async function PATCH(request: Request) {
         stripeCheckoutSessionExpired: stripeCheckoutExpiration.expired,
         stripeCheckoutSessionExpirationReason: stripeCheckoutExpiration.reason,
         stripeCheckoutSessionId: stripeCheckoutExpiration.sessionId,
+        inventoryReservationReleased: inventoryReservationRelease.released,
       },
     });
 

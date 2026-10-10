@@ -1,5 +1,6 @@
 import {
   buildMenuItemInventoryFields,
+  getTrackedAvailableStockQuantity,
   getMenuItemInventoryLabel,
   getMenuItemInventoryStatus,
   normalizeLowStockThreshold,
@@ -43,5 +44,18 @@ describe('menu item inventory helpers', () => {
       })
     ).toBe('Only 2 left');
     expect(getMenuItemInventoryStatus({ stockQuantity: 0, trackInventory: true })).toBe('sold_out');
+  });
+
+  it('treats reserved checkout stock as unavailable for new carts', () => {
+    const item = {
+      lowStockThreshold: 3,
+      reservedStockQuantity: 3,
+      stockQuantity: 5,
+      trackInventory: true,
+    };
+
+    expect(getTrackedAvailableStockQuantity(item)).toBe(2);
+    expect(getMenuItemInventoryStatus(item)).toBe('low_stock');
+    expect(getMenuItemInventoryLabel(item)).toBe('Only 2 left');
   });
 });

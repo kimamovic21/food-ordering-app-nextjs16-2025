@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { MenuItem } from '@/models/menuItem';
-import { getTrackedStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
+import { getTrackedAvailableStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
 import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { CartSize } from '@/types/cart';
@@ -45,7 +45,7 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
 
   const menuItems = await MenuItem.find({ _id: { $in: productIds } })
     .select(
-      '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable trackInventory stockQuantity lowStockThreshold'
+      '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable trackInventory stockQuantity reservedStockQuantity lowStockThreshold'
     )
     .lean();
   const menuItemsById = new Map(menuItems.map((item: any) => [item._id.toString(), item]));
@@ -65,7 +65,7 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
     }
 
     const quantity = Math.max(1, Number(product.quantity) || 1);
-    const stockQuantity = getTrackedStockQuantity(menuItem);
+    const stockQuantity = getTrackedAvailableStockQuantity(menuItem);
 
     if (isInventoryTracked(menuItem) && stockQuantity != null && stockQuantity < quantity) {
       throw new Error(

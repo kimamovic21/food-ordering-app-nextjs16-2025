@@ -29,6 +29,7 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including me
 - Price display respects `priceType` and saved price fields so single/double/triple-size items do not show misleading size labels.
 - Inventory tracking is optional per menu item. Existing menu items remain untracked until the admin enables stock tracking; new tracked items default to 10 units in stock and a low-stock threshold of 3.
 - When inventory tracking is enabled, the form saves `trackInventory`, `stockQuantity`, and `lowStockThreshold`. The table then shows in-stock, low-stock, sold-out, or untracked inventory state next to the manual availability state.
+- Open unpaid Stripe checkout sessions can temporarily increase `reservedStockQuantity`. Admin badges show the customer-available quantity and include reserved counts so the restaurant can understand why an item may look low before payment is completed.
 - The table toolbar includes inventory filters for `All`, `Low stock`, `Sold out`, and `Untracked` so restaurant admins can quickly find items that need restocking without searching manually.
 - When Stripe webhook inventory adjustment pushes an item into low-stock or sold-out state, admins receive an `inventory_alert` notification that links back to this table.
 - A manually unavailable item is still unavailable even if stock exists. A tracked item with zero stock is treated as sold out even if the manual availability toggle is still on.
@@ -82,7 +83,7 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items`, including me
 - Keep category ids/names aligned with `/api/categories` because filtering and badges depend on that relationship.
 - Preserve disabled/loading states during image upload, AI generation, save, delete, and availability toggles to avoid duplicate mutations.
 - When changing price logic, verify both the admin table and customer menu cards because the same saved fields feed both surfaces.
-- When changing inventory logic, verify admin table badges/filters, public menu cards, cart validation, checkout, inventory notifications, audit logs, and Stripe webhook stock adjustment together. UI warnings improve UX, but checkout/webhook remain authoritative.
+- When changing inventory logic, verify admin table badges/filters, public menu cards, cart validation, checkout stock reservation, reservation release on unpaid cancellation, inventory notifications, audit logs, and Stripe webhook stock adjustment together. UI warnings improve UX, but checkout/webhook remain authoritative.
 
 ## How To Explain This In A Presentation
 

@@ -256,6 +256,34 @@ describe('cart validation helpers', () => {
     expect(Restaurant.findById).not.toHaveBeenCalled();
   });
 
+  it('blocks tracked inventory quantities that are already reserved by open checkouts', async () => {
+    mockMenuItems([
+      createMenuItem({
+        reservedStockQuantity: 2,
+        stockQuantity: 3,
+        trackInventory: true,
+      }),
+    ]);
+
+    const result = await validateCartForOrder({
+      cartItems: [createCartItem({ quantity: 2 })],
+      deliveryLatitude: 43.01,
+      deliveryLongitude: 18.01,
+    });
+
+    expect(result.canCheckout).toBe(false);
+    expect(result.message).toBe('Pizza has only 1 left in stock. Your cart has 2.');
+    expect(result.blockingItems[0]).toEqual(
+      expect.objectContaining({
+        isAvailable: false,
+        status: 'stock_limit',
+        stockQuantity: 1,
+        trackInventory: true,
+      })
+    );
+    expect(Restaurant.findById).not.toHaveBeenCalled();
+  });
+
   it('blocks quantity limits across repeated sizes of the same menu item', async () => {
     mockMenuItems([createMenuItem({ maxQuantityPerOrder: 2 })]);
 

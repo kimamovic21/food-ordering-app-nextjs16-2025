@@ -18,7 +18,7 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 
 - The route receives GET/PATCH requests and converts request/session data into server-side business checks.
 - It uses `menuItem`, `order`, `restaurant`, `user` for persistence.
-- It delegates shared logic to `auditLog`, `authOptions`, `loyaltyLedger`, `notifications`, `orderAutoCancellation`, `orderNormalizer`, `restaurantAvailabilityRequests`, `stripeCheckoutSession` so behavior stays consistent across the app.
+- It delegates shared logic to `auditLog`, `authOptions`, `loyaltyLedger`, `menuItemInventoryServer`, `notifications`, `orderAutoCancellation`, `orderNormalizer`, `restaurantAvailabilityRequests`, `stripeCheckoutSession` so behavior stays consistent across the app.
 - Detected local functions/handlers: `productIds`, `receiptItems`, `skip`, `normalizedOrders`.
 
 ## Request Inputs
@@ -34,6 +34,7 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 - `stripe`: creates Checkout sessions, verifies webhooks, reuses open payment links, and records payment session ids on orders.
 - `@react-pdf/renderer`: creates downloadable/report PDF output for admin reporting flows.
 - `currency.js` and money helpers: keep prices, discounts, delivery fees, and totals rounded consistently.
+- `libs/menuItemInventoryServer.ts`: releases temporary tracked-stock reservations when a customer cancels an unpaid checkout order.
 
 ## Auth, Role, And Safety Checks
 
@@ -71,6 +72,7 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 
 - Touches Stripe payment/session/webhook behavior.
 - Writes or reads audit-log records.
+- Releases reserved tracked inventory when an unpaid `placed` order is canceled by the customer.
 - Records loyalty ledger entries when the customer confirms a delivered order as completed.
 
 ## Response Behavior
@@ -82,7 +84,7 @@ Handles get/patch work for the customer orders area. The route keeps the local w
 
 Open this file when someone asks what `/api/my-orders` does. Explain that it belongs to the
 customer order workflow: customers can read their orders, recover checkout receipts with item-level
-notes, cancel unpaid placed orders, and confirm delivered orders. Confirmation is important because it closes the order,
+notes, cancel unpaid placed orders, release any temporary stock reservation attached to that unpaid checkout, and confirm delivered orders. Confirmation is important because it closes the order,
 notifies the customer, writes audit data, frees restaurant capacity, and records the loyalty ledger
 credit for the completed order.
 

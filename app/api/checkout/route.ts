@@ -25,6 +25,12 @@ import {
   getClientIp,
 } from '@/libs/rateLimit';
 import { scheduleUnpaidOrderAutoCancellationCheck } from '@/libs/qstash';
+import { UNPAID_ORDER_AUTO_CANCEL_MINUTES } from '@/libs/orderMaintenanceConfig';
+import {
+  releaseInventoryReservationItems,
+  releaseOrderInventoryReservation,
+  reserveTrackedInventoryForCheckout,
+} from '@/libs/menuItemInventoryServer';
 import type { CartSize, CheckoutCartItemPayload } from '@/types/cart';
 import mongoose from 'mongoose';
 import Stripe from 'stripe';
@@ -897,7 +903,34 @@ export async function POST(req: Request) {
     });
   }
 
-  const order = await Order.create({
+  const reservationExpiresAt = new Date(Date.now() + UNPAID_ORDER_AUTO_CANCEL_MINUTES * 60 * 1000);
+  const inventoryReservation = await reserveTrackedInventoryForCheckout({
+    expiresAt: reservationExpiresAt,
+    items: verifiedItems,
+  });
+
+  if (!inventoryReservation.ok) {
+    const firstViolation = inventoryReservation.violations[0];
+
+    return createCheckoutBlockResponse({
+      user,
+      restaurant,
+      restaurantId,
+      message: firstViolation
+        ? `${firstViolation.menuItemName} has only ${firstViolation.stockQuantity} available right now. Your cart has ${firstViolation.requestedQuantity}.`
+        : 'Some menu items are no longer available for checkout.',
+      reason: 'inventory_reservation_unavailable',
+      status: 409,
+      metadata: {
+        violations: inventoryReservation.violations,
+      },
+    });
+  }
+
+  let order: any = null;
+
+  try {
+    order = await Order.create({
     userId: user._id,
     email: session.user.email,
     phone: normalizedPhone,
@@ -938,48 +971,79 @@ export async function POST(req: Request) {
     orderStatus: 'placed',
     checkoutFingerprint,
     deliveryPin: createDeliveryPin(),
-  });
+      inventoryReservationStatus: inventoryReservation.reserved ? 'reserved' : 'none',
+      inventoryReservedAt: inventoryReservation.reserved ? new Date() : null,
+      inventoryReservationExpiresAt: inventoryReservation.reserved ? reservationExpiresAt : null,
+      inventoryReservedItems: inventoryReservation.reservedItems.map((item) => ({
+        menuItemId: item.menuItemId,
+        menuItemName: item.menuItemName,
+        quantity: item.quantity,
+      })),
+    });
 
-  try {
-    await notifyOrderPlaced({
+    const stripeSession = await createStripeCheckoutSessionForOrder({
+      order,
+      req,
+      email: session.user.email,
+      lineItems: stripeLineItems,
+    });
+
+    if (!stripeSession.url) {
+      throw new Error('Stripe checkout URL is missing');
+    }
+
+    // Update order with stripe session ID
+    order.stripeSessionId = stripeSession.id;
+    await order.save();
+    await scheduleUnpaidOrderAutoCancellationCheck(order._id);
+
+    try {
+      await notifyOrderPlaced({
+        restaurantId: restaurant._id,
+        orderId: order._id,
+        customerUserId: user._id,
+        customerEmail: session.user.email,
+        total,
+      });
+    } catch (notificationError) {
+      console.error('Failed to create order placed notifications:', notificationError);
+    }
+
+    await createAuditLog({
+      actor: user,
+      action: 'order.created',
+      entityType: 'order',
+      entityId: order._id,
       restaurantId: restaurant._id,
       orderId: order._id,
-      customerUserId: user._id,
-      customerEmail: session.user.email,
-      total,
+      metadata: {
+        total,
+        couponCode: couponSnapshot.couponCode,
+        inventoryReservationExpiresAt: inventoryReservation.reserved
+          ? reservationExpiresAt.toISOString()
+          : null,
+        reservedInventoryItems: inventoryReservation.reservedItems.map((item) => ({
+          menuItemId: item.menuItemId,
+          quantity: item.quantity,
+        })),
+      },
     });
-  } catch (notificationError) {
-    console.error('Failed to create order placed notifications:', notificationError);
+
+    return Response.json({ url: stripeSession.url });
+  } catch (error) {
+    if (inventoryReservation.reservedItems.length > 0) {
+      if (order) {
+        await releaseOrderInventoryReservation(order, 'Checkout session could not be created.');
+        order.orderStatus = 'canceled';
+        order.canceledBy = 'system';
+        order.canceledAt = new Date();
+        order.cancellationReason = 'Checkout session could not be created.';
+        await order.save();
+      } else {
+        await releaseInventoryReservationItems(inventoryReservation.reservedItems);
+      }
+    }
+
+    throw error;
   }
-
-  await createAuditLog({
-    actor: user,
-    action: 'order.created',
-    entityType: 'order',
-    entityId: order._id,
-    restaurantId: restaurant._id,
-    orderId: order._id,
-    metadata: {
-      total,
-      couponCode: couponSnapshot.couponCode,
-    },
-  });
-
-  const stripeSession = await createStripeCheckoutSessionForOrder({
-    order,
-    req,
-    email: session.user.email,
-    lineItems: stripeLineItems,
-  });
-
-  if (!stripeSession.url) {
-    throw new Error('Stripe checkout URL is missing');
-  }
-
-  // Update order with stripe session ID
-  order.stripeSessionId = stripeSession.id;
-  await order.save();
-  await scheduleUnpaidOrderAutoCancellationCheck(order._id);
-
-  return Response.json({ url: stripeSession.url });
 }

@@ -46,6 +46,29 @@ const CourierAssignmentHistorySchema = new Schema(
   { _id: false }
 );
 
+const InventoryReservationItemSchema = new Schema(
+  {
+    menuItemId: {
+      type: Schema.Types.ObjectId,
+      ref: 'MenuItem',
+      required: true,
+    },
+    menuItemName: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 120,
+    },
+    quantity: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 1000,
+    },
+  },
+  { _id: false }
+);
+
 const OrderSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
@@ -229,6 +252,24 @@ const OrderSchema = new Schema(
       trim: true,
       maxlength: 500,
     },
+    inventoryReservationStatus: {
+      type: String,
+      enum: ['none', 'reserved', 'released', 'captured', 'failed'],
+      default: 'none',
+    },
+    inventoryReservedAt: { type: Date, default: null },
+    inventoryReservationExpiresAt: { type: Date, default: null },
+    inventoryReservedItems: {
+      type: [InventoryReservationItemSchema],
+      default: [],
+    },
+    inventoryReservationReleasedAt: { type: Date, default: null },
+    inventoryReservationReleaseReason: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 300,
+    },
     stripeSessionId: { type: String },
     receiptEmailSentAt: { type: Date, default: null },
     deliveryPin: { type: String, default: createDeliveryPin },
@@ -324,6 +365,7 @@ OrderSchema.index({ userId: 1, restaurantId: 1, checkoutFingerprint: 1, createdA
 OrderSchema.index({ courierAssignmentStatus: 1, courierAssignedAt: 1 });
 OrderSchema.index({ orderStatus: 1, readyAt: 1, courierId: 1 });
 OrderSchema.index({ refundStatus: 1, orderStatus: 1, createdAt: -1 });
+OrderSchema.index({ inventoryReservationStatus: 1, inventoryReservationExpiresAt: 1 });
 OrderSchema.index({ createdAt: -1 });
 
 // In dev, Next.js hot-reloads can retain old models. Ensure schema updates take effect.

@@ -79,6 +79,7 @@ vi.mock('@/models/restaurant', () => ({
 vi.mock('@/models/menuItem', () => ({
   MenuItem: {
     find: vi.fn(),
+    updateOne: vi.fn(),
   },
 }));
 
@@ -215,24 +216,29 @@ describe('POST /api/checkout', () => {
 
     vi.mocked(Restaurant.findById).mockResolvedValue(openRestaurant as never);
 
-    vi.mocked(MenuItem.find).mockReturnValue({
+    vi.mocked(MenuItem.find).mockImplementation((query?: any) => ({
       select: vi.fn().mockReturnValue({
-        lean: vi.fn().mockResolvedValue([
-          {
-            _id: { toString: () => 'menu-item-1' },
-            name: 'Pizza',
-            restaurantId: { toString: () => 'restaurant-1' },
-            adminId: { toString: () => 'someone-else' },
-            isAvailable: true,
-            priceType: 'triple',
-            priceSmall: 8,
-            priceMedium: 11,
-            priceLarge: 14.5,
-            maxQuantityPerOrder: 20,
-          },
-        ]),
+        lean: vi.fn().mockResolvedValue(
+          query?.trackInventory === true
+            ? []
+            : [
+                {
+                  _id: { toString: () => 'menu-item-1' },
+                  name: 'Pizza',
+                  restaurantId: { toString: () => 'restaurant-1' },
+                  adminId: { toString: () => 'someone-else' },
+                  isAvailable: true,
+                  priceType: 'triple',
+                  priceSmall: 8,
+                  priceMedium: 11,
+                  priceLarge: 14.5,
+                  maxQuantityPerOrder: 20,
+                },
+              ]
+        ),
       }),
-    } as never);
+    }) as never);
+    vi.mocked(MenuItem.updateOne).mockResolvedValue({ modifiedCount: 1 } as never);
 
     vi.mocked(Order.countDocuments).mockResolvedValue(0 as never);
     vi.mocked(Order.findOne).mockReturnValue(createOrderFindOneQuery(null) as never);
@@ -629,6 +635,67 @@ describe('POST /api/checkout', () => {
             }),
           }),
         ]),
+      })
+    );
+  });
+
+  it('reserves tracked inventory for the unpaid Stripe checkout window', async () => {
+    const trackedMenuItem = {
+      _id: { toString: () => 'menu-item-1' },
+      name: 'Pizza',
+      restaurantId: { toString: () => 'restaurant-1' },
+      adminId: { toString: () => 'someone-else' },
+      isAvailable: true,
+      priceType: 'triple',
+      priceSmall: 8,
+      priceMedium: 11,
+      priceLarge: 14.5,
+      maxQuantityPerOrder: 20,
+      reservedStockQuantity: 1,
+      stockQuantity: 5,
+      trackInventory: true,
+    };
+
+    vi.mocked(MenuItem.find)
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([trackedMenuItem]),
+        }),
+      } as never)
+      .mockReturnValueOnce({
+        select: vi.fn().mockReturnValue({
+          lean: vi.fn().mockResolvedValue([trackedMenuItem]),
+        }),
+      } as never);
+
+    const POST = await loadCheckoutRoute();
+    const response = await POST(createCheckoutRequest());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ url: 'https://checkout.stripe.com/session/test-1' });
+    expect(MenuItem.updateOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        _id: 'menu-item-1',
+        trackInventory: true,
+        $expr: expect.any(Object),
+      }),
+      expect.objectContaining({
+        $inc: { reservedStockQuantity: 1 },
+        $set: { stockReservationUpdatedAt: expect.any(Date) },
+      })
+    );
+    expect(Order.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        inventoryReservationStatus: 'reserved',
+        inventoryReservationExpiresAt: expect.any(Date),
+        inventoryReservedItems: [
+          {
+            menuItemId: 'menu-item-1',
+            menuItemName: 'Pizza',
+            quantity: 1,
+          },
+        ],
       })
     );
   });
