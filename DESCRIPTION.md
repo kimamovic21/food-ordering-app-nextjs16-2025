@@ -259,15 +259,16 @@ Checkout server rules:
 - Loyalty discount is recalculated server-side.
 - Restaurant active kitchen capacity must not be full.
 - Recent identical unpaid `placed` checkout attempts reuse or recover the existing Stripe Checkout session instead of creating duplicate orders.
+- Tracked menu item stock is temporarily reserved for the unpaid Stripe payment window, using available stock (`stockQuantity - reservedStockQuantity`) so two customers cannot both reserve the final units at the same time.
 - Customers see a payment-expiry countdown for unpaid `placed` orders that matches the 30-minute auto-cancel window.
 - Cart validation surfaces item-specific unavailable/deleted-item blockers and non-blocking price-change warnings before checkout.
 - Cart validation also performs a server-side restaurant preflight for closed/paused/closing-soon/busy/minimum-order/delivery-radius/order-quantity blockers, while the cart UI shows matching visible warnings and dynamic ETA before Stripe Checkout.
 - Typing an item note does not refetch menu availability validation; validation refreshes are tied to item identity, size, quantity, price, restaurant, and delivery location.
 - Order is created as unpaid before redirecting to Stripe.
 - QStash schedules a delayed unpaid-order maintenance check after a new Stripe Checkout session is created.
-- If that unpaid order expires, the app attempts to expire the original Stripe Checkout session and stores the expiration result in the cancellation audit log.
-- Customer manual cancellation of an unpaid `placed` order also attempts to expire the original Stripe Checkout session and stores the result in the cancellation audit log.
-- Stripe webhook later marks payment complete.
+- If that unpaid order expires, the app attempts to expire the original Stripe Checkout session, releases reserved tracked stock, and stores the expiration/release result in the cancellation audit log.
+- Customer manual cancellation of an unpaid `placed` order also attempts to expire the original Stripe Checkout session, releases reserved tracked stock, and stores the result in the cancellation audit log.
+- Stripe webhook later marks payment complete and captures any reserved tracked stock. Older unpaid orders without reservations still use the legacy direct decrement path.
 
 ## Order Status Logic
 

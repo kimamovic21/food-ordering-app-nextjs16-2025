@@ -1145,7 +1145,7 @@ The main remaining future improvements could be:
 - real driver routing/distance provider instead of basic map coordinates
 - production-grade refund workflow when real payments are used
 - more granular restaurant staff roles
-- real stock reservation windows for abandoned unpaid Stripe sessions
+- staff-facing inventory purchase order/restock workflows
 - admin-configurable notification templates
 - more advanced fraud/suspicious-review detection
 - push notifications through a dedicated browser/mobile notification service

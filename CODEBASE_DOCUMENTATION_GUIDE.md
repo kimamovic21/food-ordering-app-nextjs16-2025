@@ -9,16 +9,20 @@ This repository contains local markdown maps that explain how the project is org
 - `app/**/README.md`: generated folder maps for top-level and nested App Router UI folders, including route groups such as login/register, admin detail pages, courier pages, restaurant detail pages, and settings subroutes.
 - `components/*/README.md`: component-folder maps for `resend`, `shadcn-studio`, `shared`, `theme`, and `ui`.
 - `ROOT_CONFIGURATION_GUIDE.md`: root-level configuration file guide for Next.js, tests, Sentry, Vercel, linting, formatting, and env templates.
+- `FEATURE_WORKFLOW_INDEX.md`: feature-area routing map that points to the docs, source files, models, and focused tests to read before changing checkout, restaurant discovery, courier, support, loyalty, media, or admin workflows.
+- `OPERATIONS_RUNBOOK.md`: production/deployment troubleshooting guide for env vars, checkout, inventory reservations, Stripe, QStash, email, Cloudinary, courier operations, and admin review.
 
 ## How Future AI Work Should Use These Docs
 
 Before changing a feature:
 
-1. Read the nearest folder `README.md`.
-2. Read the exact source files involved in the task.
-3. For API changes, read the adjacent API route `README.md` and the source `route.ts`.
-4. For config changes, read `ROOT_CONFIGURATION_GUIDE.md`.
-5. After changing behavior, update the relevant README/docs so the documentation stays useful.
+1. Read `FEATURE_WORKFLOW_INDEX.md` for the affected domain when the task is non-trivial.
+2. Read the nearest folder `README.md`.
+3. Read the exact source files involved in the task.
+4. For API changes, read the adjacent API route `README.md` and the source `route.ts`.
+5. For config changes, read `ROOT_CONFIGURATION_GUIDE.md`.
+6. For production-facing workflows, read `OPERATIONS_RUNBOOK.md` before changing the behavior.
+7. After changing behavior, update the relevant README/docs so the documentation stays useful.
 
 ## Important Rule
 
@@ -35,6 +39,8 @@ Update docs when you change:
 - reusable component props or design-system behavior
 - root configuration, scripts, env variables, Sentry/Vercel/test setup
 - external integrations, package usage, or service ownership such as Cloudinary uploads, Resend emails, Stripe payments, QStash jobs, Upstash rate limits, Sentry monitoring, OpenAI generation, Leaflet maps, TanStack Query/Table, or React Email templates
+- operational runbooks, incident checklists, deployment validation, or troubleshooting expectations
+- feature workflow routing, focused test recommendations, or task handoff checklists
 
 ## Generated Docs Caveat
 

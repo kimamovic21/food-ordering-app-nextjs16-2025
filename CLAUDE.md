@@ -42,7 +42,7 @@ This file provides guidance for AI assistance in this repository.
 - Keep server secrets in server-only code (route handlers, libs), including OpenAI keys.
 - Validate API inputs and return clear error responses.
 - Use existing utility helpers when possible (libs/).
-- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
+- Before editing a non-trivial workflow, read `FEATURE_WORKFLOW_INDEX.md` to find the relevant docs, source files, models, and focused tests. Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`. Before changing production-facing checkout, deployment, env, Stripe, QStash, Cloudinary, Resend, Sentry, or incident-response behavior, read `OPERATIONS_RUNBOOK.md`.
 - Store timestamps as MongoDB `Date` values, return ISO/raw date fields from APIs, and format user-facing dates through `libs/dateFormat.ts` (`dd/MM/yyyy`, `dd/MM/yyyy HH:mm`).
 - Use `libs/money.ts` for business money calculations; avoid hand-rolled floating-point arithmetic in checkout, coupons, earnings, and reports.
 - Use `libs/phone.ts` before saving phone values; local Bosnia and Herzegovina numbers are accepted and normalized to E.164.
@@ -108,7 +108,7 @@ This file provides guidance for AI assistance in this repository.
 ## Documentation Maintenance
 
 - Treat docs updates as part of done-state for non-trivial feature, integration, route, env, schema/model, background-job, order/courier/auth/payment/email, realtime, observability, or test workflow changes.
-- Keep docs scoped: `README.md` for setup/package/env and high-level capabilities, `DESCRIPTION.md` for role behavior and business rules, `ARCHITECTURE.md` for system/data-flow changes, and `TESTING.md`, `__tests__/README.md`, or `e2e/README.md` for test strategy changes.
+- Keep docs scoped: `README.md` for setup/package/env and high-level capabilities, `DESCRIPTION.md` for role behavior and business rules, `ARCHITECTURE.md` for system/data-flow changes, `FEATURE_WORKFLOW_INDEX.md` for feature task routing, `OPERATIONS_RUNBOOK.md` for production/deployment troubleshooting, and `TESTING.md`, `__tests__/README.md`, or `e2e/README.md` for test strategy changes.
 - Keep AI guidance aligned across `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/project-instructions.md`, `.gemini/project-instructions.md`, `.cursor/rules/project-conventions.mdc`, and `.windsurf/rules/project-conventions.md` when workflow-critical rules change.
 - For every meaningful code/docs change that will become a commit, add the commit title/name to `documentation.txt` so the project work log stays aligned with the git history.
 - Use `.github/pull_request_template.md` as the final merge checklist for validation and docs ownership.

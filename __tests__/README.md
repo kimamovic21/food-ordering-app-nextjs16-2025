@@ -39,6 +39,7 @@ This folder contains unit tests grouped by feature area.
 - `libs/restaurantEta.test.ts`: validates load-adjusted restaurant preparation/delivery estimates and customer-facing busy timing messages.
 - `libs/restaurantOrderingStatus.test.ts`: validates capacity-aware ordering status, busy copy, active-order counting, and cart validation status mapping.
 - `libs/menuItemInventory.test.ts`: validates optional menu item stock tracking defaults, normalization, checkout-reserved stock math, low-stock status, and sold-out status.
+- `libs/menuItemInventoryServer.test.ts`: validates server-side checkout stock reservation, atomic rollback, reservation release, paid reservation capture, and legacy paid adjustment protection when existing reservations consume stock.
 - `libs/notificationClient.test.ts`: validates role-aware notification routing, including inventory alerts to the admin menu-items table.
 - `libs/notifications.test.ts`: validates notification creation helpers, including inventory alerts for restaurant admins.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item, per-order, and tracked-stock quantity helpers used by cart UI and checkout APIs.

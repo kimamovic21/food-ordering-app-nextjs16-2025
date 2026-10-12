@@ -64,6 +64,8 @@ Use this section when someone asks what the project is built with and which exte
 - `vitest.config.ts`: Main Vitest unit/integration test configuration. It sets aliases, setup files, and the test environment.
 - `vitest.e2e.config.ts`: E2E-style Vitest configuration for route/workflow tests that need separate behavior.
 - `TESTING.md`: Human-facing testing guide. Update it when adding new scripts, test groups, or test workflow expectations.
+- `FEATURE_WORKFLOW_INDEX.md`: Feature-area routing map for future implementation work. Update it when a major workflow moves files, gets new tests, changes ownership, or gains a new high-risk edge case.
+- `OPERATIONS_RUNBOOK.md`: Production/deployment troubleshooting guide. Update it when env ownership, Stripe/QStash/Cloudinary/Resend/Sentry behavior, background jobs, checkout maintenance, or incident response changes.
 
 ## Deployment
 
@@ -96,8 +98,9 @@ Important env areas:
 - Profile and image upload: profile screens call `/api/upload/users`, which streams files to Cloudinary, stores the returned secure URL on the user, and deletes the old Cloudinary image when possible.
 - Restaurant/menu media: admin restaurant and menu item forms upload to Cloudinary through dedicated upload routes, then save final URLs through restaurant/menu APIs.
 - Checkout: `/api/checkout` validates cart, restaurant status, delivery radius, courier readiness, coupons, loyalty, quantity/capacity limits, and then creates or reuses a Stripe Checkout session.
-- Payment completion: `/api/webhook` verifies Stripe signatures, marks orders paid, sends receipt emails through Resend, and triggers notification/order side effects.
-- Order maintenance: QStash calls signed maintenance routes later so stale unpaid orders, courier assignment timeouts, and ready orders without courier coverage can be handled even after the original request finished.
+- Checkout inventory safety: tracked menu items temporarily reserve available stock for the unpaid Stripe payment window; stale unpaid/customer-canceled orders release that reserved stock.
+- Payment completion: `/api/webhook` verifies Stripe signatures, marks orders paid, captures reserved tracked inventory or falls back to legacy direct decrement, sends receipt emails through Resend, and triggers notification/order side effects.
+- Order maintenance: QStash calls signed maintenance routes later so stale unpaid orders, stock-reservation release, courier assignment timeouts, and ready orders without courier coverage can be handled even after the original request finished.
 - Monitoring: Sentry catches app/runtime errors, while Vercel Analytics and Speed Insights give production usage/performance signals.
 
 ## Observability
