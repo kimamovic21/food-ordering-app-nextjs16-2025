@@ -100,6 +100,8 @@ It includes:
 - [ARCHITECTURE.md](./ARCHITECTURE.md): technical architecture, diagrams, data model map, and major workflow diagrams.
 - [DESCRIPTION.md](./DESCRIPTION.md): role-by-role feature description and business logic overview.
 - [CODEBASE_DOCUMENTATION_GUIDE.md](./CODEBASE_DOCUMENTATION_GUIDE.md): explains the generated API/app/component README maps and how to use them before editing code.
+- [FEATURE_WORKFLOW_INDEX.md](./FEATURE_WORKFLOW_INDEX.md): task-routing map that shows which docs, routes, helpers, models, and tests to read before changing each major feature workflow.
+- [OPERATIONS_RUNBOOK.md](./OPERATIONS_RUNBOOK.md): production/deployment troubleshooting checklist for env vars, checkout, Stripe, inventory reservations, QStash, email, media, courier operations, and admin review.
 - [PROJECT_PRESENTATION_GUIDE.md](./PROJECT_PRESENTATION_GUIDE.md): detailed presentation guide covering product flows, roles, routes, integrations, and edge cases.
 - [ROOT_CONFIGURATION_GUIDE.md](./ROOT_CONFIGURATION_GUIDE.md): root-level config guide for Next.js, testing, Sentry, Vercel, linting, formatting, and environment templates.
 - [TESTING.md](./TESTING.md): unit, integration, and e2e testing strategy and commands.
@@ -111,6 +113,8 @@ When a meaningful feature or integration changes, update the docs in the same br
 - Use `README.md` for setup, packages, environment variables, public routes, and high-level capabilities.
 - Use `DESCRIPTION.md` for role behavior, business rules, checkout/order/courier/support/messaging flows, and user-facing logic.
 - Use `ARCHITECTURE.md` for data model, lifecycle, background job, realtime, integration, and system-flow changes.
+- Use `FEATURE_WORKFLOW_INDEX.md` before non-trivial feature work to find the right docs, source files, models, and focused tests for the affected workflow.
+- Use `OPERATIONS_RUNBOOK.md` when a change affects deployment checks, environment ownership, production troubleshooting, Stripe/QStash/Cloudinary/Resend/Sentry operations, or incident response.
 - Use generated folder `README.md` files before editing API routes, app folders, or component folders, and update them when the local workflow changes.
 - Use `ROOT_CONFIGURATION_GUIDE.md` before changing root tooling, build, test, deployment, Sentry, or env-template behavior.
 - Use `TESTING.md`, `__tests__/README.md`, and `e2e/README.md` when test scope, commands, fixtures, or coverage strategy changes.

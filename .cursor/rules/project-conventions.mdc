@@ -13,7 +13,7 @@ alwaysApply: true
 - Prefer small, incremental changes.
 - Before implementing a new feature or non-trivial app logic, create or switch to a dedicated local feature branch from `main` unless the user explicitly asks to work on the current branch.
 - Follow existing patterns in `app/`, `libs/`, `models/`, `components/`, and `contexts/`.
-- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
+- Before editing a non-trivial workflow, read `FEATURE_WORKFLOW_INDEX.md` to find the relevant docs, source files, models, and focused tests. Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`. Before changing production-facing checkout, deployment, env, Stripe, QStash, Cloudinary, Resend, Sentry, or incident-response behavior, read `OPERATIONS_RUNBOOK.md`.
 - Keep reusable domain, DTO, and API response types in `types/` using lowercase feature filenames and PascalCase exported names. Keep one-off component props colocated with the component.
 - Avoid introducing new dependencies unless explicitly requested.
 

@@ -209,9 +209,13 @@ Key checks:
 - Historical completed orders can be synced into the ledger with the dry-run-first
   `loyalty:ledger:backfill` maintenance command.
 - Best coupon suggestions shown in cart are revalidated at checkout before Stripe is created.
+- Tracked menu items reserve available stock for the unpaid Stripe payment window before redirecting
+  the customer to Stripe. Available stock is calculated as `stockQuantity - reservedStockQuantity`,
+  so another open Checkout session cannot take units that are already held by a still-unpaid order.
 - Recent identical unpaid `placed` checkout attempts are matched by `checkoutFingerprint`; the app reuses or recovers the existing Stripe Checkout session instead of creating duplicate orders.
-- System cancellation of stale unpaid orders attempts to expire the open Stripe Checkout session so an old hosted payment page cannot pay a canceled order.
-- Customer cancellation of an unpaid `placed` order uses the same Stripe Checkout session expiration helper.
+- System cancellation of stale unpaid orders attempts to expire the open Stripe Checkout session and release reserved tracked stock so an old hosted payment page cannot pay a canceled order or hold inventory forever.
+- Customer cancellation of an unpaid `placed` order uses the same Stripe Checkout session expiration and inventory-release helpers.
+- Stripe webhook payment confirmation captures reserved tracked stock by decrementing physical stock and reserved stock together. Older unpaid orders without reservation metadata still use the direct decrement path, guarded by current available stock.
 - Reorders rebuild cart items from current `menu_items` records so deleted, unavailable, cross-restaurant, or changed-price items cannot silently proceed.
 - Restaurant details and favorite restaurant cards can quick reorder the latest previous order from that restaurant using the same current `menu_items` validation.
 - Customers can request back-online notifications for restaurants blocked by closed, paused, closing-soon, or busy checkout states.
@@ -231,12 +235,14 @@ sequenceDiagram
   Cart->>CheckoutAPI: Send delivery info and cart
   CheckoutAPI->>Mongo: Validate user, restaurant availability, menu items, coupons, capacity
   CheckoutAPI->>Mongo: Check recent unpaid matching checkout fingerprint
-  CheckoutAPI->>Mongo: Create unpaid order snapshot
+  CheckoutAPI->>Mongo: Reserve tracked inventory for unpaid payment window
+  CheckoutAPI->>Mongo: Create unpaid order snapshot with reservation metadata
   CheckoutAPI->>Stripe: Create checkout session
   CheckoutAPI->>QStash: Schedule delayed unpaid-order check
   Stripe-->>User: Hosted payment page
   Stripe->>Webhook: checkout.session.completed
   Webhook->>Mongo: Mark order paid
+  Webhook->>Mongo: Capture reserved inventory or cancel for refund review if capture fails
   Webhook->>Mongo: Save receipt/email state
 ```
 

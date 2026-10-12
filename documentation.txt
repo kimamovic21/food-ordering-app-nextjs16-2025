@@ -1221,3 +1221,5 @@ Add menu item inventory and sold-out automation
 Add inventory alerts and menu item stock filters
 
 Add checkout stock reservation window
+
+Improve project documentation and workflow guidance

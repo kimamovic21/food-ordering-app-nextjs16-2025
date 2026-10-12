@@ -28,7 +28,7 @@
 - Before implementing a new feature or non-trivial app logic, create or switch to a dedicated local feature branch from `main` unless the user explicitly asks to work on the current branch.
 - Preserve existing API shapes unless explicitly requested.
 - Reuse helpers in `libs/` before adding new utilities.
-- Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`.
+- Before editing a non-trivial workflow, read `FEATURE_WORKFLOW_INDEX.md` to find the relevant docs, source files, models, and focused tests. Before editing a feature folder, read the nearest generated `README.md`, including its `Packages And Services Used` section when integrations are involved. Before editing an API route, read the adjacent API `README.md` and then `route.ts`. Before changing root tooling/config, read `ROOT_CONFIGURATION_GUIDE.md`. Before changing production-facing checkout, deployment, env, Stripe, QStash, Cloudinary, Resend, Sentry, or incident-response behavior, read `OPERATIONS_RUNBOOK.md`.
 - Keep reusable domain, DTO, and API response types in `types/`; use lowercase feature filenames and PascalCase exported names. Keep one-off component props colocated with the component.
 - Use TanStack Query for client-side server state that benefits from cache, refetch, invalidation, optimistic updates, or polling. Keep message inbox/thread views, favorite ID/list views, and shared keys in `libs/queryKeys.ts`.
 - Use TanStack Table for larger list UIs that need search, sorting, pagination, or column visibility. Use simple mode without toolbar/pagination for small read-only detail tables such as order items. Keep mutations and row actions in the owning screen component.
@@ -82,6 +82,8 @@
 - Update `README.md` for setup, package, env var, route, or high-level feature changes.
 - Update `DESCRIPTION.md` for user/admin/courier behavior, business rules, support, messaging, checkout, order, restaurant, review, loyalty, or reporting changes.
 - Update `ARCHITECTURE.md` for system design, model, integration, background job, realtime, data-flow, or lifecycle changes.
+- Update `FEATURE_WORKFLOW_INDEX.md` when feature ownership, source routing, focused test commands, or high-risk workflow entry points change.
+- Update `OPERATIONS_RUNBOOK.md` for production/deployment troubleshooting, env ownership, incident response, or Stripe/QStash/Cloudinary/Resend/Sentry operational changes.
 - Update `TESTING.md`, `__tests__/README.md`, or `e2e/README.md` when commands, coverage strategy, fixtures, or test layers change.
 - Keep `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.claude/project-instructions.md`, `.gemini/project-instructions.md`, `.cursor/rules/project-conventions.mdc`, and `.windsurf/rules/project-conventions.md` aligned when workflow-critical guidance changes.
 - For every meaningful code/docs change that will become a commit, add the commit title/name to `documentation.txt` so the project work log stays aligned with the git history.
