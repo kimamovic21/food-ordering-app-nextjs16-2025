@@ -28,6 +28,7 @@ import {
   type SystemHealthTone,
 } from '@/libs/systemHealth';
 import { cn } from '@/libs/utils';
+import OrderMaintenanceRecoveryPanel from './OrderMaintenanceRecoveryPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -309,6 +310,8 @@ const SystemHealthPage = async () => {
           ))}
         </CardContent>
       </Card>
+
+      <OrderMaintenanceRecoveryPanel />
 
       <div className='grid gap-4 xl:grid-cols-2'>
         {snapshot.groups.map((group) => (

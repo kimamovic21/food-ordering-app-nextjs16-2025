@@ -28,12 +28,14 @@ This folder contains unit tests grouped by feature area.
 - `api/admin-restaurants-detail.route.test.ts`: validates superadmin-only restaurant detail access and operational summaries.
 - `api/restaurant-operations.route.test.ts`: validates restaurant operations overview API summaries and admin restaurant scoping.
 - `api/webhook.route.test.ts`: validates webhook signature/idempotency behavior, tracked-stock reservation capture/direct decrementing, low-stock inventory alert side effects, and refund-review fallback when paid inventory disappears before webhook confirmation.
+- `api/admin-order-maintenance-recovery.route.test.ts`: validates superadmin-only order maintenance recovery dry-run/apply access and audit actor forwarding.
 - `api/payment.test.ts`: validates payment-related helper logic and utility contracts.
 - `libs/courier-assignment-timeout.test.ts`: validates stale pending courier assignment expiry and courier release rules.
 - `libs/courier-assignment-history.test.ts`: validates finalized courier assignment attempt history.
 - `libs/courierSchedule.test.ts`: validates Sarajevo-time courier schedule checks, report boundary helpers, and next-shift unavailable messages.
 - `libs/courierWorkSessions.test.ts`: validates stale courier work-session cleanup and Sarajevo-local work summaries.
 - `libs/order-auto-cancellation.test.ts`: validates stale unpaid and ready-without-courier auto-cancel rules.
+- `libs/orderMaintenanceRecovery.test.ts`: validates stale order maintenance dry-run candidates, idempotent helper orchestration, audit summaries, and expired unpaid reservation release fallback.
 - `libs/paymentExpiry.test.ts`: validates the customer-facing unpaid payment countdown helper.
 - `libs/restaurantCapacity.test.ts`: validates shared active kitchen capacity normalization and near-capacity snapshot behavior.
 - `libs/restaurantEta.test.ts`: validates load-adjusted restaurant preparation/delivery estimates and customer-facing busy timing messages.
@@ -76,6 +78,7 @@ This folder contains unit tests grouped by feature area.
 - Run profile unit tests: `npm run test:profile`
 - Run payment/webhook-focused unit tests: `npm run test:payment`
 - Run realtime/SSE tests: `npm run test:realtime`
+- Run stale order recovery tests: `npm run test:file -- __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts`
 
 ## E2E Tests
 

@@ -18,10 +18,11 @@ Before changing code, verify the current state:
 
 1. Open `/admin-dashboard/system-health` as the super admin.
 2. Confirm required environment variables are present for the environment being tested.
-3. Check the latest Vercel deployment logs for install, build, type, or runtime errors.
-4. Check Sentry for recent server/client exceptions and source-map quality.
-5. Reproduce locally with `npm run dev` and the same user role if the issue is UI-facing.
-6. Run a focused test command from `TESTING.md` before broad validation.
+3. Review the Order Maintenance Recovery panel if unpaid orders, inventory reservations, courier assignments, or ready orders look stuck.
+4. Check the latest Vercel deployment logs for install, build, type, or runtime errors.
+5. Check Sentry for recent server/client exceptions and source-map quality.
+6. Reproduce locally with `npm run dev` and the same user role if the issue is UI-facing.
+7. Run a focused test command from `TESTING.md` before broad validation.
 
 ## Environment Groups
 
@@ -72,6 +73,7 @@ Check these areas when a customer cannot pay or an order behaves unexpectedly:
   email, notifications, and refund-review fallback.
 - `libs/orderAutoCancellation.ts` for stale unpaid order cleanup.
 - `app/api/qstash/order-maintenance/route.ts` for delayed QStash callbacks.
+- `app/api/admin/order-maintenance/recovery/route.ts` and `libs/orderMaintenanceRecovery.ts` for superadmin dry-run/apply recovery when stale states remain after background jobs should have handled them.
 
 Useful focused command:
 
@@ -98,6 +100,8 @@ Expected flow:
 5. Stale unpaid auto-cancel or customer unpaid cancel releases reserved stock.
 6. If payment succeeds but inventory can no longer be captured, the order is canceled and marked
    for refund review instead of silently overselling.
+7. If an unpaid order reservation stays expired because a delayed job failed, use the System Health
+   Order Maintenance Recovery panel to dry-run affected orders, then apply recovery only after review.
 
 Check these files when debugging inventory behavior:
 
@@ -131,11 +135,18 @@ Expected safety behavior:
 - A stale job reloads the order from MongoDB before changing anything.
 - Jobs should be idempotent: running twice should not double-cancel, double-release inventory, or
   double-expire a courier assignment.
+- If delayed jobs were skipped, blocked by env/app URL issues, or failed transiently, open
+  `/admin-dashboard/system-health` and use the Order Maintenance Recovery panel. The panel first
+  shows a dry-run snapshot, then POSTs to the superadmin API only after confirmation.
+- Manual recovery reuses the existing idempotent helpers for courier assignment timeouts, order
+  auto-cancellation, and inventory reservation release. It writes a summary audit log instead of
+  silently mutating orders.
 
 Useful focused command:
 
 ```bash
 npm run test:qstash
+npm run test:file -- __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts
 ```
 
 ## Email And Auth Incidents
@@ -207,6 +218,10 @@ Operational review happens mainly through:
 Audit logs should explain important admin/system actions without storing unnecessary secrets or noisy
 view-only events. For new operational workflows, log meaningful writes and blocked attempts, not
 every page read.
+
+For order maintenance recovery, start with the System Health dry-run snapshot, check the candidate
+types, then run recovery only when the stale state is real. After running, review audit logs for
+`order_maintenance.recovery_run` and any order-level cancellation or courier-assignment entries.
 
 ## Documentation Maintenance
 

@@ -81,7 +81,7 @@ They can:
 - Manage restaurant support tickets.
 - Message approved users and couriers.
 - Receive notifications for orders, cancellations, paid orders, delivery updates, and support tickets.
-- Review system health at `/admin-dashboard/system-health`, including database connectivity, Stripe, Cloudinary, Resend, Redis, QStash, Sentry, runtime metadata, and missing environment-variable checks without exposing secret values.
+- Review system health at `/admin-dashboard/system-health`, including database connectivity, Stripe, Cloudinary, Resend, Redis, QStash, Sentry, runtime metadata, missing environment-variable checks, and stale order maintenance recovery without exposing secret values.
 
 Important admin rules:
 
@@ -210,6 +210,7 @@ Order safety automation:
 - Automatic cancellations mark the order as unpaid, store a system cancellation reason, notify the customer and restaurant admins, and write an audit log entry.
 - Stale unpaid order cancellation also attempts to expire the open Stripe Checkout session, preventing old hosted payment tabs from completing an already canceled order.
 - Upstash QStash schedules delayed unpaid-order, courier-assignment-timeout, and ready-without-courier checks so production can run those maintenance checks even when nobody is actively viewing the order page.
+- Super admins can use the System Health Order Maintenance Recovery panel as a manual safety net when stale unpaid orders, expired inventory reservations, stale pending courier assignments, or ready-without-courier orders remain after delayed maintenance should have handled them.
 - Development-only order time simulation can add minutes for timeline phases, failed-delivery testing, courier assignment timeout testing, and ready-without-courier auto-cancel testing without editing MongoDB timestamps.
 
 ## Coupon And Reorder Logic
@@ -267,6 +268,7 @@ Checkout server rules:
 - Order is created as unpaid before redirecting to Stripe.
 - QStash schedules a delayed unpaid-order maintenance check after a new Stripe Checkout session is created.
 - If that unpaid order expires, the app attempts to expire the original Stripe Checkout session, releases reserved tracked stock, and stores the expiration/release result in the cancellation audit log.
+- If QStash or another delayed check misses a stale unpaid order or expired reservation, the superadmin recovery API can dry-run candidates and then reuse the same server helpers to cancel/release safely.
 - Customer manual cancellation of an unpaid `placed` order also attempts to expire the original Stripe Checkout session, releases reserved tracked stock, and stores the result in the cancellation audit log.
 - Stripe webhook later marks payment complete and captures any reserved tracked stock. Older unpaid orders without reservations still use the legacy direct decrement path.
 
