@@ -15,7 +15,7 @@ The app supports four main perspectives:
 - Couriers manage availability, receive assignments, share location, pick up orders, enter delivery PINs, report failed deliveries, and track earnings and performance.
 - Super admin manages elevated platform-level operations, users, global support, courier/admin roles, and emergency order verification.
 
-The main project idea is a realistic restaurant delivery workflow, not only a simple menu and cart. The app includes many operational edge cases such as closed restaurants, busy kitchens, stale unpaid orders, old Stripe sessions, failed deliveries, courier assignment timeouts, unavailable menu items, and ready orders that cannot get a courier.
+The main project idea is a realistic restaurant delivery workflow, not only a simple menu and cart. The app includes many operational edge cases such as closed restaurants, busy kitchens, stale unpaid orders, old Stripe sessions, failed deliveries, courier assignment timeouts, unavailable menu items, ready orders that cannot get a courier, and superadmin recovery when delayed maintenance needs manual review.
 
 ## 2. Main Tech Stack
 
@@ -502,6 +502,7 @@ QStash:
 - QStash signatures are verified before processing.
 - If QStash publishing fails, the user-facing checkout/status update should not fail just because a background check could not be scheduled.
 - The order APIs still apply maintenance checks when orders are loaded, so the system has a fallback path.
+- The System Health page adds a superadmin manual recovery panel. It first shows stale unpaid orders, expired reservations, stale courier assignments, and ready-without-courier candidates, then runs the same idempotent helpers only after confirmation.
 
 ## 11. Courier Workflow
 
@@ -611,6 +612,7 @@ Admin dashboard capabilities:
 - View restaurant reports.
 - View operations overview.
 - Review system health and production-critical integration configuration without exposing secret values.
+- Review stale order maintenance candidates and run a controlled recovery when delayed background jobs did not complete.
 - View courier stats.
 - View audit logs.
 

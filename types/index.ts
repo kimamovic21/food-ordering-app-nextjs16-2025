@@ -12,6 +12,7 @@ export type * from '@/types/money';
 export type * from '@/types/notifications';
 export type * from '@/types/operations';
 export type * from '@/types/order';
+export type * from '@/types/order-maintenance-recovery';
 export type * from '@/types/order-timeline';
 export type * from '@/types/phone';
 export type * from '@/types/receipt';

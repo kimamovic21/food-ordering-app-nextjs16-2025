@@ -29,6 +29,8 @@ Read first:
 - `app/api/checkout/README.md`
 - `app/api/webhook/README.md`
 - `app/api/cart/validate/README.md`
+- `app/api/admin/order-maintenance/recovery/README.md`
+- `app/admin-dashboard/system-health/README.md`
 
 Main source files:
 
@@ -40,7 +42,10 @@ Main source files:
 - `libs/menuItemInventoryServer.ts`
 - `libs/stripeCheckoutSession.ts`
 - `libs/orderAutoCancellation.ts`
+- `libs/orderMaintenanceRecovery.ts`
 - `libs/qstash.ts`
+- `app/api/admin/order-maintenance/recovery/route.ts`
+- `app/admin-dashboard/system-health/OrderMaintenanceRecoveryPanel.tsx`
 - `models/order.ts`
 - `models/menuItem.ts`
 - `contexts/CartContext.tsx`
@@ -55,12 +60,14 @@ Key rules:
   release reserved tracked stock.
 - Failed inventory capture after payment should not oversell silently; keep the refund-review
   fallback behavior.
+- Manual order maintenance recovery is superadmin-only. It must dry-run first, reload each order
+  before mutation, reuse existing idempotent helpers, and write meaningful audit logs.
 
 Focused tests:
 
 ```bash
 npm run test:payment
-npm run test:file -- __tests__/libs/menuItemInventoryServer.test.ts __tests__/libs/menuItemInventory.test.ts __tests__/libs/cartValidation.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/api/webhook.route.test.ts __tests__/libs/order-auto-cancellation.test.ts __tests__/models/order.model.test.ts __tests__/models/menuItem.model.test.ts
+npm run test:file -- __tests__/libs/menuItemInventoryServer.test.ts __tests__/libs/menuItemInventory.test.ts __tests__/libs/cartValidation.test.ts __tests__/api/cart-validate.route.test.ts __tests__/api/checkout.route.test.ts __tests__/api/webhook.route.test.ts __tests__/libs/order-auto-cancellation.test.ts __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts __tests__/models/order.model.test.ts __tests__/models/menuItem.model.test.ts
 ```
 
 ## Restaurant Ordering Status, ETA, Capacity, And Discovery

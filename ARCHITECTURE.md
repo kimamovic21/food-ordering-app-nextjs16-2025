@@ -300,6 +300,7 @@ Operational monitoring builds on the same timestamps:
 - Accepted, declined, and expired courier assignment attempts are appended to order assignment history so courier reliability metrics remain accurate after reassignments.
 - Stale unpaid orders auto-cancel after 30 minutes and show a customer-facing payment countdown; ready orders without a courier auto-cancel after 60 minutes.
 - Upstash QStash schedules delayed checks for stale unpaid orders, unanswered courier assignments, and ready orders without a courier so production order maintenance is not dependent only on a later page/API read.
+- `/admin-dashboard/system-health` exposes a superadmin-only Order Maintenance Recovery panel that dry-runs stale maintenance candidates and can apply the same idempotent helpers when QStash, Stripe, inventory, or courier maintenance left an order stuck.
 - System auto-cancellations mark the order unpaid, store `canceledBy: system`, add `cancellationReason`, notify customer/admins, and write an audit log.
 - For stale unpaid orders, system auto-cancellation also tries to expire the open Stripe Checkout session; failures are recorded as audit metadata and do not stop the local cancellation.
 - ETA-style notifications reuse estimate snapshots so status changes can include useful preparation or delivery timing.
@@ -486,6 +487,7 @@ For risky areas, prefer focused route tests first:
 
 - auth and role guards
 - checkout and Stripe webhook behavior
+- stale order maintenance recovery
 - restaurant availability, best coupon suggestion, and reorder validation
 - order lifecycle and delivery confirmation
 - support ticket authorization

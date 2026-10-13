@@ -23,11 +23,11 @@ It includes:
 - TanStack Table-powered searchable, sortable, paginated data tables for high-traffic admin and order lists
 - Vercel Web Analytics for production traffic insights and Vercel Speed Insights for Web Vitals/performance monitoring
 - admin dashboard for users, menu items, categories, restaurants, operations overview, restaurant reports, couriers, orders, support tickets, and statistics
-- admin system health dashboard for checking production-critical integrations and missing environment variables without exposing secret values
+- admin system health dashboard for checking production-critical integrations, missing environment variables, and stale order maintenance states without exposing secret values
 - courier dashboard with active delivery, delivery history, earnings, courier ratings, and assignment reliability views
 - courier workflow with assignment, response-time tracking, availability toggle, live location sharing on maps, delivery PIN handoff, failed-delivery review, and delivery history
 - order timeline with visual phase icons, readable activity history, preparation/delivery estimates, delay warnings, ETA-style notifications, delivery confirmation, reorder, and report-problem support tickets
-- order safety automation for stale unpaid orders, unanswered courier assignments, ready orders that cannot get a courier, and expired Stripe Checkout sessions
+- order safety automation for stale unpaid orders, unanswered courier assignments, ready orders that cannot get a courier, expired Stripe Checkout sessions, and superadmin recovery when delayed maintenance needs manual review
 - restaurant busy checkout protection based on each restaurant's active kitchen order limit
 - courier-safe cart quantity protection with restaurant-level max items per order and per-menu-item quantity limits
 - shared cart and checkout validation so cart warnings and final Stripe checkout use the same server-side menu, restaurant, radius, minimum-order, capacity, and quantity rules
@@ -300,6 +300,7 @@ This project uses many dependencies; below are the main packages actively used i
 - If inventory changes between checkout creation and payment confirmation, the paid order is system-canceled and marked for refund review instead of silently over-selling.
 - Blocked checkout attempts for active-order, restaurant-availability, capacity, unavailable-item, and quantity-limit reasons are written to audit logs as `checkout.blocked` without exposing secrets.
 - `libs/orderCapacityBackfill.ts` provides a server-only helper to dry-run or repair older restaurant/menu item documents that are missing or have out-of-range order capacity fields.
+- `libs/orderMaintenanceRecovery.ts` provides a superadmin-only safety net for stale unpaid orders, expired inventory reservations, stale courier assignments, and ready orders without a courier. The System Health page can inspect the candidates first, then run the same idempotent maintenance helpers with an audit-log summary.
 - Checkout deduplicates recent identical unpaid `placed` order attempts by reusing or recovering the existing Stripe Checkout session instead of creating another order.
 - Unpaid `placed` orders show the customer a countdown based on the same 30-minute auto-cancel window used by background maintenance.
 - When a stale unpaid `placed` order is system-canceled, the app also attempts to expire the still-open Stripe Checkout session and releases any reserved tracked stock so old payment tabs cannot complete canceled orders.
@@ -336,6 +337,7 @@ This project uses many dependencies; below are the main packages actively used i
 - Moving an order to `ready` schedules a 60-minute ready-without-courier check.
 - `POST /api/qstash/order-maintenance` receives QStash jobs, verifies the QStash signature, reloads the order from MongoDB, and runs the existing courier-assignment timeout or order auto-cancellation logic.
 - QStash publishing is fail-open: if the QStash env vars are missing, the app URL is local, or QStash is temporarily unavailable, checkout and order status updates still continue.
+- `/admin-dashboard/system-health` includes an Order Maintenance Recovery panel for superadmins. It is a manual safety net for stuck production states and should be used after checking why QStash, Stripe, inventory, or courier maintenance did not finish automatically.
 - For production, `NEXT_PUBLIC_APP_URL` or `NEXTAUTH_URL` must point to a public HTTPS app URL so QStash can call the API route. Local `localhost` URLs are intentionally skipped unless you test through a public tunnel.
 
 ### Cloudinary Menu Item Maintenance
