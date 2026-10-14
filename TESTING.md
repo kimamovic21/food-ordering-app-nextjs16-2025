@@ -83,6 +83,7 @@ Recent high-priority coverage also checks best coupon suggestion rules, restaura
 - `npm run test:components`: run component tests
 - `npm run test:libs`: run library/helper tests
 - `npm run test:models`: run model tests
+- `npm run test:editor-types`: validate the editor-only test TypeScript project used for Vitest globals and `@/` path aliases in `__tests__`
 - `npm run test:profile`: run only profile-focused unit tests
 - `npm run test:payment`: run only payment & webhook unit tests, including Stripe Checkout session expiration
 - `npm run test:e2e`: run all e2e tests
@@ -96,6 +97,12 @@ Recent high-priority coverage also checks best coupon suggestion rules, restaura
 - `npm run test:e2e:profile`: run only profile-focused e2e tests
 - `npm run test:e2e:checkout`: run only checkout & payment e2e tests
 - `npm run test:all`: run unit + e2e tests
+
+The unit test config runs with one Vitest worker on purpose. Many API route tests mock shared
+Next.js, MongoDB, Stripe, and Mongoose modules; keeping the full suite serial avoids Windows/local
+parallelism flakes where route imports can time out or consume mock state in surprising order.
+Use focused commands such as `npm run test:file -- ...` for faster iteration while developing a
+single feature.
 
 Useful focused command after recent order-flow changes:
 
@@ -187,6 +194,17 @@ Test setup will use:
 
 1. `MONGODB_URL` if already set
 2. otherwise `MONGODB_URL_TESTS` (required; no fallback)
+
+## Test Editor TypeScript Project
+
+`__tests__/tsconfig.json` exists for VS Code and TypeScript language-service support inside test
+files. The main app `tsconfig.json` intentionally excludes `__tests__`, so without this nested
+config the editor can lose `@/` path aliases and Vitest globals such as `vi`, `describe`, `it`, and
+`expect`.
+
+This config is not a replacement for production type checking. Use `npm run typecheck` for the app
+and `npm run test` or focused `npm run test:file -- ...` commands for behavior. Use
+`npm run test:editor-types` when test files show editor-only module/global diagnostics.
 
 ## E2E Notes
 
