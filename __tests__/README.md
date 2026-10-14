@@ -79,6 +79,21 @@ This folder contains unit tests grouped by feature area.
 - Run payment/webhook-focused unit tests: `npm run test:payment`
 - Run realtime/SSE tests: `npm run test:realtime`
 - Run stale order recovery tests: `npm run test:file -- __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts`
+- Validate test editor TypeScript config: `npm run test:editor-types`
+
+The default unit suite intentionally uses a single Vitest worker through `vitest.config.ts`. This
+keeps the full run stable for route tests that mock shared framework and database modules. For day
+to day work, prefer the focused commands above because they are much faster than the complete
+serial suite.
+
+## Editor TypeScript Support
+
+`__tests__/tsconfig.json` is intentionally scoped to tests so VS Code can resolve `@/` imports and
+Vitest globals in `*.test.ts` and `*.test.tsx` files. The root `tsconfig.json` excludes tests because
+the main Next.js typecheck should stay focused on app/source files.
+
+If test files show editor-only errors such as `Cannot find name 'vi'` or `Cannot find module '@/...'`,
+run `npm run test:editor-types`, then restart the TypeScript server in VS Code.
 
 ## E2E Tests
 

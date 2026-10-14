@@ -10,6 +10,7 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     testTimeout: 10000,
+    maxWorkers: 1,
   },
   resolve: {
     alias: {
