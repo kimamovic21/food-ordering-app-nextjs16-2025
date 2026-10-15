@@ -1,7 +1,10 @@
 import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
-import { buildCartItemsFromOrderProducts, createOrderPatternKey } from '@/libs/orderCartSnapshot';
+import {
+  buildOrderCartSnapshotFromOrderProducts,
+  createOrderPatternKey,
+} from '@/libs/orderCartSnapshot';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 
@@ -82,23 +85,40 @@ export async function GET() {
   }
 
   try {
-    const cartItems = await buildCartItemsFromOrderProducts(usualPattern.order.cartProducts || []);
-    const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const snapshot = await buildOrderCartSnapshotFromOrderProducts(
+      usualPattern.order.cartProducts || []
+    );
+
+    if (snapshot.cartItems.length === 0) {
+      return Response.json({
+        usualOrder: null,
+        error:
+          snapshot.skippedItems[0]?.message ||
+          'Your usual order cannot be rebuilt from current menu data.',
+      });
+    }
+
+    const subtotal = snapshot.cartItems.reduce((sum, item) => {
+      const price = typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0;
+
+      return sum + price * item.quantity;
+    }, 0);
 
     return Response.json({
       usualOrder: {
         orderId: usualPattern.order._id,
         repeatCount: usualPattern.count,
         lastOrderedAt: usualPattern.lastOrderedAt,
-        restaurantId: cartItems[0]?.restaurantId || null,
-        itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+        recoverySummary: snapshot.recoverySummary,
+        restaurantId: snapshot.cartItems[0]?.restaurantId || null,
+        itemCount: snapshot.cartItems.reduce((sum, item) => sum + item.quantity, 0),
         subtotal: Number(subtotal.toFixed(2)),
-        items: cartItems.map((item) => ({
+        items: snapshot.cartItems.map((item) => ({
           name: item.name,
           size: item.size,
           quantity: item.quantity,
         })),
-        cartItems,
+        cartItems: snapshot.cartItems,
       },
     });
   } catch (error) {

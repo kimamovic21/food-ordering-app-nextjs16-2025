@@ -28,6 +28,7 @@ import MyOrdersTable from './MyOrdersTable';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { useCart } from '@/contexts/CartContext';
 import { formatAppDate } from '@/libs/dateFormat';
+import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
 import { useCustomerOrdersListQuery, useUsualOrderQuery } from '@/hooks/useOrderListQueries';
 import { queryKeys } from '@/libs/queryKeys';
 import {
@@ -84,7 +85,16 @@ const MyOrdersPage = () => {
     try {
       setAddingUsualOrder(true);
       replaceCart(usualOrder.cartItems);
-      sonnerToast.success('Your usual order was added to cart');
+      const toastCopy = getReorderRecoveryToastCopy(
+        usualOrder.recoverySummary,
+        'Your usual order was added to cart'
+      );
+
+      if (toastCopy.tone === 'info') {
+        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
+      } else {
+        sonnerToast.success(toastCopy.title);
+      }
       router.push('/cart');
     } finally {
       setAddingUsualOrder(false);

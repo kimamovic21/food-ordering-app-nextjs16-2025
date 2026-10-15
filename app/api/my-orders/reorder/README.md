@@ -12,18 +12,25 @@
 
 ## Plain-English Summary
 
-Handles post work for the customer orders area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Rebuilds a customer's previous order into fresh cart items using the current menu data. The route
+does not trust the old order snapshot blindly: it reloads menu items from MongoDB, skips deleted or
+unavailable items, refreshes prices, reduces quantities when stock or per-item limits changed, and
+returns a recovery summary so the UI can explain what changed.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
-- It uses `order`, `user` for persistence.
-- It delegates shared logic to `auditLog`, `authOptions`, `orderCartSnapshot` so behavior stays consistent across the app.
+- It requires the signed-in customer and only reads orders owned by that customer.
+- It validates `orderId` as a MongoDB ObjectId before querying.
+- It uses `order`, `user`, and current `menuItem` documents through `orderCartSnapshot`.
+- It returns valid cart items even when part of the original order can no longer be reordered.
+- It returns `skippedItems`, `priceChangedItems`, `adjustedItems`, and `recoverySummary` for smart UI feedback.
+- It writes an audit log with item, skipped, adjusted, and price-change counts.
 - Detected local functions/handlers: only exported HTTP handlers.
 
 ## Request Inputs
 
-- No direct input parsing detected; route may rely on session/context only.
+- JSON body: `{ "orderId": "<customer order id>" }`
 
 ## Packages And Services Used
 
@@ -42,6 +49,11 @@ Handles post work for the customer orders area. The route keeps the local workfl
 - Line 18: `if (!user) {`
 - Line 24: `if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {`
 - Line 29: `if (!order) {`
+- Deleted menu items are skipped instead of crashing the entire reorder when other items remain valid.
+- Unavailable or sold-out menu items are skipped, with a customer-friendly reason in `skippedItems`.
+- Price changes are accepted from current menu data and reported in `priceChangedItems`.
+- Quantity is reduced when current stock or per-item limits are lower than the old order quantity.
+- If nothing can be reordered, the route returns `400` with detailed recovery metadata.
 
 ## Data Dependencies
 
@@ -56,11 +68,12 @@ Handles post work for the customer orders area. The route keeps the local workfl
 ## Response Behavior
 
 - Status codes detected: `400`, `401`, `404`
-- Common response fields detected: `request`, `error`, `email`, `userId`, `message`, `actor`, `action`, `entityType`, `entityId`, `restaurantId`, `orderId`, `metadata`, `itemCount`
+- Success response fields: `cartItems`, `skippedItems`, `priceChangedItems`, `adjustedItems`, `recoverySummary`
+- Error response fields can include the same recovery metadata so the UI can explain why nothing was added.
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/my-orders/reorder` does. Explain that it belongs to the customer orders workflow, serves `customer`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/my-orders/reorder` does. Explain that it lets a signed-in customer order again from an old order, but rebuilds the cart from today's menu data. If one item disappeared, the rest can still be added. If prices, limits, or stock changed, the API reports that clearly so the cart UI can show an honest recovery message.
 
 ## Maintenance Notes For Future Work
 

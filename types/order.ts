@@ -168,10 +168,63 @@ export type UsualOrder = {
   orderId: EntityId;
   repeatCount: number;
   lastOrderedAt: ISODateString;
+  recoverySummary?: ReorderRecoverySummary;
   itemCount: number;
   subtotal: number;
   items: { name: string; size: string; quantity: number }[];
   cartItems: CartItem[];
+};
+
+export type ReorderSkippedReason =
+  'deleted' | 'invalid_product' | 'invalid_size' | 'sold_out' | 'stock_limit' | 'unavailable';
+
+export type ReorderSkippedItem = {
+  productId?: EntityId;
+  name: string;
+  size?: string | null;
+  requestedQuantity: number;
+  reason: ReorderSkippedReason;
+  message: string;
+};
+
+export type ReorderPriceChangedItem = {
+  productId: EntityId;
+  name: string;
+  size: string;
+  quantity: number;
+  previousPrice: number;
+  currentPrice: number;
+};
+
+export type ReorderAdjustedItem = {
+  productId: EntityId;
+  name: string;
+  size: string;
+  requestedQuantity: number;
+  appliedQuantity: number;
+  reason: 'item_quantity_limit' | 'stock_limit';
+  message: string;
+};
+
+export type ReorderRecoverySummary = {
+  adjustedItemCount: number;
+  addedLineCount: number;
+  addedQuantity: number;
+  hasChanges: boolean;
+  originalLineCount: number;
+  originalQuantity: number;
+  priceChangedItemCount: number;
+  skippedItemCount: number;
+};
+
+export type ReorderResponse = {
+  cartItems: CartItem[];
+  adjustedItems?: ReorderAdjustedItem[];
+  priceChangedItems?: ReorderPriceChangedItem[];
+  recoverySummary?: ReorderRecoverySummary;
+  restaurantName?: string;
+  skippedItems?: ReorderSkippedItem[];
+  sourceOrderId?: EntityId;
 };
 
 export type PaginatedOrdersResponse = {

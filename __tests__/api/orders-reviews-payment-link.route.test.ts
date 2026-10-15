@@ -819,6 +819,146 @@ describe('high-priority order, review, and payment-link routes', () => {
     ]);
   });
 
+  it('partially rebuilds reorder cart items and reports current menu changes', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce({ user: { email: customer.email } } as never);
+    vi.mocked(User.findOne).mockResolvedValueOnce(customer as never);
+    vi.mocked(Order.findOne).mockReturnValueOnce({
+      lean: vi.fn().mockResolvedValue({
+        _id: { toString: () => 'order-1' },
+        userId: customer._id,
+        restaurantId: { toString: () => 'restaurant-1' },
+        cartProducts: [
+          {
+            productId: { toString: () => 'menu-item-1' },
+            name: 'Old Pizza',
+            size: 'medium',
+            quantity: 2,
+            price: 9,
+          },
+          {
+            productId: { toString: () => 'menu-item-2' },
+            name: 'Old Pasta',
+            size: 'single',
+            quantity: 1,
+            price: 8,
+          },
+          {
+            productId: { toString: () => 'menu-item-3' },
+            name: 'Old Burger',
+            size: 'single',
+            quantity: 3,
+            price: 10,
+          },
+        ],
+      }),
+    } as never);
+    vi.mocked(MenuItem.find).mockReturnValueOnce({
+      select: vi.fn().mockReturnValue({
+        lean: vi.fn().mockResolvedValue([
+          {
+            _id: { toString: () => 'menu-item-1' },
+            name: 'Pizza',
+            description: 'Fresh pizza',
+            image: 'pizza.jpg',
+            priceType: 'triple',
+            priceMedium: 12,
+            restaurantId: { toString: () => 'restaurant-1' },
+            isAvailable: true,
+          },
+          {
+            _id: { toString: () => 'menu-item-2' },
+            name: 'Pasta',
+            priceType: 'single',
+            priceSmall: 8,
+            restaurantId: { toString: () => 'restaurant-1' },
+            isAvailable: false,
+          },
+          {
+            _id: { toString: () => 'menu-item-3' },
+            name: 'Burger',
+            priceType: 'single',
+            priceSmall: 10,
+            restaurantId: { toString: () => 'restaurant-1' },
+            isAvailable: true,
+            trackInventory: true,
+            stockQuantity: 1,
+            reservedStockQuantity: 0,
+          },
+        ]),
+      }),
+    } as never);
+
+    const { POST } = await import('@/app/api/my-orders/reorder/route');
+    const res = await POST(
+      new Request('http://localhost/api/my-orders/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId: 'order-1' }),
+      })
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body.cartItems).toEqual([
+      expect.objectContaining({
+        _id: 'menu-item-1',
+        name: 'Pizza',
+        quantity: 2,
+        price: 12,
+      }),
+      expect.objectContaining({
+        _id: 'menu-item-3',
+        name: 'Burger',
+        quantity: 1,
+      }),
+    ]);
+    expect(body.skippedItems).toEqual([
+      expect.objectContaining({
+        productId: 'menu-item-2',
+        reason: 'unavailable',
+        message: 'Pasta is currently unavailable.',
+      }),
+    ]);
+    expect(body.priceChangedItems).toEqual([
+      expect.objectContaining({
+        productId: 'menu-item-1',
+        previousPrice: 9,
+        currentPrice: 12,
+      }),
+    ]);
+    expect(body.adjustedItems).toEqual([
+      expect.objectContaining({
+        productId: 'menu-item-3',
+        requestedQuantity: 3,
+        appliedQuantity: 1,
+        reason: 'stock_limit',
+      }),
+    ]);
+    expect(body.recoverySummary).toEqual(
+      expect.objectContaining({
+        adjustedItemCount: 1,
+        addedLineCount: 2,
+        addedQuantity: 3,
+        hasChanges: true,
+        originalLineCount: 3,
+        originalQuantity: 6,
+        priceChangedItemCount: 1,
+        skippedItemCount: 1,
+      })
+    );
+    expect(createAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'order.reordered',
+        metadata: expect.objectContaining({
+          adjustedItemCount: 1,
+          itemCount: 2,
+          priceChangedItemCount: 1,
+          skippedItemCount: 1,
+        }),
+      })
+    );
+  });
+
   it('builds the customer usual order from the most repeated completed order pattern', async () => {
     vi.mocked(getServerSession).mockResolvedValueOnce({ user: { email: customer.email } } as never);
     vi.mocked(User.findOne).mockResolvedValueOnce(customer as never);
@@ -936,7 +1076,21 @@ describe('high-priority order, review, and payment-link routes', () => {
     const body = await res.json();
 
     expect(res.status).toBe(400);
-    expect(body).toEqual({ error: 'Pizza is currently unavailable.' });
+    expect(body).toEqual(
+      expect.objectContaining({
+        error: 'Pizza is currently unavailable.',
+        recoverySummary: expect.objectContaining({
+          addedQuantity: 0,
+          skippedItemCount: 1,
+        }),
+        skippedItems: [
+          expect.objectContaining({
+            message: 'Pizza is currently unavailable.',
+            reason: 'unavailable',
+          }),
+        ],
+      })
+    );
   });
 
   it('builds quick reorder cart items from the latest restaurant order', async () => {

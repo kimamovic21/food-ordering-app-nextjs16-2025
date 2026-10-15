@@ -16,6 +16,7 @@ This folder contains unit tests grouped by feature area.
 - `api/profile-change-password.route.test.ts`: validates password change API behavior.
 - `api/upload-users.route.test.ts`: validates profile image upload/remove behavior.
 - `api/checkout.route.test.ts`: validates checkout guardrails, quantity-limit and tracked-stock blockers, temporary inventory reservation, free delivery threshold pricing with preserved courier payout, per-item cart note persistence, and failure handling.
+- `api/orders-reviews-payment-link.route.test.ts`: validates customer order mutations, payment-link recovery, reviews, quick reorder, smart partial reorder recovery, and reorder audit metadata.
 - `api/order-queue.route.test.ts`: validates restaurant queue access, courier timeout handling, and kitchen item-note payload normalization.
 - `api/cart-validate.route.test.ts`: validates cart item revalidation plus restaurant minimum, busy, delivery-radius, and quantity-limit preflight blockers.
 - `api/courier-assignment.route.test.ts`: validates courier assignment guardrails, courier-only assignment notes, and assignable courier schedule/status checks.

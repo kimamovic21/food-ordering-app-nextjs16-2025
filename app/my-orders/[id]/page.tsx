@@ -57,7 +57,8 @@ import {
   isOrderRelatedRealtimePayload,
 } from '@/libs/realtimeClient';
 import { formatAppDateTime } from '@/libs/dateFormat';
-import type { CustomerOrderDetails, OrderReview } from '@/types/order';
+import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
+import type { CustomerOrderDetails, OrderReview, ReorderResponse } from '@/types/order';
 
 // Map loads client-side only because Leaflet touches window during module init
 const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
@@ -426,19 +427,25 @@ const MyOrderDetailPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId: order._id }),
       });
-      const json = await response.json();
+      const json = (await response.json()) as ReorderResponse & { error?: string };
 
       if (!response.ok) {
         throw new Error(json.error || 'Failed to reorder');
       }
 
       replaceCart(json.cartItems || []);
-      sonnerToast.success('Order added to cart', {
-        style: {
-          background: '#22c55e',
-          color: 'white',
-        },
-      });
+      const toastCopy = getReorderRecoveryToastCopy(json.recoverySummary);
+
+      if (toastCopy.tone === 'info') {
+        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
+      } else {
+        sonnerToast.success(toastCopy.title, {
+          style: {
+            background: '#22c55e',
+            color: 'white',
+          },
+        });
+      }
       router.push('/cart');
     } catch (error) {
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to reorder', {
@@ -632,7 +639,8 @@ const MyOrderDetailPage = () => {
             </CardHeader>
             <CardContent className='space-y-2 text-sm text-muted-foreground'>
               <p>
-                Amount: <span className='font-semibold'>${Number(order.refundAmount || 0).toFixed(2)}</span>
+                Amount:{' '}
+                <span className='font-semibold'>${Number(order.refundAmount || 0).toFixed(2)}</span>
               </p>
               {order.refundProcessedAt && (
                 <p>Processed at: {formatAppDateTime(order.refundProcessedAt)}</p>
