@@ -19,6 +19,7 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/courier-reviews`, `/api/courier-reviews?courierId=${courierId}`, `/api/courier-reviews?orderId=${orderId}`, `/api/my-orders`, `/api/my-orders/reorder`, `/api/my-orders?id=${orderId}`, `/api/payment-link?orderId=${order._id}`, `/api/payment-link?orderId=${orderId}`, `/api/reviews`, `/api/reviews?orderId=${orderId}`. Keep API response shapes aligned.
+- Reorder actions use smart cart recovery: they replace the cart with the valid current menu items returned by the API and show a toast when old items were skipped, prices changed, or quantities were reduced.
 
 ## Important Files
 
@@ -70,10 +71,12 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+- For reorder/usual-order flows, never assume old order snapshots are still valid. The UI should trust `/api/my-orders/reorder` and `/api/my-orders/usual` response metadata and explain partial recovery with toast copy.
+- If `recoverySummary.hasChanges` is true, prefer a neutral info toast instead of a plain success toast so customers know the cart was rebuilt with today's menu, stock, and prices.
 
 ## How To Explain This In A Presentation
 
-If someone asks what this folder does, say: this is the `customer` UI for `/my-orders`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+If someone asks what this folder does, say: this is the `customer` UI for `/my-orders`; it lists past orders, opens order details, lets users finish unpaid checkout links, cancel eligible unpaid orders, confirm delivery, leave reviews, report problems, and reorder. The reorder UX is smart: the browser only applies cart items returned by server checks, then explains skipped unavailable items, refreshed prices, and reduced quantities.
 
 ## Maintenance Notes For Future Work
 

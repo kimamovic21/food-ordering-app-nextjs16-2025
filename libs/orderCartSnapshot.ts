@@ -3,7 +3,40 @@ import { MenuItem } from '@/models/menuItem';
 import { getTrackedAvailableStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
 import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
-import type { CartSize } from '@/types/cart';
+import type { CartItem, CartSize } from '@/types/cart';
+import type {
+  ReorderAdjustedItem,
+  ReorderPriceChangedItem,
+  ReorderRecoverySummary,
+  ReorderSkippedItem,
+} from '@/types/order';
+
+type OrderCartSnapshot = {
+  adjustedItems: ReorderAdjustedItem[];
+  cartItems: CartItem[];
+  priceChangedItems: ReorderPriceChangedItem[];
+  recoverySummary: ReorderRecoverySummary;
+  skippedItems: ReorderSkippedItem[];
+};
+
+const getOrderProductId = (product: any) =>
+  product?.productId?.toString?.() || String(product?.productId || '');
+
+const getOrderProductName = (product: any) => String(product?.name || 'A menu item');
+
+const getOrderProductQuantity = (product: any) => Math.max(1, Number(product?.quantity) || 1);
+
+const getFinitePrice = (value: unknown) => {
+  const price = Number(value);
+
+  return Number.isFinite(price) ? price : null;
+};
+
+const getPositiveMenuPrice = (value: unknown) => {
+  const price = getFinitePrice(value);
+
+  return price != null && price > 0 ? price : null;
+};
 
 const normalizeSize = (value: unknown, priceType?: string): CartSize => {
   const size = String(value || '').toLowerCase();
@@ -16,69 +49,192 @@ const normalizeSize = (value: unknown, priceType?: string): CartSize => {
   return 'single';
 };
 
-const getMenuItemPrice = (menuItem: any, size: CartSize, fallbackPrice: number) => {
-  if (size === 'large' && typeof menuItem.priceLarge === 'number') return menuItem.priceLarge;
-  if (size === 'medium' && typeof menuItem.priceMedium === 'number') return menuItem.priceMedium;
-  if (
-    (size === 'small' || size === 'single') &&
-    typeof menuItem.priceSmall === 'number' &&
-    menuItem.priceSmall > 0
-  ) {
-    return menuItem.priceSmall;
-  }
+const getMenuItemPrice = (menuItem: any, size: CartSize) => {
+  if (size === 'large') return getPositiveMenuPrice(menuItem.priceLarge);
+  if (size === 'medium') return getPositiveMenuPrice(menuItem.priceMedium);
+  if (size === 'small' || size === 'single') return getPositiveMenuPrice(menuItem.priceSmall);
 
-  return fallbackPrice;
+  return null;
 };
 
-export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
+const createRecoverySummary = ({
+  adjustedItems,
+  cartItems,
+  cartProducts,
+  priceChangedItems,
+  skippedItems,
+}: Omit<OrderCartSnapshot, 'recoverySummary'> & {
+  cartProducts: any[];
+}): ReorderRecoverySummary => {
+  const originalQuantity = cartProducts.reduce(
+    (sum, product) => sum + getOrderProductQuantity(product),
+    0
+  );
+  const addedQuantity = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+  return {
+    adjustedItemCount: adjustedItems.length,
+    addedLineCount: cartItems.length,
+    addedQuantity,
+    hasChanges: skippedItems.length > 0 || priceChangedItems.length > 0 || adjustedItems.length > 0,
+    originalLineCount: cartProducts.length,
+    originalQuantity,
+    priceChangedItemCount: priceChangedItems.length,
+    skippedItemCount: skippedItems.length,
+  };
+};
+
+export const buildOrderCartSnapshotFromOrderProducts = async (
+  cartProducts: any[]
+): Promise<OrderCartSnapshot> => {
   if (!Array.isArray(cartProducts) || cartProducts.length === 0) {
     throw new Error('This order has no menu items to reorder');
   }
 
-  const productIds = cartProducts
-    .map((item: any) => item.productId?.toString?.() || String(item.productId || ''))
-    .filter((id: string) => mongoose.Types.ObjectId.isValid(id));
+  const skippedItems: ReorderSkippedItem[] = [];
+  const validProductIds: string[] = [];
 
-  if (productIds.length !== cartProducts.length) {
-    throw new Error('This order contains invalid menu items');
-  }
+  cartProducts.forEach((product) => {
+    const productId = getOrderProductId(product);
 
-  const menuItems = await MenuItem.find({ _id: { $in: productIds } })
-    .select(
-      '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable trackInventory stockQuantity reservedStockQuantity lowStockThreshold'
-    )
-    .lean();
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      skippedItems.push({
+        productId,
+        name: getOrderProductName(product),
+        size: product?.size ?? null,
+        requestedQuantity: getOrderProductQuantity(product),
+        reason: 'invalid_product',
+        message: `${getOrderProductName(product)} cannot be reordered because its menu item reference is invalid.`,
+      });
+      return;
+    }
+
+    validProductIds.push(productId);
+  });
+
+  const menuItems = validProductIds.length
+    ? await MenuItem.find({ _id: { $in: Array.from(new Set(validProductIds)) } })
+        .select(
+          '_id name description image priceType priceSmall priceMedium priceLarge maxQuantityPerOrder restaurantId isAvailable trackInventory stockQuantity reservedStockQuantity lowStockThreshold'
+        )
+        .lean()
+    : [];
   const menuItemsById = new Map(menuItems.map((item: any) => [item._id.toString(), item]));
+  const cartItems: CartItem[] = [];
+  const priceChangedItems: ReorderPriceChangedItem[] = [];
+  const adjustedItems: ReorderAdjustedItem[] = [];
 
-  const cartItems = cartProducts.map((product: any) => {
-    const productId = product.productId?.toString?.() || String(product.productId || '');
+  cartProducts.forEach((product: any) => {
+    const productId = getOrderProductId(product);
+
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+      return;
+    }
+
     const menuItem = menuItemsById.get(productId);
+    const requestedQuantity = getOrderProductQuantity(product);
+    const productName = getOrderProductName(product);
 
     if (!menuItem) {
-      throw new Error(`${product.name || 'A menu item'} is no longer available.`);
+      skippedItems.push({
+        productId,
+        name: productName,
+        size: product?.size ?? null,
+        requestedQuantity,
+        reason: 'deleted',
+        message: `${productName} is no longer on the menu.`,
+      });
+      return;
     }
+
+    const itemName = String(menuItem.name || productName);
 
     if (menuItem.isAvailable === false) {
-      throw new Error(
-        `${menuItem.name || product.name || 'A menu item'} is currently unavailable.`
-      );
-    }
-
-    const quantity = Math.max(1, Number(product.quantity) || 1);
-    const stockQuantity = getTrackedAvailableStockQuantity(menuItem);
-
-    if (isInventoryTracked(menuItem) && stockQuantity != null && stockQuantity < quantity) {
-      throw new Error(
-        stockQuantity <= 0
-          ? `${menuItem.name || product.name || 'A menu item'} is sold out.`
-          : `${menuItem.name || product.name || 'A menu item'} has only ${stockQuantity} left in stock.`
-      );
+      skippedItems.push({
+        productId,
+        name: itemName,
+        size: product?.size ?? null,
+        requestedQuantity,
+        reason: 'unavailable',
+        message: `${itemName} is currently unavailable.`,
+      });
+      return;
     }
 
     const size = normalizeSize(product.size, menuItem.priceType);
-    const price = getMenuItemPrice(menuItem, size, Number(product.price) || 0);
+    const price = getMenuItemPrice(menuItem, size);
 
-    return {
+    if (price == null) {
+      skippedItems.push({
+        productId,
+        name: itemName,
+        size,
+        requestedQuantity,
+        reason: 'invalid_size',
+        message: `${itemName} is no longer available in ${size} size.`,
+      });
+      return;
+    }
+
+    let quantity = requestedQuantity;
+    const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder);
+
+    if (maxQuantityPerOrder && quantity > maxQuantityPerOrder) {
+      quantity = maxQuantityPerOrder;
+      adjustedItems.push({
+        productId,
+        name: itemName,
+        size,
+        requestedQuantity,
+        appliedQuantity: quantity,
+        reason: 'item_quantity_limit',
+        message: `${itemName} was reduced to ${quantity} because of the current per-order limit.`,
+      });
+    }
+
+    const stockQuantity = getTrackedAvailableStockQuantity(menuItem);
+
+    if (isInventoryTracked(menuItem) && stockQuantity != null) {
+      if (stockQuantity <= 0) {
+        skippedItems.push({
+          productId,
+          name: itemName,
+          size,
+          requestedQuantity,
+          reason: 'sold_out',
+          message: `${itemName} is sold out.`,
+        });
+        return;
+      }
+
+      if (stockQuantity < quantity) {
+        quantity = stockQuantity;
+        adjustedItems.push({
+          productId,
+          name: itemName,
+          size,
+          requestedQuantity,
+          appliedQuantity: quantity,
+          reason: 'stock_limit',
+          message: `${itemName} was reduced to ${quantity} because only ${stockQuantity} are left in stock.`,
+        });
+      }
+    }
+
+    const previousPrice = getFinitePrice(product.price);
+
+    if (previousPrice != null && Math.abs(previousPrice - price) >= 0.01) {
+      priceChangedItems.push({
+        productId,
+        name: itemName,
+        size,
+        quantity,
+        previousPrice,
+        currentPrice: price,
+      });
+    }
+
+    cartItems.push({
       _id: menuItem._id.toString(),
       name: menuItem.name,
       description: menuItem.description || '',
@@ -87,12 +243,12 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
       price,
       quantity,
       restaurantId: menuItem.restaurantId?.toString?.() || String(menuItem.restaurantId || ''),
-      maxQuantityPerOrder: normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder),
+      maxQuantityPerOrder,
       trackInventory: menuItem.trackInventory === true,
       stockQuantity,
       lowStockThreshold: menuItem.lowStockThreshold,
       note: limitCartItemNoteInput(product.note),
-    };
+    });
   });
 
   const restaurantIds = new Set(cartItems.map((item) => item.restaurantId));
@@ -100,7 +256,35 @@ export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
     throw new Error('This order cannot be reordered because it contains multiple restaurants.');
   }
 
-  return cartItems;
+  const recoverySummary = createRecoverySummary({
+    adjustedItems,
+    cartItems,
+    cartProducts,
+    priceChangedItems,
+    skippedItems,
+  });
+
+  return {
+    adjustedItems,
+    cartItems,
+    priceChangedItems,
+    recoverySummary,
+    skippedItems,
+  };
+};
+
+export const buildCartItemsFromOrderProducts = async (cartProducts: any[]) => {
+  const snapshot = await buildOrderCartSnapshotFromOrderProducts(cartProducts);
+
+  if (snapshot.skippedItems.length > 0) {
+    throw new Error(snapshot.skippedItems[0].message);
+  }
+
+  if (snapshot.cartItems.length === 0) {
+    throw new Error('No items from this order can be reordered.');
+  }
+
+  return snapshot.cartItems;
 };
 
 export const createOrderPatternKey = (order: any) => {

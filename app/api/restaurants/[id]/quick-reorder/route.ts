@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 import { createAuditLog } from '@/libs/auditLog';
-import { buildCartItemsFromOrderProducts } from '@/libs/orderCartSnapshot';
+import { buildOrderCartSnapshotFromOrderProducts } from '@/libs/orderCartSnapshot';
 import { Order } from '@/models/order';
 import { Restaurant } from '@/models/restaurant';
 import { User } from '@/models/user';
@@ -52,13 +52,28 @@ export async function POST(_request: Request, { params }: RouteContext) {
     );
   }
 
-  let cartItems;
+  let snapshot;
 
   try {
-    cartItems = await buildCartItemsFromOrderProducts(order.cartProducts || []);
+    snapshot = await buildOrderCartSnapshotFromOrderProducts(order.cartProducts || []);
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Unable to reorder this restaurant.' },
+      { status: 400 }
+    );
+  }
+
+  if (snapshot.cartItems.length === 0) {
+    return Response.json(
+      {
+        adjustedItems: snapshot.adjustedItems,
+        error:
+          snapshot.skippedItems[0]?.message ||
+          `No previous ${restaurant.name} items can be reordered right now.`,
+        priceChangedItems: snapshot.priceChangedItems,
+        recoverySummary: snapshot.recoverySummary,
+        skippedItems: snapshot.skippedItems,
+      },
       { status: 400 }
     );
   }
@@ -71,14 +86,21 @@ export async function POST(_request: Request, { params }: RouteContext) {
     restaurantId: restaurant._id,
     orderId: order._id,
     metadata: {
-      itemCount: cartItems.length,
+      adjustedItemCount: snapshot.adjustedItems.length,
+      itemCount: snapshot.cartItems.length,
+      priceChangedItemCount: snapshot.priceChangedItems.length,
+      skippedItemCount: snapshot.skippedItems.length,
       sourceOrderId: order._id,
     },
   });
 
   return Response.json({
-    cartItems,
+    adjustedItems: snapshot.adjustedItems,
+    cartItems: snapshot.cartItems,
+    priceChangedItems: snapshot.priceChangedItems,
+    recoverySummary: snapshot.recoverySummary,
     restaurantName: restaurant.name,
+    skippedItems: snapshot.skippedItems,
     sourceOrderId: order._id?.toString?.() || String(order._id),
   });
 }

@@ -12,18 +12,26 @@
 
 ## Plain-English Summary
 
-Handles post work for the public restaurant discovery/details area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Lets a signed-in customer rebuild their latest previous order from a specific restaurant. It uses
+the same smart cart recovery logic as `/api/my-orders/reorder`: current menu data wins, deleted or
+unavailable items are skipped, prices are refreshed, and stock/quantity reductions are reported to
+the UI.
 
 ## What Happens In This File
 
 - The route receives POST requests and converts request/session data into server-side business checks.
-- It uses `order`, `restaurant`, `user` for persistence.
+- It validates the restaurant id from route params before querying.
+- It requires a signed-in customer and confirms the restaurant still exists.
+- It finds the customer's most recent order from that restaurant with cart products.
+- It uses `order`, `restaurant`, `user`, and current menu item data for persistence/recovery.
 - It delegates shared logic to `auditLog`, `authOptions`, `orderCartSnapshot` so behavior stays consistent across the app.
+- It returns `cartItems`, `skippedItems`, `priceChangedItems`, `adjustedItems`, and `recoverySummary`.
 - Detected local functions/handlers: only exported HTTP handlers.
 
 ## Request Inputs
 
-- No direct input parsing detected; route may rely on session/context only.
+- Route param: `id` is the restaurant id.
+- Session email identifies the customer whose latest restaurant order should be rebuilt.
 
 ## Packages And Services Used
 
@@ -43,6 +51,9 @@ Handles post work for the public restaurant discovery/details area. The route ke
 - Line 32: `if (!user) {`
 - Line 36: `if (!restaurant) {`
 - Line 48: `if (!order) {`
+- If the latest restaurant order has stale menu items, valid items can still be added to cart.
+- If no item can be recovered, the route returns `400` with detailed skipped-item metadata.
+- Audit metadata records how many items were added, skipped, adjusted, or price-refreshed.
 
 ## Data Dependencies
 
@@ -57,11 +68,12 @@ Handles post work for the public restaurant discovery/details area. The route ke
 ## Response Behavior
 
 - Status codes detected: `400`, `401`, `404`
-- Common response fields detected: `id`, `error`, `email`, `userId`, `cartProducts`, `exists`, `ne`, `createdAt`, `message`, `actor`, `action`, `entityType`, `entityId`, `restaurantId`, `orderId`, `metadata`, `itemCount`, `sourceOrderId`, `restaurantName`
+- Success response fields: `cartItems`, `restaurantName`, `sourceOrderId`, `skippedItems`, `priceChangedItems`, `adjustedItems`, `recoverySummary`
+- Error response fields can include recovery metadata when the previous order exists but no item can currently be reordered.
 
 ## How To Explain This In A Presentation
 
-Open this file when someone asks what `/api/restaurants/[id]/quick-reorder` does. Explain that it belongs to the public restaurant discovery/details workflow, serves `customer`, `public visitor`, validates the inputs and access rules above, then returns a stable JSON response or a clear error status.
+Open this file when someone asks what `/api/restaurants/[id]/quick-reorder` does. Explain that it powers the restaurant detail "Order again" button by rebuilding the customer's latest order from that restaurant with current menu data and honest partial-recovery feedback.
 
 ## Maintenance Notes For Future Work
 

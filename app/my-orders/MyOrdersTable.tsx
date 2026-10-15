@@ -36,7 +36,8 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCart } from '@/contexts/CartContext';
 import { formatAppDateTime } from '@/libs/dateFormat';
-import type { OrderListItem } from '@/types/order';
+import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
+import type { OrderListItem, ReorderResponse } from '@/types/order';
 
 type MyOrdersTableProps = {
   orders: OrderListItem[];
@@ -170,14 +171,20 @@ const MyOrdersTable = ({ orders, loading, onOrderUpdated }: MyOrdersTableProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId }),
       });
-      const data = await res.json();
+      const data = (await res.json()) as ReorderResponse & { error?: string };
 
       if (!res.ok) {
         throw new Error(data.error || 'Failed to reorder');
       }
 
       replaceCart(data.cartItems || []);
-      sonnerToast.success('Order added to cart');
+      const toastCopy = getReorderRecoveryToastCopy(data.recoverySummary);
+
+      if (toastCopy.tone === 'info') {
+        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
+      } else {
+        sonnerToast.success(toastCopy.title);
+      }
       router.push('/cart');
     } catch (error) {
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to reorder');

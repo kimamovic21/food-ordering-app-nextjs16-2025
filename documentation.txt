@@ -1225,3 +1225,5 @@ Add checkout stock reservation window
 Improve project documentation and workflow guidance
 
 Add stale order maintenance recovery
+
+Add smart reorder cart recovery
