@@ -4,6 +4,7 @@ This folder contains unit tests grouped by feature area.
 
 ## Current Coverage
 
+- `api/support-tickets.route.test.ts`: validates reporter/admin scoping, private-note and resolver-identity omission, response field allowlisting, spoofed access claims, personal scope for every role, admin-as-customer and admin app-support creation, private cache headers, and authorized note updates/notifications.
 - `auth/credentials-authorize.test.ts`: validates credentials authorization behavior.
 - `api/register.route.test.ts`: validates registration rules and role assignment.
 - `api/verify-email.route.test.ts`: validates verification-token route behavior.

@@ -19,6 +19,8 @@ This folder owns the super-admin support ticket console for `/admin-dashboard/su
 - Super admins can filter by `all`, `open`, `in_review`, `resolved`, or `rejected` status.
 - Each ticket card shows reporter contact, category, support target, linked order, the original description, a public response note, and a private internal handling note.
 - Public response notes are sent back through `/my-reports`; internal handling notes remain admin-only.
+- The API serializes every ticket for the current database user and includes `internalNote`/`resolvedBy` only for authorized managers. Successful ticket responses are `private, no-store`; the admin UI continues to receive its notes while reporter responses omit them entirely.
+- This console uses the default management scope. The separate `/my-reports` page requests `scope=mine` and shows only personally submitted reports with no internal notes, even for the super admin.
 - The page can move tickets to `in_review`, `resolved`, or `rejected`. Rejected tickets must include enough public context for the reporter.
 - This folder talks to `/api/support-tickets`, `/api/support-tickets?${params.toString()}`. Keep API response shapes aligned.
 

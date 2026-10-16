@@ -372,6 +372,9 @@ Rules:
 - App support tickets route to the super admin.
 - Ticket updates are admin-only.
 - Reporter-facing response notes are shown in `/my-reports`; internal handling notes stay admin-only.
+- Ticket responses use an explicit field allowlist. Only the super admin or the authorized restaurant-support admin receives `internalNote` and `resolvedBy`; a restaurant admin acting as a customer elsewhere receives a reporter-safe creation response.
+- Successful ticket responses use `Cache-Control: private, no-store`. Privacy filtering applies to GET, POST, and PATCH JSON, not just the visible UI, and does not change stored ticket history.
+- `/my-reports` requests `scope=mine`, which constrains every role to its authenticated reporter ID and always uses the public response fields. Default admin management reads remain restaurant/platform-scoped; personal reads never grant update access.
 - Rejected tickets require a reporter-facing response note so the user understands why no further action is being taken.
 - Admin ticket updates write audit logs for operational history.
 

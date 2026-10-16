@@ -68,6 +68,11 @@ This folder contains end-to-end style tests for critical user flows using a real
   - restaurant-support tickets notify the restaurant owner and super admin
   - app-support tickets route only to super admins
   - ticket status updates notify the reporter
+  - private notes remain in MongoDB and authorized admin responses but are omitted, with resolver identity, from customer/courier list, detail, and creation responses
+  - direct ticket links cannot bypass reporter ownership, and reporters cannot create private handling notes
+  - admin buyers can follow their own reports separately from restaurant management, including after losing a restaurant assignment
+  - restaurant admins can read public replies to their own app-support reports without accessing platform notes or updating those reports
+  - historical tickets remain readable with null populated references after related documents are removed, while private notes remain restricted to authorized managers
 
 ## Environment
 

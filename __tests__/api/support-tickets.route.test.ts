@@ -73,6 +73,22 @@ const createTicketQuery = (result: unknown) => {
   return query;
 };
 
+const createPrivateTicket = (overrides: Record<string, unknown> = {}) => ({
+  _id: 'ticket-1',
+  reporterId: 'user-1',
+  restaurantId: { _id: 'restaurant-1', name: 'Test Restaurant' },
+  orderId: { _id: 'order-1', orderStatus: 'completed', total: 25 },
+  target: 'restaurant_support',
+  subject: 'Missing item',
+  description: 'One item was missing from the delivery.',
+  status: 'in_review',
+  responseNote: 'We are checking your report.',
+  internalNote: 'Private kitchen and compensation discussion.',
+  resolvedBy: { _id: 'admin-1', name: 'Manager', email: 'manager@example.com' },
+  futurePrivateField: 'This database-only field must not reach the response.',
+  ...overrides,
+});
+
 const createRequest = (url: string, body?: Record<string, unknown>) =>
   new Request(url, {
     method: body ? 'POST' : 'GET',
@@ -117,8 +133,201 @@ describe('/api/support-tickets', () => {
     expect(query.limit).toHaveBeenCalledWith(100);
   });
 
+  it.each(['user', 'courier'])(
+    'omits internal notes and resolver identity from %s list and detail responses',
+    async (role) => {
+      vi.mocked(User.findOne).mockResolvedValue({
+        _id: createObjectId('user-1'),
+        email: 'customer@example.com',
+        role,
+      } as never);
+      // Session claims and query flags must not grant admin access.
+      vi.mocked(getServerSession).mockResolvedValue({
+        user: { email: 'customer@example.com', role: 'admin' },
+      } as never);
+      const ticket = createPrivateTicket();
+      vi.mocked(SupportTicket.find).mockReturnValue(createTicketQuery([ticket]) as never);
+
+      const { GET } = await loadRoute();
+
+      for (const query of [
+        '',
+        '?ticketId=ticket-1&includeInternalNotes=true&role=admin&scope=all',
+      ]) {
+        const response = await GET(new Request(`http://localhost/api/support-tickets${query}`));
+        const body = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+        expect(body.tickets[0]).toEqual(
+          expect.objectContaining({
+            _id: ticket._id,
+            responseNote: ticket.responseNote,
+            orderId: ticket.orderId,
+            restaurantId: ticket.restaurantId,
+          })
+        );
+        expect(body.tickets[0]).not.toHaveProperty('internalNote');
+        expect(body.tickets[0]).not.toHaveProperty('resolvedBy');
+        expect(body.tickets[0]).not.toHaveProperty('futurePrivateField');
+      }
+
+      expect(SupportTicket.find).toHaveBeenLastCalledWith({
+        _id: 'ticket-1',
+        reporterId: expect.objectContaining({ toString: expect.any(Function) }),
+      });
+      expect(ticket.internalNote).toBe('Private kitchen and compensation discussion.');
+    }
+  );
+
+  it('preserves private notes for an authorized restaurant admin', async () => {
+    const restaurantId = createObjectId('restaurant-1');
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: createObjectId('admin-1'),
+      email: 'admin@example.com',
+      role: 'admin',
+      restaurantId,
+    } as never);
+    const ticket = createPrivateTicket();
+    vi.mocked(SupportTicket.find).mockReturnValue(createTicketQuery([ticket]) as never);
+
+    const { GET } = await loadRoute();
+    const response = await GET(new Request('http://localhost/api/support-tickets'));
+    const body = await response.json();
+
+    expect(body.tickets[0].internalNote).toBe(ticket.internalNote);
+    expect(body.tickets[0].resolvedBy).toEqual(ticket.resolvedBy);
+    expect(body.tickets[0]).not.toHaveProperty('futurePrivateField');
+    expect(SupportTicket.find).toHaveBeenCalledWith({
+      restaurantId,
+      target: 'restaurant_support',
+    });
+  });
+
+  it.each([
+    { label: 'customer', role: 'user', email: 'customer@example.com', restaurantId: null },
+    { label: 'courier', role: 'courier', email: 'courier@example.com', restaurantId: null },
+    {
+      label: 'restaurant admin',
+      role: 'admin',
+      email: 'admin@example.com',
+      restaurantId: 'restaurant-1',
+    },
+    {
+      label: 'admin without a restaurant',
+      role: 'admin',
+      email: 'admin@example.com',
+      restaurantId: null,
+    },
+    { label: 'super admin', role: 'admin', email: 'super@example.com', restaurantId: null },
+  ])(
+    'returns only reporter-safe personal tickets for a $label using scope=mine',
+    async ({ role, email, restaurantId }) => {
+      process.env.SUPER_ADMIN_EMAIL = 'super@example.com';
+      const userId = createObjectId('reporter-1');
+      vi.mocked(User.findOne).mockResolvedValue({
+        _id: userId,
+        email,
+        role,
+        restaurantId: restaurantId ? createObjectId(restaurantId) : null,
+      } as never);
+      const ticket = createPrivateTicket({ reporterId: 'reporter-1' });
+      vi.mocked(SupportTicket.find).mockReturnValue(createTicketQuery([ticket]) as never);
+
+      const { GET } = await loadRoute();
+      const response = await GET(
+        new Request(
+          'http://localhost/api/support-tickets?scope=mine&ticketId=ticket-1&status=in_review&reporterId=another-user&includeInternalNotes=true'
+        )
+      );
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get('Cache-Control')).toBe('private, no-store');
+      expect(SupportTicket.find).toHaveBeenCalledWith({
+        reporterId: userId,
+        _id: 'ticket-1',
+        status: 'in_review',
+      });
+      expect(body.tickets[0].responseNote).toBe(ticket.responseNote);
+      expect(body.tickets[0]).not.toHaveProperty('internalNote');
+      expect(body.tickets[0]).not.toHaveProperty('resolvedBy');
+      expect(body.tickets[0]).not.toHaveProperty('futurePrivateField');
+    }
+  );
+
+  it('still rejects management reads by an admin without a restaurant', async () => {
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: createObjectId('admin-1'),
+      email: 'admin@example.com',
+      role: 'admin',
+      restaurantId: null,
+    } as never);
+
+    const { GET } = await loadRoute();
+    const response = await GET(new Request('http://localhost/api/support-tickets'));
+
+    expect(response.status).toBe(403);
+    expect(SupportTicket.find).not.toHaveBeenCalled();
+  });
+
+  it('lets the super admin read private notes on app-support tickets', async () => {
+    process.env.SUPER_ADMIN_EMAIL = 'super@example.com';
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: createObjectId('super-1'),
+      email: 'super@example.com',
+      role: 'admin',
+      restaurantId: null,
+    } as never);
+    const ticket = createPrivateTicket({ target: 'app_support', restaurantId: null });
+    vi.mocked(SupportTicket.find).mockReturnValue(createTicketQuery([ticket]) as never);
+
+    const { GET } = await loadRoute();
+    const response = await GET(new Request('http://localhost/api/support-tickets'));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.tickets[0].internalNote).toBe(ticket.internalNote);
+    expect(body.tickets[0].resolvedBy).toEqual(ticket.resolvedBy);
+    expect(SupportTicket.find).toHaveBeenCalledWith({});
+  });
+
+  it('does not expose private notes to a non-admin with the configured superadmin email', async () => {
+    process.env.SUPER_ADMIN_EMAIL = 'customer@example.com';
+    vi.mocked(SupportTicket.find).mockReturnValue(
+      createTicketQuery([createPrivateTicket()]) as never
+    );
+
+    const { GET } = await loadRoute();
+    const response = await GET(new Request('http://localhost/api/support-tickets'));
+    const body = await response.json();
+
+    expect(body.tickets[0]).not.toHaveProperty('internalNote');
+    expect(body.tickets[0]).not.toHaveProperty('resolvedBy');
+  });
+
+  it('blocks unauthenticated ticket reads before querying tickets', async () => {
+    vi.mocked(getServerSession).mockResolvedValueOnce(null);
+
+    const { GET } = await loadRoute();
+    const response = await GET(new Request('http://localhost/api/support-tickets'));
+
+    expect(response.status).toBe(401);
+    expect(SupportTicket.find).not.toHaveBeenCalled();
+  });
+
   it('normalizes legacy closed tickets as resolved', async () => {
-    const query = createTicketQuery([{ _id: 'ticket-1', subject: 'Handled', status: 'closed' }]);
+    const query = createTicketQuery([
+      {
+        _id: 'ticket-1',
+        subject: 'Handled',
+        status: 'closed',
+        internalNote: 'Private legacy handling details.',
+        restaurantId: null,
+        orderId: null,
+        resolvedBy: null,
+      },
+    ]);
     vi.mocked(SupportTicket.find).mockReturnValue(query as never);
 
     const { GET } = await loadRoute();
@@ -126,7 +335,15 @@ describe('/api/support-tickets', () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.tickets).toEqual([{ _id: 'ticket-1', subject: 'Handled', status: 'resolved' }]);
+    expect(body.tickets).toEqual([
+      {
+        _id: 'ticket-1',
+        subject: 'Handled',
+        status: 'resolved',
+        restaurantId: null,
+        orderId: null,
+      },
+    ]);
   });
 
   it('scopes restaurant admins to restaurant support tickets for their restaurant', async () => {
@@ -160,7 +377,7 @@ describe('/api/support-tickets', () => {
     const orderId = createObjectId('order-1');
     const restaurantId = createObjectId('restaurant-1');
     const ticket = { _id: createObjectId('ticket-1') };
-    const populatedTicket = { _id: 'ticket-1', subject: 'Wrong pizza size' };
+    const populatedTicket = createPrivateTicket({ subject: 'Wrong pizza size' });
     const query = createTicketQuery(populatedTicket);
 
     vi.mocked(User.findOne).mockResolvedValueOnce({
@@ -187,12 +404,23 @@ describe('/api/support-tickets', () => {
         priority: 'high',
         subject: 'Wrong pizza size',
         description: 'I ordered large pizza but received a small one.',
+        internalNote: 'Reporter tried to set an admin-only note.',
       })
     );
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(body).toEqual({ ticket: populatedTicket });
+    expect(body.ticket).toEqual(
+      expect.objectContaining({
+        _id: populatedTicket._id,
+        subject: populatedTicket.subject,
+        responseNote: populatedTicket.responseNote,
+      })
+    );
+    expect(body.ticket).not.toHaveProperty('internalNote');
+    expect(body.ticket).not.toHaveProperty('resolvedBy');
+    expect(body.ticket).not.toHaveProperty('futurePrivateField');
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(SupportTicket.create).toHaveBeenCalledWith({
       reporterId: userId,
       reporterRole: 'user',
@@ -224,7 +452,10 @@ describe('/api/support-tickets', () => {
     const orderRestaurantId = createObjectId('order-restaurant');
     const orderId = createObjectId('order-1');
     const ticket = { _id: createObjectId('ticket-1') };
-    const populatedTicket = { _id: 'ticket-1', subject: 'One extra pizza' };
+    const populatedTicket = createPrivateTicket({
+      subject: 'One extra pizza',
+      restaurantId: { _id: orderRestaurantId.toString(), name: 'Another Restaurant' },
+    });
     const query = createTicketQuery(populatedTicket);
 
     vi.mocked(getServerSession).mockResolvedValueOnce({
@@ -258,7 +489,9 @@ describe('/api/support-tickets', () => {
     const body = await response.json();
 
     expect(response.status).toBe(201);
-    expect(body).toEqual({ ticket: populatedTicket });
+    expect(body.ticket.subject).toBe(populatedTicket.subject);
+    expect(body.ticket).not.toHaveProperty('internalNote');
+    expect(body.ticket).not.toHaveProperty('resolvedBy');
     expect(SupportTicket.create).toHaveBeenCalledWith(
       expect.objectContaining({
         reporterId: adminId,
@@ -267,6 +500,43 @@ describe('/api/support-tickets', () => {
         contactPhone: '',
         orderId,
         restaurantId: orderRestaurantId,
+      })
+    );
+  });
+
+  it('omits private fields when an admin creates app support linked to their own restaurant', async () => {
+    const restaurantId = createObjectId('restaurant-1');
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: createObjectId('admin-1'),
+      name: 'Restaurant Owner',
+      email: 'admin@example.com',
+      role: 'admin',
+      restaurantId,
+    } as never);
+    const ticket = createPrivateTicket({ target: 'app_support' });
+    vi.mocked(SupportTicket.create).mockResolvedValueOnce({ _id: 'ticket-1' } as never);
+    vi.mocked(SupportTicket.findById).mockReturnValueOnce(createTicketQuery(ticket) as never);
+
+    const { POST } = await loadRoute();
+    const response = await POST(
+      createRequest('http://localhost/api/support-tickets', {
+        target: 'app_support',
+        category: 'app_issue',
+        subject: 'Restaurant settings problem',
+        description: 'I need help with my restaurant settings in the app.',
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(body.ticket.restaurantId._id).toBe('restaurant-1');
+    expect(body.ticket.responseNote).toBe(ticket.responseNote);
+    expect(body.ticket).not.toHaveProperty('internalNote');
+    expect(body.ticket).not.toHaveProperty('resolvedBy');
+    expect(SupportTicket.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        restaurantId,
+        target: 'app_support',
       })
     );
   });
@@ -312,7 +582,14 @@ describe('/api/support-tickets', () => {
       resolvedAt: null,
       save,
     };
-    const updatedTicket = { _id: 'ticket-1', status: 'resolved' };
+    const updatedTicket = {
+      _id: 'ticket-1',
+      status: 'resolved',
+      target: 'restaurant_support',
+      restaurantId: { _id: restaurantId.toString(), name: 'Test Restaurant' },
+      internalNote: 'Kitchen confirmed the missing item and manager approved compensation.',
+      resolvedBy: { _id: 'admin-1', name: 'Manager', email: 'admin@example.com' },
+    };
     const query = createTicketQuery(updatedTicket);
 
     vi.mocked(getServerSession).mockResolvedValueOnce({
@@ -345,6 +622,7 @@ describe('/api/support-tickets', () => {
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ ticket: updatedTicket });
+    expect(response.headers.get('Cache-Control')).toBe('private, no-store');
     expect(ticket.status).toBe('resolved');
     expect(ticket.responseNote).toBe('We refunded the missing item manually.');
     expect(ticket.internalNote).toBe(
@@ -382,6 +660,62 @@ describe('/api/support-tickets', () => {
       subject: 'Missing item',
       responseNote: 'We refunded the missing item manually.',
     });
+  });
+
+  it.each(['user', 'courier'])(
+    'blocks %s attempts to edit private support fields',
+    async (role) => {
+      vi.mocked(User.findOne).mockResolvedValueOnce({
+        _id: createObjectId('user-1'),
+        email: 'customer@example.com',
+        role,
+      } as never);
+
+      const { PATCH } = await loadRoute();
+      const response = await PATCH(
+        new Request('http://localhost/api/support-tickets', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ticketId: 'ticket-1',
+            status: 'resolved',
+            internalNote: 'An unauthorized edit.',
+          }),
+        })
+      );
+
+      expect(response.status).toBe(403);
+      expect(SupportTicket.findById).not.toHaveBeenCalled();
+      expect(createAuditLog).not.toHaveBeenCalled();
+      expect(notifySupportTicketReporterAboutStatus).not.toHaveBeenCalled();
+    }
+  );
+
+  it('blocks restaurant admins from updating tickets for another restaurant', async () => {
+    const save = vi.fn();
+    vi.mocked(User.findOne).mockResolvedValueOnce({
+      _id: createObjectId('admin-1'),
+      email: 'admin@example.com',
+      role: 'admin',
+      restaurantId: createObjectId('restaurant-1'),
+    } as never);
+    vi.mocked(SupportTicket.findById).mockResolvedValueOnce({
+      ...createPrivateTicket({ restaurantId: createObjectId('another-restaurant') }),
+      save,
+    } as never);
+
+    const { PATCH } = await loadRoute();
+    const response = await PATCH(
+      new Request('http://localhost/api/support-tickets', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ticketId: 'ticket-1', status: 'in_review' }),
+      })
+    );
+
+    expect(response.status).toBe(403);
+    expect(save).not.toHaveBeenCalled();
+    expect(createAuditLog).not.toHaveBeenCalled();
   });
 
   it('blocks restaurant admins from updating app support tickets', async () => {
