@@ -324,6 +324,8 @@ Main source files:
 Key rules:
 
 - Support tickets stay role-scoped between restaurant support and app support.
+- Support ticket JSON must pass through the explicit response allowlist for GET, POST, and PATCH. Include `internalNote`/`resolvedBy` only for an administrator authorized to manage that ticket, using the same `canManageTicket` rule as PATCH authorization.
+- `/my-reports` must request `scope=mine`: filter by the authenticated reporter ID for every role, always omit private handling fields, and keep status/ticket filters within that ownership constraint. The default management scope and PATCH permissions remain separate.
 - Audit logs should record meaningful writes and blocked attempts, not every read.
 - Messages stay approved and role-restricted; customer-to-customer chat remains blocked.
 - SSE events should signal clients to refetch source-of-truth JSON endpoints.

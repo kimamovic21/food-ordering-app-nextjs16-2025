@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import useProfile from '@/hooks/useProfile';
 import { formatAppDateTime } from '@/libs/dateFormat';
-import type { SupportTicket, SupportTicketStatusFilter } from '@/types/support-ticket';
+import type { ReporterSupportTicket, SupportTicketStatusFilter } from '@/types/support-ticket';
 
 const statusLabels = {
   open: 'Open',
@@ -47,7 +47,7 @@ const categoryLabels: Record<string, string> = {
   other: 'Other',
 };
 
-const getStatusClass = (status: SupportTicket['status']) => {
+const getStatusClass = (status: ReporterSupportTicket['status']) => {
   if (status === 'open') {
     return 'bg-red-100 text-red-800 hover:bg-red-100 dark:bg-red-950 dark:text-red-100';
   }
@@ -63,7 +63,7 @@ const getStatusClass = (status: SupportTicket['status']) => {
   return 'bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950 dark:text-green-100';
 };
 
-const getResponseNoteClass = (status: SupportTicket['status']) =>
+const getResponseNoteClass = (status: ReporterSupportTicket['status']) =>
   status === 'rejected'
     ? 'border-slate-200 bg-slate-50 text-slate-900 dark:border-slate-800 dark:bg-slate-950/40 dark:text-slate-100'
     : 'border-green-200 bg-green-50 text-green-900 dark:border-green-900 dark:bg-green-950/30 dark:text-green-100';
@@ -73,7 +73,7 @@ const getId = (value: string | { _id: string } | null | undefined) =>
 
 const MyReportsPage = () => {
   const { data: profileData, loading: profileLoading } = useProfile();
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [tickets, setTickets] = useState<ReporterSupportTicket[]>([]);
   const [loading, setLoading] = useState(true);
   const [{ status: statusFilter, ticketId }, setReportQuery] = useQueryStates({
     status: parseAsStringLiteral(statusFilterOptions).withDefault('all'),
@@ -89,7 +89,7 @@ const MyReportsPage = () => {
     setLoading(true);
 
     try {
-      const params = new URLSearchParams();
+      const params = new URLSearchParams({ scope: 'mine' });
       if (statusFilter !== 'all') {
         params.set('status', statusFilter);
       }

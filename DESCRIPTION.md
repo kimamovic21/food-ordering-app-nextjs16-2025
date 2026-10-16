@@ -358,6 +358,7 @@ Ticket statuses:
 - `open`
 - `in_review`
 - `resolved`
+- `rejected`
 
 Admins can:
 
@@ -367,6 +368,16 @@ Admins can:
 - mark in review
 - resolve
 - open the related order
+
+Public `responseNote` text is visible to the reporter. Private `internalNote` and resolver identity
+are omitted from customer/courier JSON responses and returned only to administrators authorized
+to manage that ticket. An admin buying from another restaurant does not gain access to that
+restaurant's private notes through ticket creation. Existing private notes remain stored in MongoDB.
+
+`/my-reports` shows personally submitted reports for every signed-in role. Restaurant owners can
+follow their own app-support requests and purchases from other restaurants without mixing them
+with customer complaints they manage. Public responses remain readable even if the owner no longer
+has a restaurant assignment; private handling notes and update permissions stay restricted.
 
 ## Messaging Logic
 

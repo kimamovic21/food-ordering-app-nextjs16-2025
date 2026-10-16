@@ -40,3 +40,5 @@ export type SupportTicket = {
 };
 
 export type SupportTicketStatusFilter = 'all' | SupportTicketStatus;
+
+export type ReporterSupportTicket = Omit<SupportTicket, 'internalNote' | 'resolvedBy'>;

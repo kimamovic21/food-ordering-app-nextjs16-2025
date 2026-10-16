@@ -15,6 +15,7 @@ import {
 import { Order } from '@/models/order';
 import { SupportTicket } from '@/models/supportTicket';
 import { User } from '@/models/user';
+import type { ReporterSupportTicket } from '@/types/support-ticket';
 
 const validTargets = ['restaurant_support', 'app_support'] as const;
 const validCategories = [
@@ -47,6 +48,15 @@ const isSuperAdminUser = (user: any) => {
   return Boolean(user?.role === 'admin' && superAdminEmail && user.email === superAdminEmail);
 };
 
+const canManageTicket = (user: any, ticket: any) =>
+  user.role === 'admin' &&
+  (isSuperAdminUser(user) ||
+    Boolean(
+      user.restaurantId &&
+      ticket.target === 'restaurant_support' &&
+      (ticket.restaurantId?._id ?? ticket.restaurantId)?.toString() === user.restaurantId.toString()
+    ));
+
 const canAccessOrder = (user: any, order: any) => {
   if (order.userId?.toString() === user._id.toString()) {
     return true;
@@ -74,8 +84,40 @@ const populateTicketQuery = (query: any) =>
     .populate('resolvedBy', 'name email')
     .sort({ createdAt: -1 });
 
-const normalizeTicket = (ticket: any) =>
-  ticket && ticket.status === 'closed' ? { ...ticket, status: 'resolved' } : ticket;
+const serializeTicket = (ticket: any, user: any, { reporterOnly = false } = {}) => {
+  if (!ticket) return null;
+
+  // Explicit response fields keep future database-only fields out of reporter payloads.
+  const reporterTicket: ReporterSupportTicket = {
+    _id: ticket._id,
+    reporterId: ticket.reporterId,
+    reporterRole: ticket.reporterRole,
+    reporterName: ticket.reporterName,
+    reporterEmail: ticket.reporterEmail,
+    contactEmail: ticket.contactEmail,
+    contactPhone: ticket.contactPhone,
+    orderId: ticket.orderId,
+    restaurantId: ticket.restaurantId,
+    target: ticket.target,
+    category: ticket.category,
+    subject: ticket.subject,
+    description: ticket.description,
+    status: ticket.status === 'closed' ? 'resolved' : ticket.status,
+    priority: ticket.priority,
+    responseNote: ticket.responseNote,
+    resolvedAt: ticket.resolvedAt,
+    createdAt: ticket.createdAt,
+    updatedAt: ticket.updatedAt,
+  };
+
+  if (reporterOnly || !canManageTicket(user, ticket)) return reporterTicket;
+
+  return {
+    ...reporterTicket,
+    internalNote: ticket.internalNote,
+    resolvedBy: ticket.resolvedBy,
+  };
+};
 
 export async function GET(request: Request) {
   await mongoose.connect(process.env.MONGODB_URL as string);
@@ -89,6 +131,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const status = url.searchParams.get('status');
   const ticketId = url.searchParams.get('ticketId');
+  const reporterOnly = url.searchParams.get('scope') === 'mine';
   const filter: Record<string, unknown> = {};
 
   if (status && validStatuses.includes(status as (typeof validStatuses)[number])) {
@@ -102,21 +145,22 @@ export async function GET(request: Request) {
     filter._id = ticketId;
   }
 
-  if (user.role === 'admin') {
-    if (!isSuperAdminUser(user)) {
-      if (!user.restaurantId) {
-        return Response.json({ error: 'Admin is not assigned to a restaurant' }, { status: 403 });
-      }
-      filter.restaurantId = user.restaurantId;
-      filter.target = 'restaurant_support';
-    }
-  } else {
+  if (reporterOnly || user.role !== 'admin') {
     filter.reporterId = user._id;
+  } else if (!isSuperAdminUser(user)) {
+    if (!user.restaurantId) {
+      return Response.json({ error: 'Admin is not assigned to a restaurant' }, { status: 403 });
+    }
+    filter.restaurantId = user.restaurantId;
+    filter.target = 'restaurant_support';
   }
 
   const tickets = await populateTicketQuery(SupportTicket.find(filter).limit(100)).lean();
 
-  return Response.json({ tickets: tickets.map(normalizeTicket) });
+  return Response.json(
+    { tickets: tickets.map((ticket: any) => serializeTicket(ticket, user, { reporterOnly })) },
+    { headers: { 'Cache-Control': 'private, no-store' } }
+  );
 }
 
 export async function POST(request: Request) {
@@ -227,7 +271,10 @@ export async function POST(request: Request) {
 
   const populatedTicket = await populateTicketQuery(SupportTicket.findById(ticket._id)).lean();
 
-  return Response.json({ ticket: normalizeTicket(populatedTicket) }, { status: 201 });
+  return Response.json(
+    { ticket: serializeTicket(populatedTicket, user) },
+    { status: 201, headers: { 'Cache-Control': 'private, no-store' } }
+  );
 }
 
 export async function PATCH(request: Request) {
@@ -281,12 +328,7 @@ export async function PATCH(request: Request) {
     return Response.json({ error: 'Ticket not found' }, { status: 404 });
   }
 
-  if (
-    !isSuperAdminUser(user) &&
-    (!user.restaurantId ||
-      ticket.target !== 'restaurant_support' ||
-      ticket.restaurantId?.toString() !== user.restaurantId.toString())
-  ) {
+  if (!canManageTicket(user, ticket)) {
     return Response.json({ error: 'You cannot update this ticket' }, { status: 403 });
   }
 
@@ -348,5 +390,8 @@ export async function PATCH(request: Request) {
 
   const updatedTicket = await populateTicketQuery(SupportTicket.findById(ticket._id)).lean();
 
-  return Response.json({ ticket: normalizeTicket(updatedTicket) });
+  return Response.json(
+    { ticket: serializeTicket(updatedTicket, user) },
+    { headers: { 'Cache-Control': 'private, no-store' } }
+  );
 }

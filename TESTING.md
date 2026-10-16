@@ -74,6 +74,13 @@ Recent high-priority coverage also checks best coupon suggestion rules, restaura
 
 ## Commands
 
+Support-ticket privacy changes should be checked at the JSON boundary, not only in the UI. Run
+`npm run test:file -- __tests__/api/support-tickets.route.test.ts` for role-based field filtering,
+admin-as-customer creation, personal scope for all roles, cache headers, and authorization tests. Run `npm run test:e2e:support`
+against the dedicated test database to verify that persisted private notes stay available to the
+authorized admin but are absent from personal responses. The database suite also checks admin buyers,
+app-support reports tied to the reporter's own restaurant, and historical reads with deleted references.
+
 - `npm run test`: run all tests once
 - `npm run typecheck`: run TypeScript plus Next generated route/page type checks
 - `npm run test:watch`: run in watch mode

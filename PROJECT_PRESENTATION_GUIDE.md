@@ -750,6 +750,8 @@ Support-ticket behavior:
 - Tickets can have statuses such as open, in review, resolved, and rejected.
 - Admin public response notes can be displayed to the reporter in `/my-reports`.
 - Admin internal notes stay private inside the support workflow.
+- The server omits private notes and resolver identity from customer/courier API responses, including direct ticket links and creation responses. Authorized admins still receive their handling notes; role checks use the database user and the specific ticket's restaurant/target.
+- My Reports explicitly requests the personal scope for every role. For example, a restaurant owner ordering from another restaurant can follow their complaint and read the public answer, but cannot see that restaurant's private notes or manage the ticket. Their own restaurant's customer reports remain in the management scope.
 - Admin ticket updates write audit logs so support handling has operational history.
 - Restaurant-scoped tickets go to the restaurant owner.
 - App-support tickets go to super admin.
