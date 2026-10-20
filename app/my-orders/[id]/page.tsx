@@ -44,7 +44,7 @@ import OrderDelayNotice from '@/components/shared/OrderDelayNotice';
 import OrderActivityLog from '@/components/shared/OrderActivityLog';
 import ReportProblemDialog from '@/components/shared/ReportProblemDialog';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
-import { useCart } from '@/contexts/CartContext';
+import { useReorderCart } from '@/hooks/useReorderCart';
 import type { OrderPhaseDurationOffsets } from '@/types/order-timeline';
 import {
   getDevOrderTimeOffsetsFromStorage,
@@ -57,8 +57,7 @@ import {
   isOrderRelatedRealtimePayload,
 } from '@/libs/realtimeClient';
 import { formatAppDateTime } from '@/libs/dateFormat';
-import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
-import type { CustomerOrderDetails, OrderReview, ReorderResponse } from '@/types/order';
+import type { CustomerOrderDetails, OrderReview } from '@/types/order';
 
 // Map loads client-side only because Leaflet touches window during module init
 const OrderMap = dynamic(() => import('@/components/shared/OrderMap'), {
@@ -80,13 +79,12 @@ const MyOrderDetailPage = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [cancelingOrder, setCancelingOrder] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
-  const [reorderingOrder, setReorderingOrder] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { data: profileData, loading: profileLoading } = useProfile();
   const params = useParams();
   const router = useRouter();
-  const { replaceCart } = useCart();
+  const { reorder, isReordering: reorderingOrder } = useReorderCart();
   const orderId = params?.id as string;
   const isFirstLoad = useRef(true);
 
@@ -418,45 +416,7 @@ const MyOrderDetailPage = () => {
 
   const handleReorder = async () => {
     if (!order) return;
-
-    setReorderingOrder(true);
-
-    try {
-      const response = await fetch('/api/my-orders/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId: order._id }),
-      });
-      const json = (await response.json()) as ReorderResponse & { error?: string };
-
-      if (!response.ok) {
-        throw new Error(json.error || 'Failed to reorder');
-      }
-
-      replaceCart(json.cartItems || []);
-      const toastCopy = getReorderRecoveryToastCopy(json.recoverySummary);
-
-      if (toastCopy.tone === 'info') {
-        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
-      } else {
-        sonnerToast.success(toastCopy.title, {
-          style: {
-            background: '#22c55e',
-            color: 'white',
-          },
-        });
-      }
-      router.push('/cart');
-    } catch (error) {
-      sonnerToast.error(error instanceof Error ? error.message : 'Failed to reorder', {
-        style: {
-          background: '#ef4444',
-          color: 'white',
-        },
-      });
-    } finally {
-      setReorderingOrder(false);
-    }
+    await reorder({ orderId: order._id });
   };
 
   const totalTimelineOffsetMinutes = getOrderTimelineTotalOffsetMinutes(timelineOffsets);

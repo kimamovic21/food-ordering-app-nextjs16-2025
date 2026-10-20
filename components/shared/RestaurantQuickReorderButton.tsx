@@ -1,15 +1,9 @@
 'use client';
 
 import { RefreshCcw } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
-import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { Button } from '@/components/ui/button';
-import { useCart } from '@/contexts/CartContext';
-import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
+import { useReorderCart } from '@/hooks/useReorderCart';
 import { cn } from '@/libs/utils';
-import type { CartItem } from '@/types/cart';
-import type { ReorderResponse } from '@/types/order';
 
 type RestaurantQuickReorderButtonProps = {
   restaurantId: string;
@@ -24,42 +18,12 @@ const RestaurantQuickReorderButton = ({
   className,
   variant = 'default',
 }: RestaurantQuickReorderButtonProps) => {
-  const router = useRouter();
-  const { replaceCart } = useCart();
-  const [loading, setLoading] = useState(false);
+  const { reorder, isReordering: loading } = useReorderCart();
 
   const handleQuickReorder = async () => {
     if (!restaurantId) return;
 
-    setLoading(true);
-
-    try {
-      const response = await fetch(`/api/restaurants/${restaurantId}/quick-reorder`, {
-        method: 'POST',
-      });
-      const json = (await response.json()) as ReorderResponse & { error?: string };
-
-      if (!response.ok) {
-        throw new Error(json.error || `Unable to reorder from ${restaurantName}.`);
-      }
-
-      replaceCart((json.cartItems || []) as CartItem[]);
-      const toastCopy = getReorderRecoveryToastCopy(
-        json.recoverySummary,
-        `Previous ${restaurantName} order added to your cart.`
-      );
-
-      if (toastCopy.tone === 'info') {
-        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
-      } else {
-        sonnerToast.success(toastCopy.title);
-      }
-      router.push('/cart');
-    } catch (error) {
-      sonnerToast.error(error instanceof Error ? error.message : 'Unable to reorder right now.');
-    } finally {
-      setLoading(false);
-    }
+    await reorder({ restaurantId, restaurantName });
   };
 
   return (

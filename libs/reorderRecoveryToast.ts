@@ -16,7 +16,7 @@ export const getReorderRecoveryToastCopy = (
 
   if (summary.skippedItemCount > 0) {
     updates.push(
-      `${summary.skippedItemCount} unavailable ${summary.skippedItemCount === 1 ? 'item was' : 'items were'} skipped`
+      `${summary.skippedItemCount} ${summary.skippedItemCount === 1 ? 'item could' : 'items could'} not be added`
     );
   }
 

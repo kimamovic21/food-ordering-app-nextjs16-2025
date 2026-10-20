@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -13,7 +13,6 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { useRouter } from 'next/navigation';
 import { parseAsInteger, useQueryState } from 'nuqs';
 import {
   Pagination,
@@ -25,10 +24,8 @@ import {
 import useProfile from '@/hooks/useProfile';
 import Title from '@/components/shared/Title';
 import MyOrdersTable from './MyOrdersTable';
-import { sonnerToast } from '@/components/shared/SonnerToastComponent';
-import { useCart } from '@/contexts/CartContext';
+import { useReorderCart } from '@/hooks/useReorderCart';
 import { formatAppDate } from '@/libs/dateFormat';
-import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
 import { useCustomerOrdersListQuery, useUsualOrderQuery } from '@/hooks/useOrderListQueries';
 import { queryKeys } from '@/libs/queryKeys';
 import {
@@ -39,13 +36,11 @@ import {
 import type { CustomerOrdersListResponse, OrderListItem } from '@/types/order';
 
 const MyOrdersPage = () => {
-  const [addingUsualOrder, setAddingUsualOrder] = useState(false);
+  const { reorder, isReordering: addingUsualOrder } = useReorderCart();
   const [pageQuery, setPageQuery] = useQueryState('page', parseAsInteger.withDefault(1));
   const page = Math.max(1, pageQuery);
   const { data, loading } = useProfile();
   const queryClient = useQueryClient();
-  const { replaceCart } = useCart();
-  const router = useRouter();
   const isAuthenticated = Boolean(data?.email);
   const ordersQuery = useCustomerOrdersListQuery(page, !loading && isAuthenticated);
   const usualOrderQuery = useUsualOrderQuery(!loading && isAuthenticated);
@@ -78,27 +73,14 @@ const MyOrdersPage = () => {
   }, [isAuthenticated, queryClient]);
 
   const handleAddUsualOrder = async () => {
-    if (!usualOrder?.cartItems?.length) {
+    if (!usualOrder?.orderId) {
       return;
     }
 
-    try {
-      setAddingUsualOrder(true);
-      replaceCart(usualOrder.cartItems);
-      const toastCopy = getReorderRecoveryToastCopy(
-        usualOrder.recoverySummary,
-        'Your usual order was added to cart'
-      );
-
-      if (toastCopy.tone === 'info') {
-        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
-      } else {
-        sonnerToast.success(toastCopy.title);
-      }
-      router.push('/cart');
-    } finally {
-      setAddingUsualOrder(false);
-    }
+    await reorder({
+      orderId: usualOrder.orderId,
+      successMessage: 'Your usual order was added to cart',
+    });
   };
 
   const handleOrderUpdated = (updatedOrder: OrderListItem) => {

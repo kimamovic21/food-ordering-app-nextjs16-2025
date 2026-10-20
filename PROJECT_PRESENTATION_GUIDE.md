@@ -384,6 +384,9 @@ Reorder:
 - The app rebuilds the cart from current `menu_items` data.
 - Deleted, unavailable, cross-restaurant, invalid, or mismatched items are handled before checkout.
 - Customers can reorder from order history, order details, restaurant details, and favorite restaurants.
+- Reordering cannot silently discard a cart the customer is already building. A nonempty cart opens a confirmation; "Keep current cart" or Escape preserves every item and note. Only confirmed replacement produces success feedback and opens `/cart`.
+- "Order usual" is a convenience preview, not a stale copy: clicking it asks the server to rebuild that source order again with current data.
+- Sizes share inventory: if a previous order contains four Small and four Large pizzas but only five units are available now, recovery keeps four Small and one Large. Per-item limits work the same way, and the UI reports adjusted/skipped lines. No stock is reserved until checkout performs its own current checks.
 
 ## 9. Order Lifecycle
 

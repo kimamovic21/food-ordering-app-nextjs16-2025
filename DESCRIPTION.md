@@ -228,7 +228,9 @@ Reorder:
 - Customers can quick reorder the latest previous order from a restaurant on `/restaurants/[id]` and `/favorite-restaurants`.
 - Reorder rebuilds the cart from current `menu_items` data instead of trusting the old order snapshot.
 - Deleted, unavailable, invalid, cross-restaurant, or price-mismatched items are blocked or refreshed before checkout.
-- Reorder replaces the current cart and sends the customer back to `/cart`.
+- Reorder asks before replacing a nonempty cart, including one from the same restaurant. Canceling preserves items and notes; confirming replaces them and opens `/cart`.
+- "Order usual" refreshes the source order through the reorder API at click time rather than applying a cached preview.
+- Stock and per-item quantity limits are shared across all sizes of the same item during recovery. Checkout still revalidates the resulting cart before payment.
 
 ## Cart And Checkout Logic
 

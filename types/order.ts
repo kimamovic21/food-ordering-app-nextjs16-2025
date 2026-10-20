@@ -176,7 +176,18 @@ export type UsualOrder = {
 };
 
 export type ReorderSkippedReason =
-  'deleted' | 'invalid_product' | 'invalid_size' | 'sold_out' | 'stock_limit' | 'unavailable';
+  | 'deleted'
+  | 'invalid_product'
+  | 'invalid_size'
+  | 'item_quantity_limit'
+  | 'sold_out'
+  | 'stock_limit'
+  | 'unavailable';
+
+export type ReorderCartRequest = (
+  | { orderId: EntityId; restaurantId?: never; restaurantName?: never }
+  | { restaurantId: EntityId; restaurantName?: string; orderId?: never }
+) & { successMessage?: string };
 
 export type ReorderSkippedItem = {
   productId?: EntityId;

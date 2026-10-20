@@ -189,13 +189,15 @@ Main source files:
 - `hooks/useOrderListQueries.ts`
 - `libs/orderDelay.ts`
 - `libs/orderCartSnapshot.ts`
+- `hooks/useReorderCart.ts`
+- `contexts/CartContext.tsx`
 - `libs/notifications.ts`
 - `models/order.ts`
 
 Key rules:
 
 - Customer payloads must not expose admin internal notes.
-- Reorder must rebuild from current menu item data and block invalid/deleted/unavailable items.
+- Reorder must rebuild current menu data, skip unrecoverable lines, reject mixed restaurants, and share stock/per-item limits across sizes. All client entry points must await nonempty-cart replacement confirmation; usual-order previews must be rebuilt on click. See `app/my-orders/README.md` and `app/api/my-orders/reorder/README.md`.
 - Active-order quick access should stay customer-only and run stale-order maintenance before
   returning data.
 - Late-order warnings should compare elapsed active time against saved estimates plus grace time.
@@ -204,6 +206,7 @@ Focused tests:
 
 ```bash
 npm run test:file -- __tests__/api/my-orders-active.route.test.ts __tests__/api/order-queue.route.test.ts __tests__/hooks/useOrderListQueries.test.ts __tests__/libs/orderDelay.test.ts __tests__/components/OrderActivityLog.test.ts __tests__/libs/notifications.test.ts
+npm run test:file -- __tests__/libs/orderCartSnapshot.test.ts __tests__/components/ReorderCartSafety.test.tsx __tests__/components/UsualOrderReorder.test.tsx __tests__/api/orders-reviews-payment-link.route.test.ts
 ```
 
 ## Courier Availability, Assignment, Work Sessions, And Delivery

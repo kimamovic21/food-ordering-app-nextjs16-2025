@@ -100,7 +100,7 @@ See `example.env`. Variables currently used in the project include:
 - System auto-cancellation of stale unpaid orders should attempt to expire the open Stripe Checkout session and record the result in audit metadata without blocking local cancellation.
 - Customer manual cancellation of unpaid `placed` orders should use the same Stripe Checkout session expiration helper and audit the result.
 - Best coupon suggestions are user-facing help only; checkout must revalidate coupons server-side.
-- Reorder must rebuild from current `menu_items` data and block deleted, unavailable, cross-restaurant, or invalid items.
+- Reorder must rebuild current menu data, skip unrecoverable lines, reject mixed restaurants, and share stock/per-item limits across sizes. Use `useReorderCart` and await `CartProvider.replaceCart` confirmation before replacing a nonempty cart; rebuild usual-order previews on click. See `app/my-orders/README.md`.
 - Restaurant quick reorder must use the same current `menu_items` rebuild rules as order reorder.
 - Public and superadmin restaurant filters should stay server-authoritative before pagination so status, rating, delivery-radius, and operational filters do not produce incorrect page counts.
 - Restaurant report UI lives at `/admin-dashboard/restaurant-reports`; daily, weekly, and monthly reports should show zeros for empty periods and disable PDF download when there is no activity.

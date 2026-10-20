@@ -52,6 +52,8 @@ the UI.
 - Line 36: `if (!restaurant) {`
 - Line 48: `if (!order) {`
 - If the latest restaurant order has stale menu items, valid items can still be added to cart.
+- The shared helper allocates stock and per-item limits across all sizes of each item in original line order. See `/api/my-orders/reorder` documentation for reduction/skip reasons and reservation-aware stock calculations.
+- The browser must await cart replacement confirmation for a nonempty cart before showing success or navigating. The API only rebuilds a snapshot and writes audit metadata; it does not reserve stock, place an order, or know whether the customer accepted that confirmation.
 - If no item can be recovered, the route returns `400` with detailed skipped-item metadata.
 - Audit metadata records how many items were added, skipped, adjusted, or price-refreshed.
 

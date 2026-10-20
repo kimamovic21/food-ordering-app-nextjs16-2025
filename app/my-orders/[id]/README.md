@@ -65,6 +65,8 @@ been marked complete in the simulated Stripe test-card workflow.
 
 ## Edge Cases And UX Rules
 
+- Reorder delegates to `hooks/useReorderCart.ts`. A nonempty cart needs confirmation before replacement; cancel/Escape preserves its items and notes, and does not navigate. Repeated clicks are guarded while the request or confirmation is pending. Leaving this screen aborts the request and cancels its pending confirmation. See the parent `README.md` for the complete recovery flow.
+
 - Preserve route loading states so refreshes and slow network states look intentional.
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.

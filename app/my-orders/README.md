@@ -19,7 +19,17 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/courier-reviews`, `/api/courier-reviews?courierId=${courierId}`, `/api/courier-reviews?orderId=${orderId}`, `/api/my-orders`, `/api/my-orders/reorder`, `/api/my-orders?id=${orderId}`, `/api/payment-link?orderId=${order._id}`, `/api/payment-link?orderId=${orderId}`, `/api/reviews`, `/api/reviews?orderId=${orderId}`. Keep API response shapes aligned.
-- Reorder actions use smart cart recovery: they replace the cart with the valid current menu items returned by the API and show a toast when old items were skipped, prices changed, or quantities were reduced.
+- Reorder actions use `hooks/useReorderCart.ts`: rebuild from current menu data, await cart replacement permission, then show recovery feedback and navigate to `/cart`.
+
+### Safe Reorder Flow
+
+1. Order history, order details, and "Order usual" call `POST /api/my-orders/reorder` with the source order id. The usual-order card is only a cached preview, not permission to reuse its cached cart items.
+2. The API rebuilds current items and shares each item's stock/per-order allowance across all its sizes. Unrecoverable lines are skipped; price changes and final quantity reductions are reported.
+3. `CartProvider.replaceCart` checks the current cart when the response arrives. An empty cart is filled immediately. A nonempty cart opens "Replace your cart?", even if both orders belong to the same restaurant.
+4. "Keep current cart" or Escape leaves items and notes untouched, without a success toast or navigation. Confirming replaces the items and notes together. Invalid/empty responses cannot clear the cart.
+5. The shared hook ignores repeated clicks while pending and aborts when its component unmounts, including closing a pending confirmation. One confirmation cannot be overwritten by another replacement request.
+
+This is recovery, not an inventory reservation or payment. Stock and restaurant availability may change after recovery; checkout remains the final server-authoritative gate.
 
 ## Important Files
 
@@ -71,7 +81,7 @@ This folder owns customer order history/detail flows, active-order visibility, i
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.
 - If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
-- For reorder/usual-order flows, never assume old order snapshots are still valid. The UI should trust `/api/my-orders/reorder` and `/api/my-orders/usual` response metadata and explain partial recovery with toast copy.
+- For reorder/usual-order flows, never assume old order snapshots are still valid. Use the fresh POST response at click time and explain partial recovery with toast copy. Await the boolean result from `replaceCart`; a canceled replacement is not a successful reorder.
 - If `recoverySummary.hasChanges` is true, prefer a neutral info toast instead of a plain success toast so customers know the cart was rebuilt with today's menu, stock, and prices.
 
 ## How To Explain This In A Presentation

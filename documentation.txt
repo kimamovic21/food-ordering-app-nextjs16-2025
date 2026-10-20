@@ -1229,3 +1229,5 @@ Add stale order maintenance recovery
 Add smart reorder cart recovery
 
 Protect support ticket privacy and personal report access
+
+Protect existing carts and enforce shared reorder quantity limits
