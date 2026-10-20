@@ -53,13 +53,18 @@ returns a recovery summary so the UI can explain what changed.
 - Unavailable or sold-out menu items are skipped, with a customer-friendly reason in `skippedItems`.
 - Price changes are accepted from current menu data and reported in `priceChangedItems`.
 - Quantity is reduced when current stock or per-item limits are lower than the old order quantity.
+- All sizes of the same menu item share one allowance, allocated in the original order's line order. With five available units, a previous order of four Small and four Large becomes four Small and one Large, not eight units.
+- Available stock is physical stock minus existing reservations. Untracked items still share their per-order limit; legacy missing limits use the existing default of 20. Different menu items have independent allowances.
+- A later size with no remaining allowance is skipped with `stock_limit` or `item_quantity_limit`; `sold_out` means the item had no available stock before allocation. Invalid/unavailable lines do not consume the allowance.
+- A reduced line produces one `adjustedItems` entry with its final applied quantity, even if both stock and the item limit constrain it. Price-change metadata uses that final quantity.
+- The API does not reserve stock or change the source order. Checkout revalidates all rules. Its audit event describes the rebuild request, not proof that the customer accepted the browser's cart-replacement confirmation.
 - If nothing can be reordered, the route returns `400` with detailed recovery metadata.
 
 ## Data Dependencies
 
 - Models: `order`, `user`
 - Shared libs: `auditLog`, `authOptions`, `orderCartSnapshot`
-- Shared types: None detected
+- Shared types: recovery DTOs in `types/order.ts`, cart items in `types/cart.ts`
 
 ## Side Effects
 

@@ -12,7 +12,9 @@
 
 ## Plain-English Summary
 
-Handles get work for the customer orders area. The route keeps the local workflow server-authoritative and delegates shared business rules to models and libs.
+Builds the signed-in customer's usual-order preview from their most repeated pattern among the last 50 paid completed orders, with recency breaking frequency ties. It uses current menu data rather than historical prices and returns `usualOrder: null` when no usable pattern remains.
+
+The preview uses `orderCartSnapshot` with shared stock and per-item limits across sizes, just like ordinary reorder. The client treats this GET response as a preview only: clicking "Order usual" sends the returned `orderId` to `POST /api/my-orders/reorder` for a fresh rebuild. A nonempty cart then requires replacement confirmation. No stock is reserved by either preview or reorder; checkout still performs final validation.
 
 ## What Happens In This File
 

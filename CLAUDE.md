@@ -61,7 +61,7 @@ This file provides guidance for AI assistance in this repository.
 - Preserve stale unpaid auto-cancel protection: when the app cancels an unpaid `placed` order, it should try to expire the open Stripe Checkout session and audit the result without blocking cancellation; customer order screens should show the same 30-minute payment-expiry window.
 - Preserve customer manual cancel protection: unpaid `placed` order cancellation should use the same Stripe Checkout expiration helper and audit metadata.
 - Treat best coupon suggestions as UI help only; checkout must revalidate coupons server-side.
-- Reorder flows must rebuild from current `menu_items` data and block deleted, unavailable, cross-restaurant, or invalid items.
+- Reorder must rebuild current menu data, skip unrecoverable lines, reject mixed restaurants, and share stock/per-item limits across sizes. Use `useReorderCart` and await `CartProvider.replaceCart` confirmation before replacing a nonempty cart; rebuild usual-order previews on click. See `app/my-orders/README.md`.
 - Restaurant reports live at `/admin-dashboard/restaurant-reports` and generate daily, weekly, and monthly summaries/PDFs from order data.
 - Restaurant operations overview lives at `/admin-dashboard/operations` and uses `/api/restaurant/operations` for active stage counts, kitchen capacity, restaurant status, courier availability, today revenue, unpaid/canceled counts, quick actions, and urgent order attention items.
 - Preserve delivery double confirmation: courier PIN handoff first, then customer or restaurant admin completion.

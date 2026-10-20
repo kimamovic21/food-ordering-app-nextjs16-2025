@@ -34,10 +34,9 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { useCart } from '@/contexts/CartContext';
+import { useReorderCart } from '@/hooks/useReorderCart';
 import { formatAppDateTime } from '@/libs/dateFormat';
-import { getReorderRecoveryToastCopy } from '@/libs/reorderRecoveryToast';
-import type { OrderListItem, ReorderResponse } from '@/types/order';
+import type { OrderListItem } from '@/types/order';
 
 type MyOrdersTableProps = {
   orders: OrderListItem[];
@@ -95,9 +94,8 @@ const orderColumnLabels = {
 
 const MyOrdersTable = ({ orders, loading, onOrderUpdated }: MyOrdersTableProps) => {
   const router = useRouter();
-  const { replaceCart } = useCart();
+  const { reorder, isReordering } = useReorderCart();
   const [processingPayment, setProcessingPayment] = useState<string | null>(null);
-  const [reorderingOrder, setReorderingOrder] = useState<string | null>(null);
   const [cancelOrderId, setCancelOrderId] = useState<string | null>(null);
   const [cancelingOrder, setCancelingOrder] = useState<string | null>(null);
 
@@ -163,35 +161,7 @@ const MyOrdersTable = ({ orders, loading, onOrderUpdated }: MyOrdersTableProps) 
     }
   };
 
-  const handleReorder = async (orderId: string) => {
-    try {
-      setReorderingOrder(orderId);
-      const res = await fetch('/api/my-orders/reorder', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId }),
-      });
-      const data = (await res.json()) as ReorderResponse & { error?: string };
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to reorder');
-      }
-
-      replaceCart(data.cartItems || []);
-      const toastCopy = getReorderRecoveryToastCopy(data.recoverySummary);
-
-      if (toastCopy.tone === 'info') {
-        sonnerToast.info(toastCopy.title, { description: toastCopy.description });
-      } else {
-        sonnerToast.success(toastCopy.title);
-      }
-      router.push('/cart');
-    } catch (error) {
-      sonnerToast.error(error instanceof Error ? error.message : 'Failed to reorder');
-    } finally {
-      setReorderingOrder(null);
-    }
-  };
+  const handleReorder = (orderId: string) => reorder({ orderId });
 
   const handleCancelOrder = async () => {
     if (!cancelOrderId) return;
@@ -298,9 +268,9 @@ const MyOrdersTable = ({ orders, loading, onOrderUpdated }: MyOrdersTableProps) 
                   aria-label='Reorder'
                   onClick={() => handleReorder(order._id)}
                   onKeyDown={(event) => handleIconKeyDown(event, () => handleReorder(order._id))}
-                  aria-disabled={reorderingOrder === order._id}
-                  className={`size-5 cursor-pointer align-middle text-muted-foreground transition-colors hover:text-primary ${reorderingOrder === order._id ? 'pointer-events-none opacity-50' : ''}`}
-                  tabIndex={reorderingOrder === order._id ? -1 : 0}
+                  aria-disabled={isReordering}
+                  className={`size-5 cursor-pointer align-middle text-muted-foreground transition-colors hover:text-primary ${isReordering ? 'pointer-events-none opacity-50' : ''}`}
+                  tabIndex={isReordering ? -1 : 0}
                   role='button'
                 />
               </TooltipTrigger>

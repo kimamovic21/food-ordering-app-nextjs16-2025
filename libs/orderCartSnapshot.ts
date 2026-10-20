@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { MenuItem } from '@/models/menuItem';
-import { getTrackedAvailableStockQuantity, isInventoryTracked } from '@/libs/menuItemInventory';
+import { getTrackedAvailableStockQuantity } from '@/libs/menuItemInventory';
 import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
 import type { CartItem, CartSize } from '@/types/cart';
@@ -24,7 +24,10 @@ const getOrderProductId = (product: any) =>
 
 const getOrderProductName = (product: any) => String(product?.name || 'A menu item');
 
-const getOrderProductQuantity = (product: any) => Math.max(1, Number(product?.quantity) || 1);
+const getOrderProductQuantity = (product: any) => {
+  const quantity = Number(product?.quantity);
+  return Number.isFinite(quantity) ? Math.max(1, Math.floor(quantity)) : 1;
+};
 
 const getFinitePrice = (value: unknown) => {
   const price = Number(value);
@@ -123,6 +126,7 @@ export const buildOrderCartSnapshotFromOrderProducts = async (
   const cartItems: CartItem[] = [];
   const priceChangedItems: ReorderPriceChangedItem[] = [];
   const adjustedItems: ReorderAdjustedItem[] = [];
+  const allocatedQuantityById = new Map<string, number>();
 
   cartProducts.forEach((product: any) => {
     const productId = getOrderProductId(product);
@@ -176,50 +180,61 @@ export const buildOrderCartSnapshotFromOrderProducts = async (
       return;
     }
 
-    let quantity = requestedQuantity;
     const maxQuantityPerOrder = normalizeMenuItemQuantityLimit(menuItem.maxQuantityPerOrder);
+    const stockQuantity = getTrackedAvailableStockQuantity(menuItem);
 
-    if (maxQuantityPerOrder && quantity > maxQuantityPerOrder) {
-      quantity = maxQuantityPerOrder;
+    if (stockQuantity === 0) {
+      skippedItems.push({
+        productId,
+        name: itemName,
+        size,
+        requestedQuantity,
+        reason: 'sold_out',
+        message: `${itemName} is sold out.`,
+      });
+      return;
+    }
+
+    // All sizes share one menu item's inventory and per-order allowance.
+    // Allocate in original order so recovery is deterministic.
+    const allocatedQuantity = allocatedQuantityById.get(productId) || 0;
+    const remainingLimit = Math.max(0, maxQuantityPerOrder - allocatedQuantity);
+    const remainingStock =
+      stockQuantity == null ? Infinity : Math.max(0, stockQuantity - allocatedQuantity);
+    const quantity = Math.min(requestedQuantity, remainingLimit, remainingStock);
+    const reason = remainingStock < remainingLimit ? 'stock_limit' : 'item_quantity_limit';
+
+    if (quantity === 0) {
+      skippedItems.push({
+        productId,
+        name: itemName,
+        size,
+        requestedQuantity,
+        reason,
+        message:
+          reason === 'stock_limit'
+            ? `${itemName} (${size}) was skipped because other sizes already use the available stock.`
+            : `${itemName} (${size}) was skipped because other sizes already reach the per-order limit.`,
+      });
+      return;
+    }
+
+    if (quantity < requestedQuantity) {
       adjustedItems.push({
         productId,
         name: itemName,
         size,
         requestedQuantity,
         appliedQuantity: quantity,
-        reason: 'item_quantity_limit',
-        message: `${itemName} was reduced to ${quantity} because of the current per-order limit.`,
+        reason,
+        message:
+          reason === 'stock_limit'
+            ? `${itemName} (${size}) was reduced to ${quantity} to stay within the available stock across all sizes.`
+            : `${itemName} (${size}) was reduced to ${quantity} to stay within the per-order limit across all sizes.`,
       });
     }
 
-    const stockQuantity = getTrackedAvailableStockQuantity(menuItem);
-
-    if (isInventoryTracked(menuItem) && stockQuantity != null) {
-      if (stockQuantity <= 0) {
-        skippedItems.push({
-          productId,
-          name: itemName,
-          size,
-          requestedQuantity,
-          reason: 'sold_out',
-          message: `${itemName} is sold out.`,
-        });
-        return;
-      }
-
-      if (stockQuantity < quantity) {
-        quantity = stockQuantity;
-        adjustedItems.push({
-          productId,
-          name: itemName,
-          size,
-          requestedQuantity,
-          appliedQuantity: quantity,
-          reason: 'stock_limit',
-          message: `${itemName} was reduced to ${quantity} because only ${stockQuantity} are left in stock.`,
-        });
-      }
-    }
+    allocatedQuantityById.set(productId, allocatedQuantity + quantity);
 
     const previousPrice = getFinitePrice(product.price);
 

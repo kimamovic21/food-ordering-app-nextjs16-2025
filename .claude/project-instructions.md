@@ -56,7 +56,7 @@
 - Preserve stale unpaid auto-cancel protection: system cancellation should try to expire the open Stripe Checkout session and audit the result without blocking local order cancellation; customer order screens should show the same 30-minute payment-expiry window.
 - Preserve customer manual cancel protection: unpaid `placed` order cancellation should use the same Stripe Checkout expiration helper and audit metadata.
 - Treat best coupon suggestions as UI help only; checkout must revalidate coupons server-side.
-- Reorder flows must rebuild from current `menu_items` data and block deleted, unavailable, cross-restaurant, or invalid items.
+- Reorder must rebuild current menu data, skip unrecoverable lines, reject mixed restaurants, and share stock/per-item limits across sizes. Use `useReorderCart` and await `CartProvider.replaceCart` confirmation before replacing a nonempty cart; rebuild usual-order previews on click. See `app/my-orders/README.md`.
 - Keep delivery completion double-confirmed with courier PIN handoff followed by customer/admin finalization.
 - Keep support tickets scoped between restaurant support and app support.
 - Keep ETA-style notifications and late active-order alerts aligned with order timeline state; failed-delivery review notifications should route restaurant admins to `/admin-dashboard/orders/[id]`.

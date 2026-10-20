@@ -218,6 +218,8 @@ Key checks:
 - Stripe webhook payment confirmation captures reserved tracked stock by decrementing physical stock and reserved stock together. Older unpaid orders without reservation metadata still use the direct decrement path, guarded by current available stock.
 - Reorders rebuild cart items from current `menu_items` records so deleted, unavailable, cross-restaurant, or changed-price items cannot silently proceed.
 - Restaurant details and favorite restaurant cards can quick reorder the latest previous order from that restaurant using the same current `menu_items` validation.
+- `orderCartSnapshot` allocates each item's available stock (physical minus reserved) and per-order limit across its sizes in original line order. It reports one final adjustment per reduced line and skips lines whose shared allowance is exhausted; this rebuild does not reserve stock.
+- `useReorderCart` centralizes the four client reorder entry points, fetches fresh data even for the usual-order preview, guards repeated clicks, and aborts on unmount. It awaits `CartProvider.replaceCart`, which confirms nonempty-cart replacement, preserves existing items/notes on cancel, and rejects empty/invalid payloads. Recovery toasts and navigation run only on acceptance; checkout remains authoritative.
 - Customers can request back-online notifications for restaurants blocked by closed, paused, closing-soon, or busy checkout states.
 - Customers can reuse saved delivery addresses from `/api/profile/delivery-addresses`; duplicate saved-address attempts reuse the existing address, and checkout still validates the final delivery payload and radius server-side.
 

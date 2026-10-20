@@ -1,6 +1,25 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+  ReactNode,
+} from 'react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { limitCartItemNoteInput } from '@/libs/cartItemNotes';
 import { canAddItemToCart } from '@/libs/orderQuantityLimits';
 import type { CartItem } from '@/types/cart';
@@ -17,7 +36,7 @@ interface CartContextType {
   updateQuantity: (id: string, size: string, quantity: number) => void;
   updateItemNote: (id: string, size: string, note: string) => void;
   clearCart: () => void;
-  replaceCart: (items: CartItem[]) => void;
+  replaceCart: (items: CartItem[], options?: { signal?: AbortSignal }) => Promise<boolean>;
   getTotalItems: () => number;
   getTotalPrice: () => number;
   getCartRestaurantId: () => string | null; // Get the restaurantId of items in cart
@@ -50,6 +69,12 @@ interface CartProviderProps {
   children: ReactNode;
 }
 
+type PendingCartReplacement = {
+  items: CartItem[];
+  resolve: (accepted: boolean) => void;
+  detachAbort: () => void;
+};
+
 export const CartProvider = ({ children }: CartProviderProps) => {
   // Lazy initialization: load from localStorage only once during component mount
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -79,6 +104,25 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     }
     return [];
   });
+
+  const latestCart = useRef(cartItems);
+  const pendingReplacement = useRef<PendingCartReplacement | null>(null);
+  const returnFocus = useRef<HTMLElement | SVGElement | null>(null);
+  const [replacementOpen, setReplacementOpen] = useState(false);
+
+  useLayoutEffect(() => {
+    latestCart.current = cartItems;
+  }, [cartItems]);
+
+  useEffect(
+    () => () => {
+      const pending = pendingReplacement.current;
+      pendingReplacement.current = null;
+      pending?.detachAbort();
+      pending?.resolve(false);
+    },
+    []
+  );
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
@@ -159,13 +203,71 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     setCartItems([]);
   }, []);
 
-  const replaceCart = useCallback((items: CartItem[]) => {
-    setCartItems(
-      items
-        .filter((item) => item.restaurantId && item.quantity > 0)
-        .map((item) => ({ ...item, note: limitCartItemNoteInput(item.note) }))
-    );
+  const finishReplacement = useCallback((accepted: boolean) => {
+    const pending = pendingReplacement.current;
+    if (!pending) return;
+
+    pendingReplacement.current = null;
+    pending.detachAbort();
+    setReplacementOpen(false);
+    if (accepted) {
+      latestCart.current = pending.items;
+      setCartItems(pending.items);
+    }
+    pending.resolve(accepted);
   }, []);
+
+  const replaceCart = useCallback(
+    (items: CartItem[], { signal }: { signal?: AbortSignal } = {}) => {
+      if (signal?.aborted || pendingReplacement.current) return Promise.resolve(false);
+
+      // Fail closed: malformed/empty recovery responses must never erase a valid cart.
+      if (
+        !Array.isArray(items) ||
+        items.length === 0 ||
+        items.some(
+          (item) =>
+            !item?._id ||
+            !item.restaurantId ||
+            !Number.isSafeInteger(item.quantity) ||
+            item.quantity < 1 ||
+            typeof item.price !== 'number' ||
+            !Number.isFinite(item.price) ||
+            item.price <= 0 ||
+            !['single', 'small', 'medium', 'large'].includes(item.size)
+        ) ||
+        new Set(items.map((item) => item.restaurantId)).size !== 1
+      ) {
+        return Promise.reject(
+          new Error('No valid items could be added. Your current cart has not changed.')
+        );
+      }
+
+      const nextItems = items.map((item) => ({ ...item, note: limitCartItemNoteInput(item.note) }));
+      if (latestCart.current.length === 0) {
+        latestCart.current = nextItems;
+        setCartItems(nextItems);
+        return Promise.resolve(true);
+      }
+
+      const activeElement = document.activeElement;
+      returnFocus.current =
+        activeElement instanceof HTMLElement || activeElement instanceof SVGElement
+          ? activeElement
+          : null;
+      return new Promise<boolean>((resolve) => {
+        const abort = () => finishReplacement(false);
+        pendingReplacement.current = {
+          items: nextItems,
+          resolve,
+          detachAbort: () => signal?.removeEventListener('abort', abort),
+        };
+        signal?.addEventListener('abort', abort, { once: true });
+        setReplacementOpen(true);
+      });
+    },
+    [finishReplacement]
+  );
 
   const getCartRestaurantId = (): string | null => {
     if (cartItems.length === 0) return null;
@@ -204,6 +306,33 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       }}
     >
       {children}
+      <AlertDialog
+        open={replacementOpen}
+        onOpenChange={(open) => {
+          if (!open) finishReplacement(false);
+        }}
+      >
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            if (returnFocus.current?.isConnected) returnFocus.current.focus();
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace your cart?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You already have items in your cart. Reordering will replace them and their item notes
+              with this order.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep current cart</AlertDialogCancel>
+            <AlertDialogAction onClick={() => finishReplacement(true)}>
+              Replace cart
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CartContext.Provider>
   );
 };
