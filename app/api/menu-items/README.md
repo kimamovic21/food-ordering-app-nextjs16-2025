@@ -1,111 +1,116 @@
 # API Route: /api/menu-items
 
-> Enhanced route documentation. Keep this file aligned with the adjacent `route.ts` when behavior changes.
+## Purpose And Access
 
-## Source And Ownership
+This route serves public menu reads and restaurant-owner menu management. `GET` is public;
+`POST`, `PUT`, `PATCH`, and `DELETE` require admin access through `isAdmin`, a session email,
+and a current User record. Existing-item mutations also require `adminId` ownership.
+Being the platform super admin does not bypass that ownership check.
 
-- Source file: `app/api/menu-items/route.ts`
-- Route: `/api/menu-items`
-- HTTP methods: `POST`, `GET`, `PUT`, `PATCH`, `DELETE`
-- Feature area: menu items
-- Main audience/roles: `admin`, `restaurant admin`
+## Read And Create Behavior
 
-## Plain-English Summary
+- `GET?_id=...` returns an array containing the populated item, or an empty array if not found.
+- `GET?adminId=...` returns that owner's items. Unfiltered GET returns the public menu.
+- Grouped reads support category summaries. Advanced reads filter search text, categories,
+  price range and sort order before pagination. Restaurant ratings are attached to results.
+- `POST` requires the admin to have a restaurant, validates the required price count, and attaches
+  the server-derived owner/restaurant IDs. `priceType` supports single, double and triple pricing.
+  Legacy inference remains available; double pricing keeps its second amount in `priceMedium`.
+- Creation normalizes optional stock settings through `buildMenuItemInventoryFields`.
+  Untracked items have null physical stock; opting into tracking defaults to ten units.
+  Existing items are not automatically migrated or assigned stock.
 
-Handles post/get/put/patch/delete work for the menu items area. The route keeps the local workflow server-authoritative, saves optional inventory-tracking fields, and delegates shared business rules to models and libs.
+## Versioned Edit Contract
 
-## What Happens In This File
+Both `PUT` and `PATCH` require `expectedEditVersion`, a nonnegative integer from the last loaded
+item (`0` for legacy documents without the field). A successful atomic write returns the updated
+document and increments `editVersion`. An older browser tab without this field must reload.
+This version covers admin edits only, not routine checkout reservations or inventory capture.
 
-- The route receives POST/GET/PUT/PATCH/DELETE requests and converts request/session data into server-side business checks.
-- It uses `category`, `menuItem`, `user` for persistence.
-- It delegates shared logic to `authGuards`, `authOptions`, `cloudinary`, `menuItemInventory`, `orderDeletionGuards`, `orderQuantityLimits`, `reviewSummary` so behavior stays consistent across the app.
-- `POST` and `PUT` normalize `trackInventory`, `stockQuantity`, and `lowStockThreshold` through `buildMenuItemInventoryFields`. When tracking is disabled, stock is saved as `null` so older/existing menu items remain unlimited until an admin opts in.
-- `PATCH` remains scoped to manual availability only. Inventory sold-out state is derived from stock quantity, not from this manual toggle.
-- Detected local functions/handlers: `escapeRegex`, `parseNumber`, `parsePositiveInt`, `isValidPriceType`, `resolvePriceType`, `hasRequiredPricesByType`, `toCategorySlug`, `buildSort`, `skip`.
+`PUT` still accepts the existing content/price payload. Its inventory fields are optional:
 
-## Request Inputs
+- Omit `stockQuantity` when it has not intentionally changed. Saving a description, price or image
+  must not restore stock consumed after the form loaded.
+- An intentional tracked-stock change requires `stockQuantity` and `expectedStockQuantity`.
+  Quantities must be integers in `0..1000`; a missing legacy/untracked baseline is `null`.
+- Enabling tracking requires an explicit stock value and baseline. Disabling tracking clears stock
+  to null but is rejected while stock remains reserved.
+- `lowStockThreshold`, when supplied, must be an integer in `0..100`.
+- Client-supplied reserved counts, timestamps and stored versions are never copied into the update.
 
-- JSON body parsed with `req.json()`
-- URL search params for filters, pagination, ids, or options
+`buildMenuItemInventoryEdit` builds the actual MongoDB write filter: owner/id, expected admin
+version, and, for stock writes, expected physical stock and a live reserved-count ceiling.
+Tracking changes additionally require zero reservations. `findOneAndUpdate` applies that filter
+and the update atomically. A pre-read check alone is insufficient because checkout can reserve
+units between reading and saving.
 
-## Packages And Services Used
+`PATCH` only updates manual availability and increments the same edit version. This prevents an
+older form from undoing a newer availability toggle. Sold-out state remains derived separately.
 
-- `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
-- `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
-- `mongoose` + MongoDB models: keep users, restaurants, menu items, orders, coupons, reviews, and audit data server-authoritative.
-- `cloudinary`: stores uploaded user, restaurant, category, and menu-item images; cleanup logic removes replaced or deleted assets by public id.
-- `libs/menuItemInventory.ts`: normalizes stock defaults/ranges and keeps inventory status labels shared across API, cart, and UI consumers.
+## Errors And Edge Cases
 
-## Auth, Role, And Safety Checks
+- Unauthorized/non-owner requests cannot modify items or obtain a conflict snapshot for another owner.
+- Invalid edit version/inventory values return `400`; a failed write precondition returns `409`
+  with `code: MENU_ITEM_EDIT_CONFLICT` and reload guidance. No partial edit is applied.
+- A missing item at the initial read returns `404`; deletion between read and write safely conflicts.
+- Two forms based on the same version cannot both overwrite the document.
+- Stock can equal reserved units, leaving zero available units, but cannot go below reservations.
+- Omitted inventory fields are preserved on PUT. Missing legacy versions compare as zero.
+- A conflicting save never deletes the previous image. If the conflict happens during upload,
+  the unused new upload is cleaned up after confirming that no item references it.
+- `DELETE` uses `findBlockingMenuItemOrder` and returns `409` while an active order needs the item.
+  Otherwise it attempts existing Cloudinary image cleanup and removes the document.
+- Unexpected route failures return the existing generic failure responses.
 
-- Requires a NextAuth session for at least one handler branch.
-- Uses shared `authOptions`, so role/session behavior follows the global auth setup.
+## Packages And Dependencies
 
-## Edge Cases Covered
+- Next.js route handlers return JSON through the standard Response API.
+- NextAuth/authGuards resolve access; Mongoose owns MenuItem, Category, User and Order records.
+- Zod validates edit metadata/inventory in `libs/menuItemEdit.ts`.
+- `menuItemInventory.ts`, `orderQuantityLimits.ts`, `orderDeletionGuards.ts`, and
+  `reviewSummary.ts` retain their shared inventory, limit, deletion and rating responsibilities.
+- Cloudinary uploads and cleanup are coordinated by `libs/menuItemImage.ts` within the save request.
 
-- Line 17: `if (!value) return null;`
-- Line 23: `if (!value) return fallback;`
-- Line 25: `if (!Number.isFinite(parsed) || parsed <= 0) return fallback;`
-- Line 33: `if (isValidPriceType(data.priceType)) {`
-- Line 38: `if (legacyFoodType === 'drink') {`
-- Line 42: `if (data.priceLarge != null && data.priceLarge !== '') {`
-- Line 46: `if (data.priceMedium != null && data.priceMedium !== '') {`
-- Line 89: `if (!(await isAdmin())) {`
-- Line 95: `if (!session?.user?.email) {`
-- Line 100: `if (!currentUser) {`
-- Line 105: `if (!currentUser.restaurantId) {`
-- Line 116: `if (!hasRequiredPricesByType(priceType, data)) {`
-- Line 125: `if (data.image && typeof data.image === 'string') {`
-- Line 126: `if (!data.image.startsWith('http')) {`
-- Line 176: `if (_id) {`
-- Line 178: `if (!item) return Response.json([]);`
-- Line 184: `if (adminId) {`
-- Line 190: `if (groupBy === 'category') {`
-- Line 223: `if (hasAdvancedQuery) {`
-- Line 226: `if (query) {`
-- Line 234: `if (categoriesParam) {`
-- Line 250: `if (slugValues.length > 0) {`
-- Line 284: `if (minPrice != null || maxPrice != null) {`
-- Line 286: `if (minPrice != null) priceMatch.$gte = minPrice;`
-- Line 287: `if (maxPrice != null) priceMatch.$lte = maxPrice;`
-- Line 326: `if (!(await isAdmin())) {`
-- Line 332: `if (!session?.user?.email) {`
-- Line 337: `if (!currentUser) {`
-- Line 345: `if (!existingItem) {`
-- Line 349: `if (existingItem.adminId.toString() !== currentUser._id.toString()) {`
-- Line 358: `if (!hasRequiredPricesByType(priceType, data)) {`
-- Line 367: `if (data.image && typeof data.image === 'string') {`
-- Line 368: `if (!data.image.startsWith('http')) {`
-- Line 404: `if (!(await isAdmin())) {`
-- Line 409: `if (!session?.user?.email) {`
-- Line 414: `if (!currentUser) {`
+## Images Are Saved Only On Submit
 
-## Data Dependencies
+Selecting a file only previews it locally. New/edit forms send one POST/PUT to this route when
+Save/Update is pressed. With a selected image the body is multipart FormData: `data` contains the
+JSON item payload and `file` contains the image. JSON requests without a new file remain supported.
+The old standalone `/api/upload/menu-items` endpoint returns 410 without contacting Cloudinary.
 
-- Models: `category`, `menuItem`, `user`
-- Shared libs: `authGuards`, `authOptions`, `cloudinary`, `menuItemInventory`, `orderDeletionGuards`, `orderQuantityLimits`, `reviewSummary`
-- Shared types: None detected
+1. Resolve the session, restaurant/owner, required prices and inventory rules before uploading.
+2. Parse the request and reject empty/non-image files or files over 4 MB. Run Mongoose model
+   validation before external upload; a temporary validation-only image value is never persisted.
+3. For edits with a file, check the complete version/stock filter before uploading. Recheck it
+   atomically in the final write, because another edit or checkout reservation can still race.
+4. Upload into `menu-items` locally or `menu-items-production` in production, then save the URL
+   and all other fields together. Image upload alone is not reported as a successful item save.
+5. Only after a successful edit, attempt deletion of the replaced image. Deletion checks the
+   configured Cloudinary account, the current environment's folder and remaining MenuItem references.
+6. If the write fails, attempt cleanup of the newly uploaded image, not the original. Query current
+   references first: a lost database acknowledgement is not proof that the write failed.
 
-## Side Effects
+Cloudinary and MongoDB cannot share an atomic transaction. Cleanup failures are logged without
+turning a committed save into an error. A terminated server or unavailable reference check can
+still leave an orphan; the reviewed audit in `OPERATIONS_RUNBOOK.md` remains the recovery path.
+A refresh before Save performs no upload. A refresh after Save was submitted does not undo a save
+already being processed by the server. This is not a general upload quota or rate-limiting system.
 
-- Creates MongoDB documents.
-- Updates existing MongoDB documents.
-- Deletes or cleans up MongoDB data.
-- Touches Cloudinary media upload/delete behavior.
-- Saves optional inventory fields used by cart validation, checkout blockers, public sold-out UI, and Stripe webhook stock decrementing.
+## Verification And Maintenance
 
-## Response Behavior
+Focused coverage includes route auth/contracts in `__tests__/api/menu-items.route.test.ts`,
+real isolated MongoDB write races in `__tests__/libs/menuItemEdit.test.ts`, image lifecycle in
+`__tests__/api/menu-item-images.route.test.ts`, retired endpoint coverage in
+`__tests__/api/upload-menu-items.route.test.ts`, and submit-only/draft behavior in
+`__tests__/components/EditMenuItemPage.test.tsx` and `__tests__/components/NewMenuItemPage.test.tsx`.
 
-- Status codes detected: `400`, `401`, `403`, `404`, `409`, `500`
-- Common response fields detected: `value`, `parsed`, `fallback`, `data`, `priceType`, `sortBy`, `effectivePrice`, `createdAt`, `default`, `req`, `error`, `email`, `name`, `description`, `image`, `category`, `priceSmall`, `priceMedium`, `null`, `priceLarge`, `maxQuantityPerOrder`, `isAvailable`, `adminId`, `restaurantId`, `item`, `details`, `items`, `categories`, `matchStage`, `regex`, `options`, `in`, `pipeline`, `match`, `addFields`, `priceValues`, `filter`, `input`, `as`, `cond`, `ne`, `min`, `priceMatch`, `sort`, `project`
+If another admin mutation is added, it must participate in the edit-version protocol. Do not
+replace conditional writes with an unguarded findByIdAndUpdate or send unchanged stock from forms.
+Checkout and webhook guards remain authoritative; this route does not replace them.
 
-## How To Explain This In A Presentation
+## Presentation Example
 
-Open this file when someone asks what `/api/menu-items` does. Explain that it belongs to the menu items workflow, serves `admin`, `restaurant admin`, validates ownership and price inputs, persists optional inventory settings, and returns a stable JSON response or a clear error status. Existing items are not migrated into stock tracking automatically.
-
-## Maintenance Notes For Future Work
-
-- Read the source `route.ts` before editing; this README is a map, not the source of truth.
-- If you change request/response fields, update shared types in `types/`, UI consumers, and focused tests.
-- Preserve auth, role, ownership, rate-limit, payment, and data-integrity guards unless a task explicitly changes them.
-- For checkout, payment, order, courier, notification, QStash, or audit routes, run the related focused tests before finishing.
+An admin opens an item showing ten units. Three units sell while the admin edits its description.
+Saving the description keeps seven units. If the admin intentionally changes stock, the API first
+checks that its original stock baseline is still current and that reservations fit. If another
+admin tab saved newer content, the older tab receives a conflict instead of overwriting it.

@@ -23,6 +23,7 @@ describe('MenuItem model validation', () => {
     expect(m.stockQuantity).toBeNull();
     expect(m.reservedStockQuantity).toBe(0);
     expect(m.lowStockThreshold).toBe(3);
+    expect(m.editVersion).toBe(0);
   });
 
   it('rejects invalid priceType', async () => {

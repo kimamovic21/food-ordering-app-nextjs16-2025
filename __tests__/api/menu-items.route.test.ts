@@ -58,8 +58,10 @@ vi.mock('@/models/user', () => ({
 vi.mock('@/models/menuItem', () => ({
   MenuItem: {
     create: vi.fn(),
+    validate: vi.fn(),
+    exists: vi.fn(),
     findById: vi.fn(),
-    findByIdAndUpdate: vi.fn(),
+    findOneAndUpdate: vi.fn(),
     aggregate: vi.fn(),
     find: vi.fn(),
     countDocuments: vi.fn(),
@@ -108,6 +110,7 @@ const createRequest = (body: Record<string, unknown>) =>
 describe('/api/menu-items route', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv('CLOUDINARY_CLOUD_NAME', 'demo');
     vi.mocked(isAdmin).mockResolvedValue(true as never);
     vi.mocked(getServerSession).mockResolvedValue({
       user: { email: 'admin@example.com' },
@@ -117,6 +120,8 @@ describe('/api/menu-items route', () => {
       select: vi.fn().mockResolvedValue(null),
     } as never);
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   it('requires an admin session to create menu items', async () => {
     vi.mocked(isAdmin).mockResolvedValueOnce(false as never);
@@ -225,7 +230,7 @@ describe('/api/menu-items route', () => {
       _id: 'menu-1',
       adminId: { toString: () => 'admin-1' },
     } as never);
-    vi.mocked(MenuItem.findByIdAndUpdate).mockResolvedValueOnce({
+    vi.mocked(MenuItem.findOneAndUpdate).mockResolvedValueOnce({
       _id: 'menu-1',
       isAvailable: false,
     } as never);
@@ -238,6 +243,7 @@ describe('/api/menu-items route', () => {
         body: JSON.stringify({
           _id: 'menu-1',
           isAvailable: false,
+          expectedEditVersion: 0,
         }),
       })
     );
@@ -245,11 +251,97 @@ describe('/api/menu-items route', () => {
 
     expect(res.status).toBe(200);
     expect(body).toEqual({ _id: 'menu-1', isAvailable: false });
-    expect(MenuItem.findByIdAndUpdate).toHaveBeenCalledWith(
-      'menu-1',
-      { isAvailable: false },
-      { new: true }
+    expect(MenuItem.findOneAndUpdate).toHaveBeenCalledWith(
+      {
+        _id: 'menu-1',
+        adminId: currentAdmin._id,
+        $expr: { $eq: [{ $ifNull: ['$editVersion', 0] }, 0] },
+      },
+      { $set: { isAvailable: false }, $inc: { editVersion: 1 } },
+      { returnDocument: 'after', runValidators: true }
     );
+  });
+
+  describe('safe edits', () => {
+    const editBody = {
+      _id: 'menu-1',
+      name: 'Soup',
+      description: 'Updated recipe',
+      category: 'category-1',
+      image: 'https://example.com/soup.jpg',
+      priceType: 'single',
+      priceSmall: 5,
+      expectedEditVersion: 0,
+    };
+
+    beforeEach(() => {
+      vi.mocked(MenuItem.findById).mockResolvedValue({
+        adminId: currentAdmin._id,
+        trackInventory: true,
+        stockQuantity: 7,
+        reservedStockQuantity: 2,
+      } as never);
+      vi.mocked(MenuItem.findOneAndUpdate).mockReset();
+    });
+
+    it('does not reset omitted inventory when saving content', async () => {
+      vi.mocked(MenuItem.findOneAndUpdate).mockResolvedValue({
+        ...editBody,
+        editVersion: 1,
+        stockQuantity: 7,
+      } as never);
+      const { PUT } = await loadMenuItemsRoute();
+      const res = await PUT(createRequest(editBody));
+      expect(res.status).toBe(200);
+      expect((await res.json()).editVersion).toBe(1);
+      const update = vi.mocked(MenuItem.findOneAndUpdate).mock.calls[0][1];
+      expect(update.$set).not.toHaveProperty('stockQuantity');
+      expect(update.$set).not.toHaveProperty('trackInventory');
+      expect(update.$set).not.toHaveProperty('reservedStockQuantity');
+      expect(update.$inc).toEqual({ editVersion: 1 });
+    });
+
+    it.each([
+      { expectedEditVersion: undefined },
+      { expectedEditVersion: -1 },
+      { stockQuantity: 15 },
+      { stockQuantity: 1.5, expectedStockQuantity: 7 },
+      { stockQuantity: 1001, expectedStockQuantity: 7 },
+      { lowStockThreshold: -1 },
+      { stockQuantity: null, expectedStockQuantity: 7 },
+    ])('rejects unsafe inventory/version input %j', async (invalid) => {
+      const { PUT } = await loadMenuItemsRoute();
+      const res = await PUT(createRequest({ ...editBody, ...invalid }));
+      expect(res.status).toBe(400);
+      expect(MenuItem.findOneAndUpdate).not.toHaveBeenCalled();
+    });
+
+    it('returns a conflict when the atomic version/stock/reservation guard fails', async () => {
+      vi.mocked(MenuItem.findOneAndUpdate).mockResolvedValue(null);
+      const { PUT } = await loadMenuItemsRoute();
+      const res = await PUT(
+        createRequest({ ...editBody, stockQuantity: 1, expectedStockQuantity: 10 })
+      );
+      expect(res.status).toBe(409);
+      expect((await res.json()).code).toBe('MENU_ITEM_EDIT_CONFLICT');
+      expect(cloudinary.uploader.destroy).not.toHaveBeenCalled();
+    });
+
+    it('rejects stale availability changes instead of overwriting the item', async () => {
+      vi.mocked(MenuItem.findOneAndUpdate).mockResolvedValue(null);
+      const { PATCH } = await loadMenuItemsRoute();
+      const res = await PATCH(
+        createRequest({ _id: 'menu-1', isAvailable: false, expectedEditVersion: 0 })
+      );
+      expect(res.status).toBe(409);
+    });
+
+    it('requires a version for availability changes', async () => {
+      const { PATCH } = await loadMenuItemsRoute();
+      const res = await PATCH(createRequest({ _id: 'menu-1', isAvailable: false }));
+      expect(res.status).toBe(400);
+      expect(MenuItem.findOneAndUpdate).not.toHaveBeenCalled();
+    });
   });
 
   it('blocks updates to menu items owned by another admin', async () => {
@@ -275,7 +367,7 @@ describe('/api/menu-items route', () => {
 
     expect(res.status).toBe(403);
     expect(body).toEqual({ error: 'You are not authorized to edit this menu item' });
-    expect(MenuItem.findByIdAndUpdate).not.toHaveBeenCalled();
+    expect(MenuItem.findOneAndUpdate).not.toHaveBeenCalled();
   });
 
   it('builds an advanced search aggregation for query/category/price filters', async () => {
@@ -338,22 +430,29 @@ describe('/api/menu-items route', () => {
     expect(cloudinary.uploader.destroy).not.toHaveBeenCalled();
   });
 
-  it('deletes an owned menu item when no active order references it', async () => {
-    vi.mocked(MenuItem.findById).mockResolvedValueOnce({
-      _id: 'menu-1',
-      adminId: { toString: () => 'admin-1' },
-      image: 'https://res.cloudinary.com/demo/image/upload/menu-items/pizza.jpg',
-    } as never);
+  it.each(['development', 'production'])(
+    'deletes an owned menu item and its %s image when no active order references it',
+    async (env) => {
+      vi.stubEnv('NODE_ENV', env);
+      const folder = env === 'production' ? 'menu-items-production' : 'menu-items';
+      vi.mocked(MenuItem.findById).mockResolvedValueOnce({
+        _id: 'menu-1',
+        adminId: { toString: () => 'admin-1' },
+        image: `https://res.cloudinary.com/demo/image/upload/${folder}/pizza.jpg`,
+      } as never);
 
-    const { DELETE } = await loadMenuItemsRoute();
-    const res = await DELETE(
-      new Request('http://localhost/api/menu-items?_id=menu-1', { method: 'DELETE' })
-    );
-    const body = await res.json();
+      const { DELETE } = await loadMenuItemsRoute();
+      const res = await DELETE(
+        new Request('http://localhost/api/menu-items?_id=menu-1', { method: 'DELETE' })
+      );
+      const body = await res.json();
 
-    expect(res.status).toBe(200);
-    expect(body).toBe(true);
-    expect(cloudinary.uploader.destroy).toHaveBeenCalledWith('menu-items/pizza');
-    expect(MenuItem.deleteOne).toHaveBeenCalledWith({ _id: 'menu-1' });
-  });
+      expect(res.status).toBe(200);
+      expect(body).toBe(true);
+      expect(cloudinary.uploader.destroy).toHaveBeenCalledWith(`${folder}/pizza`, {
+        invalidate: true,
+      });
+      expect(MenuItem.deleteOne).toHaveBeenCalledWith({ _id: 'menu-1' });
+    }
+  );
 });

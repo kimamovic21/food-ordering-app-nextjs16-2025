@@ -1,10 +1,23 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { useRouter, useParams } from 'next/navigation';
 import { Form } from '@/components/ui/form';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { RefreshCw } from 'lucide-react';
+import { getMenuItemStockEdit } from '@/libs/menuItemEdit';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -28,12 +41,11 @@ import {
   MAX_MENU_ITEM_QUANTITY_LIMIT,
   MIN_MENU_ITEM_QUANTITY_LIMIT,
 } from '@/libs/orderQuantityLimits';
-import type { MenuItemCategory } from '@/types/menu';
+import type { MenuItemCategory, MenuItemListItem } from '@/types/menu';
 
 const EditMenuItemPage = () => {
   const router = useRouter();
-  const params = useParams();
-  const id = (params as any)!.id as string;
+  const { id } = useParams<{ id: string }>();
   const form = useForm();
   const { data, loading } = useProfile();
 
@@ -58,18 +70,58 @@ const EditMenuItemPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isDescriptionGenerating, setIsDescriptionGenerating] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
+  const [baseline, setBaseline] = useState<MenuItemListItem | null>(null);
+  const [loadError, setLoadError] = useState(false);
+  const [conflict, setConflict] = useState<string | null>(null);
+  const [confirmReload, setConfirmReload] = useState(false);
+  const savingRef = useRef(false);
+
+  const applyItem = useCallback((item: MenuItemListItem) => {
+    setBaseline(item);
+    setName(item.name);
+    setDescription(item.description);
+    setCategoryId(typeof item.category === 'string' ? item.category : item.category?._id || '');
+    setPriceType(
+      item.priceType ||
+        (item.foodType === 'drink'
+          ? 'single'
+          : item.priceLarge != null
+            ? 'triple'
+            : item.priceMedium != null
+              ? 'double'
+              : 'single')
+    );
+    setPriceSmall(item.priceSmall?.toString() ?? '');
+    setPriceMedium(item.priceMedium?.toString() ?? '');
+    setPriceLarge(item.priceLarge?.toString() ?? '');
+    setMaxQuantityPerOrder(String(item.maxQuantityPerOrder ?? DEFAULT_MENU_ITEM_QUANTITY_LIMIT));
+    setTrackInventory(item.trackInventory === true);
+    setStockQuantity(
+      String(item.stockQuantity ?? (item.trackInventory ? 0 : DEFAULT_MENU_ITEM_STOCK_QUANTITY))
+    );
+    setLowStockThreshold(String(item.lowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD));
+    setIsAvailable(item.isAvailable !== false);
+    setImage(item.image || '');
+    setImagePreview(item.image || '');
+    setImageFile(null);
+    setConflict(null);
+  }, []);
 
   const fetchCategoriesAndItem = useCallback(async () => {
+    setIsDataLoading(true);
     try {
       const [catsRes, itemRes] = await Promise.all([
         fetch('/api/categories'),
-        fetch(`/api/menu-items?_id=${id}`),
+        fetch(`/api/menu-items?_id=${id}`, { cache: 'no-store' }),
       ]);
+
+      if (!catsRes.ok || !itemRes.ok) throw new Error('Failed to load menu item');
 
       const cats = await catsRes.json();
       setCategories(cats);
 
-      const items = await itemRes.json();
+      const items: MenuItemListItem[] = await itemRes.json();
+      if (!items.length) throw new Error('Menu item not found');
       if (items.length > 0) {
         const item = items[0];
 
@@ -85,51 +137,17 @@ const EditMenuItemPage = () => {
           return;
         }
 
-        setName(item.name);
-        setDescription(item.description);
-        setCategoryId(typeof item.category === 'string' ? item.category : item.category?._id || '');
-
-        const derivedPriceType =
-          item.priceType ||
-          (item.foodType === 'drink'
-            ? 'single'
-            : item.priceLarge != null
-              ? 'triple'
-              : item.priceMedium != null
-                ? 'double'
-                : 'single');
-        setPriceType(derivedPriceType);
-
-        setPriceSmall(item.priceSmall ? item.priceSmall.toString() : '');
-        setPriceMedium(item.priceMedium ? item.priceMedium.toString() : '');
-        setPriceLarge(item.priceLarge ? item.priceLarge.toString() : '');
-        setMaxQuantityPerOrder(
-          item.maxQuantityPerOrder
-            ? item.maxQuantityPerOrder.toString()
-            : String(DEFAULT_MENU_ITEM_QUANTITY_LIMIT)
-        );
-        setTrackInventory(item.trackInventory === true);
-        setStockQuantity(
-          typeof item.stockQuantity === 'number'
-            ? item.stockQuantity.toString()
-            : String(DEFAULT_MENU_ITEM_STOCK_QUANTITY)
-        );
-        setLowStockThreshold(
-          typeof item.lowStockThreshold === 'number'
-            ? item.lowStockThreshold.toString()
-            : String(DEFAULT_LOW_STOCK_THRESHOLD)
-        );
-        setIsAvailable(item.isAvailable !== false);
-        setImage(item.image || '');
-        setImagePreview(item.image || '');
+        applyItem(item);
+        setLoadError(false);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
       sonnerToast.error('Failed to load menu item');
+      setLoadError(true);
     } finally {
       setIsDataLoading(false);
     }
-  }, [id, data?._id, router]);
+  }, [id, data?._id, router, applyItem]);
 
   useEffect(() => {
     if (data?._id) {
@@ -149,29 +167,6 @@ const EditMenuItemPage = () => {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-  };
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const data = new FormData();
-    data.append('file', file);
-    data.append('menuItemId', id);
-
-    const res = await fetch('/api/upload/menu-items', {
-      method: 'POST',
-      body: data,
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Upload failed: ${res.status} - ${errorText}`);
-    }
-
-    const json = await res.json();
-    if (!json.url || typeof json.url !== 'string' || !json.url.startsWith('http')) {
-      console.error('Invalid upload response:', json);
-      throw new Error(`Invalid image URL returned from upload: ${JSON.stringify(json)}`);
-    }
-    return json.url;
   };
 
   const handleGenerateDescription = async () => {
@@ -218,6 +213,7 @@ const EditMenuItemPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current || !baseline || conflict || isDescriptionGenerating) return;
 
     if (name.trim() === '' || categoryId.trim() === '') {
       sonnerToast.error('Name and category are required', {
@@ -247,6 +243,7 @@ const EditMenuItemPage = () => {
       return;
     }
 
+    savingRef.current = true;
     setIsSaving(true);
 
     try {
@@ -293,7 +290,10 @@ const EditMenuItemPage = () => {
 
       if (
         trackInventory &&
-        (!Number.isFinite(stock) || stock < 0 || stock > MAX_MENU_ITEM_STOCK_QUANTITY)
+        (!stockQuantity.trim() ||
+          !Number.isInteger(stock) ||
+          stock < 0 ||
+          stock > MAX_MENU_ITEM_STOCK_QUANTITY)
       ) {
         sonnerToast.error(`Current stock must be between 0 and ${MAX_MENU_ITEM_STOCK_QUANTITY}`, {
           style: {
@@ -307,7 +307,10 @@ const EditMenuItemPage = () => {
 
       if (
         trackInventory &&
-        (!Number.isFinite(lowStock) || lowStock < 0 || lowStock > MAX_LOW_STOCK_THRESHOLD)
+        (!lowStockThreshold.trim() ||
+          !Number.isInteger(lowStock) ||
+          lowStock < 0 ||
+          lowStock > MAX_LOW_STOCK_THRESHOLD)
       ) {
         sonnerToast.error(`Low stock alert must be between 0 and ${MAX_LOW_STOCK_THRESHOLD}`, {
           style: {
@@ -317,17 +320,6 @@ const EditMenuItemPage = () => {
         });
         setIsSaving(false);
         return;
-      }
-
-      let imageUrl = image;
-      if (imageFile) {
-        const uploadPromise = uploadImage(imageFile);
-        sonnerToast.promise(uploadPromise, {
-          loading: 'Uploading image...',
-          success: 'Image uploaded!',
-          error: 'Image upload failed',
-        });
-        imageUrl = await uploadPromise;
       }
 
       const menuItemData = {
@@ -340,19 +332,29 @@ const EditMenuItemPage = () => {
         priceLarge: priceType === 'triple' ? l : null,
         maxQuantityPerOrder: Math.floor(maxQuantity),
         trackInventory,
-        stockQuantity: trackInventory ? Math.floor(stock) : null,
+        ...getMenuItemStockEdit(baseline, trackInventory, stock),
+        expectedEditVersion: baseline.editVersion ?? 0,
         lowStockThreshold: Math.floor(lowStock),
         isAvailable,
-        image: imageUrl || '',
+        image: image || '',
       };
 
+      const payload = JSON.stringify({ _id: id, ...menuItemData });
+      const body = new FormData();
+      body.append('data', payload);
+      if (imageFile) body.append('file', imageFile);
       const response = await fetch('/api/menu-items', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: id, ...menuItemData }),
+        ...(imageFile ? {} : { headers: { 'Content-Type': 'application/json' } }),
+        body: imageFile ? body : payload,
       });
 
-      if (!response.ok) throw new Error('Failed to update menu item');
+      const result = await response.json();
+      if (!response.ok) {
+        if (response.status === 409)
+          setConflict(result.error || 'This item changed. Reload before saving.');
+        throw new Error(result.error || 'Failed to update menu item');
+      }
 
       sonnerToast.success('Menu item updated!', {
         style: {
@@ -360,18 +362,17 @@ const EditMenuItemPage = () => {
           color: 'white',
         },
       });
-      setImage(imageUrl || '');
-      setImagePreview(imageUrl || '');
-      setImageFile(null);
+      applyItem(result as MenuItemListItem);
     } catch (err) {
       console.error(err);
-      sonnerToast.error('Failed to update menu item', {
+      sonnerToast.error(err instanceof Error ? err.message : 'Failed to update menu item', {
         style: {
           background: '#ef4444',
           color: 'white',
         },
       });
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };
@@ -438,6 +439,13 @@ const EditMenuItemPage = () => {
             </div>
           </div>
         </div>
+      ) : loadError && !baseline ? (
+        <div className='space-y-3' role='alert'>
+          <p>Could not load this menu item.</p>
+          <Button type='button' variant='outline' onClick={() => void fetchCategoriesAndItem()}>
+            <RefreshCw className='size-4' /> Retry
+          </Button>
+        </div>
       ) : (
         <>
           <Breadcrumb className='mb-4'>
@@ -451,6 +459,40 @@ const EditMenuItemPage = () => {
           </Breadcrumb>
 
           <Title>Edit Menu Item</Title>
+
+          {conflict && (
+            <div
+              className='mx-auto mt-6 max-w-3xl space-y-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-4'
+              role='alert'
+            >
+              <p className='font-medium'>Changes not saved</p>
+              <p className='text-sm'>{conflict}</p>
+              <p className='text-sm text-muted-foreground'>
+                Your draft is still in the form below.
+              </p>
+              <Button type='button' variant='outline' onClick={() => setConfirmReload(true)}>
+                <RefreshCw className='size-4' /> Reload latest item
+              </Button>
+            </div>
+          )}
+
+          <AlertDialog open={confirmReload} onOpenChange={setConfirmReload}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Discard this draft and load the latest item?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Unsaved text, stock changes and the selected image will be replaced only after the
+                  latest item loads successfully.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep draft</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void fetchCategoriesAndItem()}>
+                  Reload latest
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           <Form {...form}>
             <form className='mt-8 max-w-2xl lg:max-w-3xl mx-auto' onSubmit={handleSubmit}>
@@ -478,6 +520,15 @@ const EditMenuItemPage = () => {
                   isAvailable={isAvailable}
                   editingItem={id}
                   isSaving={isSaving}
+                  saveDisabled={!baseline || Boolean(conflict) || isDescriptionGenerating}
+                  inventorySnapshot={
+                    baseline?.trackInventory
+                      ? {
+                          stock: baseline.stockQuantity ?? 0,
+                          reserved: baseline.reservedStockQuantity ?? 0,
+                        }
+                      : undefined
+                  }
                   isDescriptionGenerating={isDescriptionGenerating}
                   onNameChange={setName}
                   onCategoryChange={setCategoryId}

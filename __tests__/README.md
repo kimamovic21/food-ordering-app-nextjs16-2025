@@ -81,6 +81,7 @@ This folder contains unit tests grouped by feature area.
 - Watch mode: `npm run test:watch`
 - Run a single test file: `npm run test:file -- __tests__/api/register.route.test.ts`
 - Run profile unit tests: `npm run test:profile`
+- Run menu item edit/form/image-save/availability/inventory tests: `npm run test:menu-items`
 - Run payment/webhook-focused unit tests: `npm run test:payment`
 - Run realtime/SSE tests: `npm run test:realtime`
 - Run stale order recovery tests: `npm run test:file -- __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts`
@@ -90,6 +91,12 @@ The default unit suite intentionally uses a single Vitest worker through `vitest
 keeps the full run stable for route tests that mock shared framework and database modules. For day
 to day work, prefer the focused commands above because they are much faster than the complete
 serial suite.
+
+Choose tests by the affected workflow, not by an arbitrary maximum count. The menu-items command
+selects eleven files rather than the whole app. It includes mocked image-service calls and isolated
+database tests; it does not manipulate real Cloudinary assets. Add checkout/webhook/cart tests when
+those contracts change. Agents must obtain the user's explicit request or approval before running
+the full unit or e2e suite, including pre-merge verification; use focused tests and concise output by default.
 
 ## Editor TypeScript Support
 

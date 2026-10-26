@@ -43,6 +43,8 @@ interface MenuItemFormProps {
   isAvailable: boolean;
   editingItem: string | null;
   isSaving: boolean;
+  saveDisabled?: boolean;
+  inventorySnapshot?: { stock: number; reserved: number };
   isDescriptionGenerating?: boolean;
   onNameChange: (value: string) => void;
   onCategoryChange: (value: string) => void;
@@ -76,6 +78,8 @@ const MenuItemForm = ({
   isAvailable,
   editingItem,
   isSaving,
+  saveDisabled = false,
+  inventorySnapshot,
   isDescriptionGenerating = false,
   onNameChange,
   onCategoryChange,
@@ -405,6 +409,13 @@ const MenuItemForm = ({
         </div>
 
         <div className='space-y-3 rounded-lg border bg-muted/20 p-3'>
+          {inventorySnapshot && (
+            <p className='text-xs text-muted-foreground' role='status'>
+              At last load: {inventorySnapshot.stock} in stock, {inventorySnapshot.reserved}{' '}
+              reserved, {Math.max(0, inventorySnapshot.stock - inventorySnapshot.reserved)}{' '}
+              available.
+            </p>
+          )}
           <label className='flex items-start gap-3'>
             <Checkbox
               checked={trackInventory}
@@ -482,7 +493,7 @@ const MenuItemForm = ({
         </label>
 
         <div className='flex gap-2 pt-2'>
-          <Button type='submit' className='grow' disabled={isSaving}>
+          <Button type='submit' className='grow' disabled={isSaving || saveDisabled}>
             {isSaving ? 'Saving...' : editingItem ? 'Update' : 'Create'}
           </Button>
           {editingItem && (

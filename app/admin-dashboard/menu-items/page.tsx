@@ -127,7 +127,8 @@ const MenuItemsListPage = () => {
   };
 
   const handleToggleAvailability = async (id: string, isAvailable: boolean) => {
-    const previousItems = menuItems;
+    const previousItem = menuItems.find((item) => item._id === id);
+    if (!previousItem) return;
 
     setMenuItems((items) =>
       items.map((item) => (item._id === id ? { ...item, isAvailable } : item))
@@ -137,13 +138,33 @@ const MenuItemsListPage = () => {
       const res = await fetch('/api/menu-items', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ _id: id, isAvailable }),
+        body: JSON.stringify({
+          _id: id,
+          isAvailable,
+          expectedEditVersion: previousItem.editVersion ?? 0,
+        }),
       });
 
+      const json = await res.json().catch(() => null);
       if (!res.ok) {
-        const json = await res.json().catch(() => null);
+        if (res.status === 409) {
+          const latest = await fetch(`/api/menu-items?_id=${id}`, { cache: 'no-store' });
+          if (latest.ok) {
+            const items: MenuItemListItem[] = await latest.json();
+            setMenuItems((current) =>
+              items[0]
+                ? current.map((item) => (item._id === id ? items[0] : item))
+                : current.filter((item) => item._id !== id)
+            );
+          }
+        }
         throw new Error(json?.error || 'Failed to update availability');
       }
+      setMenuItems((items) =>
+        items.map((item) =>
+          item._id === id ? { ...item, ...json, category: item.category } : item
+        )
+      );
 
       sonnerToast.success(isAvailable ? 'Menu item is available' : 'Menu item marked unavailable', {
         style: {
@@ -153,7 +174,13 @@ const MenuItemsListPage = () => {
       });
     } catch (err) {
       console.error(err);
-      setMenuItems(previousItems);
+      setMenuItems((items) =>
+        items.map((item) =>
+          item._id === id && item.editVersion === previousItem.editVersion
+            ? { ...item, isAvailable: previousItem.isAvailable }
+            : item
+        )
+      );
       sonnerToast.error(err instanceof Error ? err.message : 'Failed to update availability', {
         style: {
           background: '#ef4444',

@@ -308,6 +308,18 @@ Operational monitoring builds on the same timestamps:
 - ETA-style notifications reuse estimate snapshots so status changes can include useful preparation or delivery timing.
 - `OrderProgressStepper` gives customers and admins a compact visual stage tracker for placed, kitchen, transport, and delivered phases.
 
+## Concurrent Menu Item Editing
+
+Admin PUT/PATCH writes use a separate `MenuItem.editVersion` with an atomic expected-version
+filter. Legacy records without it compare as version zero. Inventory reservation/capture writes
+do not increment this version, allowing content-only edits while sales continue. The edit form
+omits unchanged stock; intentional adjustments additionally compare physical stock and enforce
+the current reserved-count ceiling in the same MongoDB write. Tracking changes require zero
+reservations. Image selection is local-only. POST/PUT accepts the file with the complete save payload,
+uploads after validation, and cleans replaced images only after a successful write. Conflicts clean
+unused new uploads without touching the original image. Conflicts preserve the draft until a confirmed reload succeeds. The full contract and
+focused test pointers live in `app/api/menu-items/README.md`.
+
 ## Delete Protection
 
 Restaurant and menu data can be edited while orders are active, but destructive deletes are blocked when active order records still depend on that data.

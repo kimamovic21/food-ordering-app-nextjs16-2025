@@ -20,6 +20,7 @@
     "test:components": "vitest run --environment jsdom __tests__/components",
     "test:libs": "vitest run __tests__/libs",
     "test:models": "vitest run __tests__/models",
+    "test:menu-items": "vitest run __tests__/api/menu-items.route.test.ts __tests__/api/menu-item-images.route.test.ts __tests__/api/upload-menu-items.route.test.ts __tests__/components/EditMenuItemPage.test.tsx __tests__/components/NewMenuItemPage.test.tsx __tests__/components/MenuItemsAvailability.test.tsx __tests__/components/AdminMenuItemsTable.test.tsx __tests__/libs/menuItemEdit.test.ts __tests__/libs/menuItemInventory.test.ts __tests__/libs/menuItemInventoryServer.test.ts __tests__/models/menuItem.model.test.ts",
     "test:editor-types": "tsc --noEmit -p __tests__/tsconfig.json",
     "test:profile": "vitest run __tests__/api/profile.route.test.ts __tests__/api/profile-change-password.route.test.ts __tests__/api/upload-users.route.test.ts",
     "test:payment": "vitest run __tests__/api/payment.test.ts __tests__/api/checkout.route.test.ts __tests__/api/webhook.route.test.ts __tests__/libs/stripe-checkout-session.test.ts",

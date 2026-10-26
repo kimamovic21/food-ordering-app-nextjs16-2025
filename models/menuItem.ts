@@ -19,6 +19,7 @@ const MenuItemSchema = new Schema(
     stockLastAdjustedAt: { type: Date, default: null },
     stockReservationUpdatedAt: { type: Date, default: null },
     isAvailable: { type: Boolean, default: true, index: true },
+    editVersion: { type: Number, default: 0, min: 0 },
     adminId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     restaurantId: { type: Schema.Types.ObjectId, ref: 'Restaurant', required: true },
   },

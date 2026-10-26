@@ -18,20 +18,20 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items/new`, includin
 - Start from `page.tsx` for the route shell and data loading shape.
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
-- This folder talks to `/api/ai/menu-item-description`, `/api/categories`, `/api/menu-items`, `/api/upload/menu-items`. Keep API response shapes aligned.
+- This folder talks to `/api/ai/menu-item-description`, `/api/categories`, `/api/menu-items`. Keep API response shapes aligned.
 
 ## Important Files
 
 - `app/admin-dashboard/menu-items/new/layout.tsx`: functions/components: `AdminNewMenuItemLayout`
 - `app/admin-dashboard/menu-items/new/loading.tsx`: functions/components: `Skeleton`, `NewMenuItemLoading`
-- `app/admin-dashboard/menu-items/new/page.tsx`: functions/components: `NewMenuItemPage`, `fetchCategories`, `handleImageSelect`, `uploadImage`, `handleGenerateDescription`, `handleSubmit`, `resetForm`, `handlePriceTypeChange`; API calls: `/api/categories`, `/api/upload/menu-items`, `/api/ai/menu-item-description`, `/api/menu-items`; client component; form validation
+- `app/admin-dashboard/menu-items/new/page.tsx`: functions/components: `NewMenuItemPage`, `fetchCategories`, `handleImageSelect`, `handleGenerateDescription`, `handleSubmit`, `resetForm`, `handlePriceTypeChange`; API calls: `/api/categories`, `/api/ai/menu-item-description`, `/api/menu-items`; client component; form validation
 
 ## API/Data Connections
 
 - Calls `/api/ai/menu-item-description`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/categories`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/menu-items`; inspect the matching API README/source before changing its response shape.
-- Calls `/api/upload/menu-items`; inspect the matching API README/source before changing its response shape.
+- Images are uploaded only with the complete Save/Update payload to `/api/menu-items`; the former standalone upload endpoint is retired.
 
 ## Packages And Services Used
 
@@ -45,6 +45,9 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items/new`, includin
 
 ## Edge Cases And UX Rules
 
+- Selecting an image uses FileReader for a local preview; refreshing, canceling, or leaving before Save never uploads it.
+- Save requires an image and sends `file` plus JSON `data` in one multipart POST to `/api/menu-items`. A synchronous submit guard blocks duplicate clicks. No separate upload-success toast is shown before the item is actually saved.
+- The server validates the model and permissions before uploading; creation failure attempts cleanup of the unused new image. An image larger than 4 MB returns a validation error. See `app/api/menu-items/README.md` for cleanup limitations.
 - Preserve route loading states so refreshes and slow network states look intentional.
 - Preserve empty/error states so users are not left with blank screens.
 - If forms exist, keep validation messages close to the field that failed.

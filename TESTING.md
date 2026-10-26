@@ -74,6 +74,23 @@ Recent high-priority coverage also checks best coupon suggestion rules, restaura
 
 ## Commands
 
+### Choose The Scope First
+
+The total printed by `npm run test` describes the entire unit/component/integration suite, not
+the tests introduced by one feature. Keep the full suite; do not delete tests or impose a fixed
+50/100-test cap to make a local run smaller.
+
+- During local work, start with the relevant feature command or `npm run test:file -- <path>...`.
+- For menu item forms, edit conflicts, availability, inventory, and save-time image behavior,
+  use `npm run test:menu-items`. It selects eleven related test files, mocks Cloudinary calls,
+  and uses an isolated MongoDB instance for database race tests. No real images are uploaded/deleted.
+- Expand the scope when shared behavior changes. Checkout/payment/inventory integration changes
+  also need the relevant cart, checkout, webhook, cancellation and e2e tests in the workflows below.
+- Agents must obtain the user's explicit request or approval before running the full unit or e2e
+  suite, including pre-merge checks. Default to focused tests and concise output to conserve the
+  user's session budget. Explain any proposed wider coverage. Focused e2e tests use a dedicated test database.
+- Report the command and actual result. A passing focused run does not mean the entire app was tested.
+
 Support-ticket privacy changes should be checked at the JSON boundary, not only in the UI. Run
 `npm run test:file -- __tests__/api/support-tickets.route.test.ts` for role-based field filtering,
 admin-as-customer creation, personal scope for all roles, cache headers, and authorization tests. Run `npm run test:e2e:support`
@@ -90,6 +107,7 @@ app-support reports tied to the reporter's own restaurant, and historical reads 
 - `npm run test:components`: run component tests
 - `npm run test:libs`: run library/helper tests
 - `npm run test:models`: run model tests
+- `npm run test:menu-items`: run focused menu item API, form, availability, image-save, model, and inventory tests
 - `npm run test:editor-types`: validate the editor-only test TypeScript project used for Vitest globals and `@/` path aliases in `__tests__`
 - `npm run test:profile`: run only profile-focused unit tests
 - `npm run test:payment`: run only payment & webhook unit tests, including Stripe Checkout session expiration

@@ -1231,3 +1231,5 @@ Add smart reorder cart recovery
 Protect support ticket privacy and personal report access
 
 Protect existing carts and enforce shared reorder quantity limits
+
+Protect menu item edits and streamline focused testing

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 import { Form } from '@/components/ui/form';
@@ -54,6 +54,7 @@ const NewMenuItemPage = () => {
   const [imagePreview, setImagePreview] = useState('');
   const [categories, setCategories] = useState<MenuItemCategory[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const savingRef = useRef(false);
   const [isDescriptionGenerating, setIsDescriptionGenerating] = useState(false);
   const [isCategoriesLoading, setIsCategoriesLoading] = useState(true);
 
@@ -86,28 +87,6 @@ const NewMenuItemPage = () => {
       setImagePreview(reader.result as string);
     };
     reader.readAsDataURL(file);
-  };
-
-  const uploadImage = async (file: File): Promise<string> => {
-    const data = new FormData();
-    data.append('file', file);
-
-    const res = await fetch('/api/upload/menu-items', {
-      method: 'POST',
-      body: data,
-    });
-
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`Upload failed: ${res.status} - ${errorText}`);
-    }
-
-    const json = await res.json();
-    if (!json.url || typeof json.url !== 'string' || !json.url.startsWith('http')) {
-      console.error('Invalid upload response:', json);
-      throw new Error(`Invalid image URL returned from upload: ${JSON.stringify(json)}`);
-    }
-    return json.url;
   };
 
   const handleGenerateDescription = async () => {
@@ -154,6 +133,7 @@ const NewMenuItemPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (savingRef.current || isDescriptionGenerating) return;
 
     if (name.trim() === '' || categoryId.trim() === '') {
       sonnerToast.error('Name and category are required', {
@@ -183,6 +163,11 @@ const NewMenuItemPage = () => {
       return;
     }
 
+    if (!imageFile) {
+      sonnerToast.error('Choose an image before saving the menu item');
+      return;
+    }
+    savingRef.current = true;
     setIsSaving(true);
 
     try {
@@ -234,17 +219,6 @@ const NewMenuItemPage = () => {
         return;
       }
 
-      let imageUrl = '';
-      if (imageFile) {
-        const uploadPromise = uploadImage(imageFile);
-        sonnerToast.promise(uploadPromise, {
-          loading: 'Uploading image...',
-          success: 'Image uploaded!',
-          error: 'Image upload failed',
-        });
-        imageUrl = await uploadPromise;
-      }
-
       const menuItemData = {
         name,
         description,
@@ -258,16 +232,20 @@ const NewMenuItemPage = () => {
         stockQuantity: trackInventory ? Math.floor(stock) : null,
         lowStockThreshold: Math.floor(lowStock),
         isAvailable,
-        image: imageUrl || '',
       };
 
+      const body = new FormData();
+      body.append('data', JSON.stringify(menuItemData));
+      body.append('file', imageFile);
       const response = await fetch('/api/menu-items', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(menuItemData),
+        body,
       });
 
-      if (!response.ok) throw new Error('Failed to create menu item');
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || 'Failed to create menu item');
+      }
 
       sonnerToast.success('Menu item created!', {
         style: {
@@ -278,13 +256,14 @@ const NewMenuItemPage = () => {
       router.push('/admin-dashboard/menu-items');
     } catch (err) {
       console.error(err);
-      sonnerToast.error('Failed to create menu item', {
+      sonnerToast.error(err instanceof Error ? err.message : 'Failed to create menu item', {
         style: {
           background: '#ef4444',
           color: 'white',
         },
       });
     } finally {
+      savingRef.current = false;
       setIsSaving(false);
     }
   };

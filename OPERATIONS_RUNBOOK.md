@@ -173,6 +173,14 @@ Cloudinary stores user avatars, restaurant images, category images, and menu ite
 - Deleting users/restaurants/menu items should delete owned Cloudinary assets where the workflow is
   designed to clean them up.
 - The menu item cleanup script can detect orphaned Cloudinary menu item images.
+- Menu-item forms only preview selected images locally. Save/Update submits the file and item data
+  to `/api/menu-items` together; standalone `/api/upload/menu-items` returns 410 with reload guidance.
+- The server validates before upload, cleans replaced images after a successful save, and attempts
+  cleanup of failed-save uploads only after checking that no item references them. It only deletes
+  from the configured cloud and current environment's menu folder. Cleanup failures are logged.
+- A server termination or unavailable database/Cloudinary cleanup can still leave an orphan. Run
+  the audit only after reviewing its results and avoiding in-flight saves. There is no persistent
+  pending-upload registry. Never delete based only on a browser error: the save may have committed.
 
 Dry run first:
 

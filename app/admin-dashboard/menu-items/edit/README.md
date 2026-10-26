@@ -18,13 +18,13 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items/edit`, includi
 - Start from `page.tsx` for the route shell and data loading shape.
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
-- This folder talks to `/api/ai/menu-item-description`, `/api/categories`, `/api/menu-items`, `/api/menu-items?_id=${id}`, `/api/upload/menu-items`. Keep API response shapes aligned.
+- This folder talks to `/api/ai/menu-item-description`, `/api/categories`, `/api/menu-items`, `/api/menu-items?_id=${id}`. Keep API response shapes aligned.
 
 ## Important Files
 
 - `app/admin-dashboard/menu-items/edit/[id]/layout.tsx`: functions/components: `generateMetadata`, `AdminEditMenuItemLayout`
 - `app/admin-dashboard/menu-items/edit/[id]/loading.tsx`: functions/components: `Skeleton`, `EditMenuItemLoading`
-- `app/admin-dashboard/menu-items/edit/[id]/page.tsx`: functions/components: `EditMenuItemPage`, `id`, `handleImageSelect`, `uploadImage`, `handleGenerateDescription`, `handleSubmit`, `handlePriceTypeChange`; API calls: `/api/categories`, `/api/menu-items?_id=${id}`, `/api/upload/menu-items`, `/api/ai/menu-item-description`, `/api/menu-items`; client component; form validation
+- `app/admin-dashboard/menu-items/edit/[id]/page.tsx`: functions/components: `EditMenuItemPage`, `id`, `handleImageSelect`, `handleGenerateDescription`, `handleSubmit`, `handlePriceTypeChange`; API calls: `/api/categories`, `/api/menu-items?_id=${id}`, `/api/ai/menu-item-description`, `/api/menu-items`; client component; form validation
 
 ## API/Data Connections
 
@@ -32,7 +32,7 @@ This folder owns admin-facing UI for `/admin-dashboard/menu-items/edit`, includi
 - Calls `/api/categories`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/menu-items`; inspect the matching API README/source before changing its response shape.
 - Calls `/api/menu-items?_id=${id}`; inspect the matching API README/source before changing its response shape.
-- Calls `/api/upload/menu-items`; inspect the matching API README/source before changing its response shape.
+- Images are uploaded only with the complete Save/Update payload to `/api/menu-items`; the former standalone upload endpoint is retired.
 
 ## Packages And Services Used
 
