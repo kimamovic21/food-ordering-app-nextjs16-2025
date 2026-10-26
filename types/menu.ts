@@ -32,7 +32,13 @@ export type MenuItemListItem = {
   restaurantRatingCount?: number;
   createdAt?: string;
   updatedAt?: string;
+  editVersion?: number;
 };
+
+export type MenuItemEditBaseline = Pick<
+  MenuItemListItem,
+  'editVersion' | 'trackInventory' | 'stockQuantity' | 'reservedStockQuantity'
+>;
 
 export type MenuCategorySummary = {
   _id: EntityId;

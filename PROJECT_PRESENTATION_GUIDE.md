@@ -343,6 +343,19 @@ Menu items:
 - Price type controls whether the item uses one, two, or three size prices.
 - Max quantity per order prevents a single item, such as pizza or burgers, from being ordered in unrealistic bulk from normal checkout.
 - Admins can create/edit items and upload images to Cloudinary.
+- Optional inventory tracking distinguishes physical, reserved and available stock. Ordinary content
+  edits never restore stock sold since the form opened. Explicit stock adjustments compare the
+  previous quantity and cannot reduce it below reservations; disabling tracking also requires no
+  reservations. Existing items stay untracked unless the owner opts in.
+- Each admin edit or availability toggle advances an edit version. Two tabs cannot silently
+  overwrite one another. A conflict leaves the form draft intact, with an explicit confirmation
+  before loading the current item. For example, ten units loaded minus three units sold still
+  leaves seven after saving a description, not ten.
+- Choosing an image only displays a local preview. Save/Update submits the file with the full item
+  payload in one request. The server validates first, uploads, then saves. After successful replacement
+  it cleans the old image; a rejected edit keeps the original and cleans its unused new upload.
+  Refreshing before Save never uploads anything. Cleanup checks environment folders and references;
+  infrastructure failures may still require the orphan audit. Details: `app/api/menu-items/README.md`.
 - Admins can use the AI assistant to generate a polished menu item description.
 - Admins can mark menu items unavailable without deleting them.
 - Public pages block ordering unavailable menu items.

@@ -150,6 +150,9 @@ Key rules:
 - Menu item deletion and restaurant deletion must respect active-order guards.
 - Inventory tracking is optional; untracked existing items should keep working.
 - Admin inventory UI should show reserved stock clearly when unpaid checkout sessions hold items.
+- Admin edits use `libs/menuItemEdit.ts`: expected edit version, intentional stock changes only,
+  and atomic reservation guards. Read `app/admin-dashboard/menu-items/edit/[id]/README.md`
+  and `app/api/upload/menu-items/README.md` before changing form saves or submit-only image uploads.
 - Operations screens should summarize active stages, capacity, courier availability, today revenue,
   unpaid/canceled counts, and attention items without exposing customer-only details.
 
@@ -157,6 +160,7 @@ Focused tests:
 
 ```bash
 npm run test:file -- __tests__/api/menu-items.route.test.ts __tests__/api/restaurant.route.test.ts __tests__/api/restaurant-operations.route.test.ts __tests__/api/order-queue.route.test.ts __tests__/libs/restaurantOperations.test.ts __tests__/libs/menuItemInventory.test.ts __tests__/libs/orderQuantityLimits.test.ts
+npm run test:menu-items
 ```
 
 If a listed test does not exist yet, use the closest existing route/helper test and add the missing

@@ -7,10 +7,21 @@ import { isAdmin } from '@/libs/authGuards';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
 import mongoose, { PipelineStage } from 'mongoose';
-import cloudinary from '@/libs/cloudinary';
+import {
+  cleanupUnusedMenuItemImage,
+  MenuItemSaveInputError,
+  readMenuItemSaveRequest,
+  uploadMenuItemImage,
+} from '@/libs/menuItemImage';
 import { buildMenuItemInventoryFields } from '@/libs/menuItemInventory';
 import { findBlockingMenuItemOrder } from '@/libs/orderDeletionGuards';
 import { normalizeMenuItemQuantityLimit } from '@/libs/orderQuantityLimits';
+import {
+  buildMenuItemInventoryEdit,
+  menuItemEditVersionFilter,
+  menuItemEditVersionSchema,
+  menuItemInventoryEditSchema,
+} from '@/libs/menuItemEdit';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -83,7 +94,19 @@ const buildSort = (sortBy: string): Record<string, 1 | -1> => {
   }
 };
 
+const editConflict = () =>
+  Response.json(
+    {
+      code: 'MENU_ITEM_EDIT_CONFLICT',
+      error:
+        'This item or its stock changed, or stock is reserved by a checkout. Your changes were not saved. Review the latest values before trying again.',
+    },
+    { status: 409 }
+  );
+
 export async function POST(req: Request) {
+  let uploadedUrl: string | undefined;
+  let saved = false;
   try {
     await mongoose.connect(process.env.MONGODB_URL as string);
 
@@ -110,7 +133,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const data = await req.json();
+    const { data, file } = await readMenuItemSaveRequest(req);
 
     const priceType = resolvePriceType(data);
 
@@ -135,7 +158,7 @@ export async function POST(req: Request) {
     const menuItemData = {
       name: data.name,
       description: data.description,
-      image: data.image || '',
+      image: file ? 'pending-image' : data.image || '',
       category: data.category,
       priceType,
       priceSmall: data.priceSmall ? Number(data.priceSmall) : null,
@@ -150,10 +173,23 @@ export async function POST(req: Request) {
       restaurantId: currentUser.restaurantId,
     };
 
+    await MenuItem.validate(menuItemData);
+    if (file) {
+      uploadedUrl = (await uploadMenuItemImage(file)).secure_url;
+      menuItemData.image = uploadedUrl;
+    }
     const menuItemDoc = await MenuItem.create(menuItemData);
+    saved = true;
 
     return Response.json(menuItemDoc);
   } catch (error) {
+    if (uploadedUrl && !saved) await cleanupUnusedMenuItemImage(uploadedUrl);
+    if (
+      error instanceof MenuItemSaveInputError ||
+      (error instanceof Error && error.name === 'ValidationError')
+    ) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
     console.error('Error creating menu item:', error);
     return Response.json({ error: 'Failed to create menu item', details: error }, { status: 500 });
   }
@@ -322,6 +358,8 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
+  let uploadedUrl: string | undefined;
+  let saved = false;
   try {
     await mongoose.connect(process.env.MONGODB_URL as string);
 
@@ -340,7 +378,12 @@ export async function PUT(req: Request) {
       return Response.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { _id, ...data } = await req.json();
+    const { data: payload, file } = await readMenuItemSaveRequest(req);
+    const { _id, ...data } = payload;
+
+    if (typeof _id !== 'string' || !mongoose.Types.ObjectId.isValid(_id)) {
+      return Response.json({ error: 'Invalid menu item ID' }, { status: 400 });
+    }
 
     // Check if the menu item belongs to the current user
     const existingItem = await MenuItem.findById(_id);
@@ -375,10 +418,24 @@ export async function PUT(req: Request) {
       }
     }
 
+    const parsedEdit = menuItemInventoryEditSchema.safeParse(data);
+    if (!parsedEdit.success) {
+      return Response.json(
+        {
+          error: 'Invalid inventory values or missing edit version. Reload the item before saving.',
+        },
+        { status: 400 }
+      );
+    }
+    const inventoryEdit = buildMenuItemInventoryEdit(existingItem, parsedEdit.data);
+    if (inventoryEdit.error) {
+      return Response.json({ error: inventoryEdit.error }, { status: 400 });
+    }
+
     const updateData = {
       name: data.name,
       description: data.description,
-      image: data.image || '',
+      image: file ? 'pending-image' : (data.image ?? existingItem.image),
       category: data.category,
       priceType,
       priceSmall: data.priceSmall ? Number(data.priceSmall) : null,
@@ -387,14 +444,41 @@ export async function PUT(req: Request) {
       priceLarge:
         priceType === 'triple' ? (data.priceLarge ? Number(data.priceLarge) : null) : null,
       maxQuantityPerOrder: normalizeMenuItemQuantityLimit(data.maxQuantityPerOrder),
-      ...buildMenuItemInventoryFields(data),
+      ...inventoryEdit.fields,
       isAvailable: data.isAvailable !== false,
     };
 
-    const updated = await MenuItem.findByIdAndUpdate(_id, updateData, { new: true });
+    await MenuItem.validate(updateData, Object.keys(updateData));
+    const filter = { _id, adminId: currentUser._id, ...inventoryEdit.filter };
+    if (file) {
+      // Avoid uploading an already stale draft; the final write still checks atomically.
+      if (!(await MenuItem.exists(filter))) return editConflict();
+      uploadedUrl = (await uploadMenuItemImage(file)).secure_url;
+      updateData.image = uploadedUrl;
+    }
+    const updated = await MenuItem.findOneAndUpdate(
+      filter,
+      { $set: updateData, $inc: { editVersion: 1 } },
+      { returnDocument: 'after', runValidators: true }
+    );
+    if (!updated) {
+      if (uploadedUrl) await cleanupUnusedMenuItemImage(uploadedUrl);
+      return editConflict();
+    }
+    saved = true;
+    if (existingItem.image && existingItem.image !== updated.image) {
+      await cleanupUnusedMenuItemImage(existingItem.image);
+    }
 
     return Response.json(updated);
   } catch (error) {
+    if (uploadedUrl && !saved) await cleanupUnusedMenuItemImage(uploadedUrl);
+    if (
+      error instanceof MenuItemSaveInputError ||
+      (error instanceof Error && error.name === 'ValidationError')
+    ) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
     console.error('Error updating menu item:', error);
     return Response.json({ error: 'Failed to update menu item', details: error }, { status: 500 });
   }
@@ -418,7 +502,7 @@ export async function PATCH(req: Request) {
       return Response.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const { _id, isAvailable } = await req.json();
+    const { _id, isAvailable, expectedEditVersion } = await req.json();
 
     if (!_id || !mongoose.Types.ObjectId.isValid(_id)) {
       return Response.json({ error: 'Invalid menu item ID' }, { status: 400 });
@@ -440,7 +524,18 @@ export async function PATCH(req: Request) {
       );
     }
 
-    const updated = await MenuItem.findByIdAndUpdate(_id, { isAvailable }, { new: true });
+    if (!menuItemEditVersionSchema.safeParse(expectedEditVersion).success) {
+      return Response.json(
+        { error: 'Reload the item before changing availability.' },
+        { status: 400 }
+      );
+    }
+    const updated = await MenuItem.findOneAndUpdate(
+      { _id, adminId: currentUser._id, ...menuItemEditVersionFilter(expectedEditVersion) },
+      { $set: { isAvailable }, $inc: { editVersion: 1 } },
+      { returnDocument: 'after', runValidators: true }
+    );
+    if (!updated) return editConflict();
 
     return Response.json(updated);
   } catch (error) {
@@ -501,20 +596,8 @@ export async function DELETE(req: Request) {
       );
     }
 
-    if (menuItem && menuItem.image) {
-      const matches = menuItem.image.match(/menu-items\/([^\.]+)/);
-      const publicId = matches ? `menu-items/${matches[1]}` : null;
-
-      if (publicId) {
-        try {
-          await cloudinary.uploader.destroy(publicId);
-        } catch (error) {
-          console.error('Error deleting image from Cloudinary:', error);
-        }
-      }
-    }
-
     await MenuItem.deleteOne({ _id });
+    await cleanupUnusedMenuItemImage(menuItem.image);
   }
 
   return Response.json(true);

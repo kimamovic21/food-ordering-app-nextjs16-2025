@@ -64,6 +64,7 @@ Use this section when someone asks what the project is built with and which exte
 - `vitest.config.ts`: Main Vitest unit/integration test configuration. It sets aliases, setup files, and the test environment.
 - `vitest.e2e.config.ts`: E2E-style Vitest configuration for route/workflow tests that need separate behavior.
 - `TESTING.md`: Human-facing testing guide. Update it when adding new scripts, test groups, or test workflow expectations.
+- Prefer focused npm scripts while iterating, such as `npm run test:menu-items`. `npm run test` intentionally remains the full unit/component/integration suite; see `TESTING.md` for when to broaden coverage.
 - `FEATURE_WORKFLOW_INDEX.md`: Feature-area routing map for future implementation work. Update it when a major workflow moves files, gets new tests, changes ownership, or gains a new high-risk edge case.
 - `OPERATIONS_RUNBOOK.md`: Production/deployment troubleshooting guide. Update it when env ownership, Stripe/QStash/Cloudinary/Resend/Sentry behavior, background jobs, checkout maintenance, or incident response changes.
 

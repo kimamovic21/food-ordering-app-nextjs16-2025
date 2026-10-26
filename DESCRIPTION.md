@@ -189,6 +189,10 @@ Availability logic:
 - Public add-to-cart actions prefetch visible restaurant ordering status where possible and check it before changing the cart.
 - Checkout validates availability again on the server.
 - Admins can set a per-menu-item order quantity cap from 1 to 20, and the cart/checkouts add all sizes of the same item together before enforcing that cap.
+- Menu-item edits protect concurrent sales: saving text or an image does not reset unchanged stock.
+  Intentional stock adjustments cannot go below reservations, and tracking cannot be disabled
+  while units remain reserved. Stale admin edits receive a clear conflict and keep the draft until
+  the owner confirms loading the latest item. Existing untracked items require no migration.
 
 Busy restaurant logic:
 

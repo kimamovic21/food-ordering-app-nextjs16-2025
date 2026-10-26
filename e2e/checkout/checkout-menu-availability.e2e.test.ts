@@ -125,6 +125,7 @@ describe('E2E: Checkout stale menu availability', () => {
         body: JSON.stringify({
           _id: menuItem._id.toString(),
           isAvailable: false,
+          expectedEditVersion: menuItem.editVersion ?? 0,
         }),
       })
     );
@@ -132,6 +133,28 @@ describe('E2E: Checkout stale menu availability', () => {
 
     const unavailableItem = await MenuItem.findById(menuItem._id).lean();
     expect(unavailableItem?.isAvailable).toBe(false);
+
+    // An older edit tab must not undo the availability change before the customer checks out.
+    const { PUT: EditMenuItem } = await import('@/app/api/menu-items/route');
+    const staleEditResp = await EditMenuItem(
+      new Request('http://localhost/api/menu-items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          _id: menuItem._id.toString(),
+          expectedEditVersion: 0,
+          name: menuItem.name,
+          description: menuItem.description,
+          image: menuItem.image,
+          category: category._id.toString(),
+          priceType: 'single',
+          priceSmall: 12,
+          isAvailable: true,
+        }),
+      })
+    );
+    expect(staleEditResp.status).toBe(409);
+    expect((await MenuItem.findById(menuItem._id).lean())?.isAvailable).toBe(false);
 
     activeSession = { user: { email: customer.email, role: 'user' } };
     const { POST: Checkout } = await import('@/app/api/checkout/route');
