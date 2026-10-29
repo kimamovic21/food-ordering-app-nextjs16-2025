@@ -29,6 +29,9 @@ They can:
 - Quickly order again from restaurant details or favorite restaurant cards based on the latest previous order from that restaurant.
 - Use the header quick-access link to finish payment, track an active order, or notice a delayed active order.
 - Track order progress and live courier location when delivery starts.
+- See courier location freshness and last update time, with a clear last-known-location state
+  during connection problems. Tracking is limited to the customer's active order and ends at
+  delivery handoff/cancellation; historical orders do not expose the courier's later movements.
 - See a visual order progress stepper for placed, kitchen, transport, and delivered stages.
 - See a delay warning when an active order runs past its estimated total time plus the grace window.
 - See delivery PIN on active delivery orders.

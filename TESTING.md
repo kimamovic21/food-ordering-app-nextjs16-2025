@@ -91,6 +91,13 @@ the tests introduced by one feature. Keep the full suite; do not delete tests or
   user's session budget. Explain any proposed wider coverage. Focused e2e tests use a dedicated test database.
 - Report the command and actual result. A passing focused run does not mean the entire app was tested.
 
+Courier tracking changes use `npm run test:courier-tracking -- --reporter=dot`. It selects four
+files covering order/customer/restaurant authorization, terminal and stale assignments, coordinate
+validation/freshness, cancellable queries, session changes, retry states, and map rendering.
+These tests mock the database and external map services; they do not change real orders or locations.
+Assignment writes, PIN handoff, work sessions and availability were not changed by this read-side
+workflow; include their own focused tests if those behaviors are modified later.
+
 Support-ticket privacy changes should be checked at the JSON boundary, not only in the UI. Run
 `npm run test:file -- __tests__/api/support-tickets.route.test.ts` for role-based field filtering,
 admin-as-customer creation, personal scope for all roles, cache headers, and authorization tests. Run `npm run test:e2e:support`
@@ -108,6 +115,7 @@ app-support reports tied to the reporter's own restaurant, and historical reads 
 - `npm run test:libs`: run library/helper tests
 - `npm run test:models`: run model tests
 - `npm run test:menu-items`: run focused menu item API, form, availability, image-save, model, and inventory tests
+- `npm run test:courier-tracking`: run only the courier-location API, freshness helper, query hook, and map tests
 - `npm run test:editor-types`: validate the editor-only test TypeScript project used for Vitest globals and `@/` path aliases in `__tests__`
 - `npm run test:profile`: run only profile-focused unit tests
 - `npm run test:payment`: run only payment & webhook unit tests, including Stripe Checkout session expiration

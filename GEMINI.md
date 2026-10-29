@@ -68,6 +68,7 @@ This file provides project context and coding guidance for Gemini tools.
 - Restaurant reports live at `/admin-dashboard/restaurant-reports` and generate daily, weekly, and monthly summaries/PDFs from order data.
 - Restaurant operations overview lives at `/admin-dashboard/operations` and uses `/api/restaurant/operations` for active stage counts, kitchen capacity, restaurant status, courier availability, today revenue, unpaid/canceled counts, quick actions, and urgent order attention items.
 - Preserve delivery double confirmation: courier PIN handoff first, then customer or restaurant admin completion.
+- Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
 - Keep support tickets role-scoped between restaurant support and app support.
 - Keep ETA-style notifications and late active-order alerts aligned with order timeline state; failed-delivery review notifications should route restaurant admins to `/admin-dashboard/orders/[id]`.
 - Keep QStash delayed job handlers server-only, signature-verified, idempotent, and fail-open around user-facing checkout/order status flows.
@@ -104,7 +105,7 @@ This file provides project context and coding guidance for Gemini tools.
 - Order-flow coverage includes checkout, coupons, restaurant availability helpers, notification copy, courier delivery summaries, and high-risk lifecycle transitions.
 - Use `__tests__/utils/testFactories.ts` for generated fixtures, and `__tests__/utils/mongoMemoryServer.ts` for isolated Mongo integration tests when needed.
 - Run npm run lint after changes.
-- Run npm run test after test-related changes.
+- Run the changed test files or the matching focused feature command after test-related changes; full-suite runs require explicit user approval.
 - For API changes, note any new env vars in example.env.
 - For feature additions, also update README.md and AGENTS.md.
 

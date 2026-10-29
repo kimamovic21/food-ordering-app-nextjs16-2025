@@ -223,15 +223,22 @@ Read first:
 - `app/courier-dashboard/README.md`
 - `app/courier-dashboard/my-delivery/README.md`
 - `app/courier-dashboard/my-deliveries/README.md`
-- `app/api/my-delivery/courier/README.md`
+- `app/api/my-delivery/README.md`
+- `app/api/orders/courier-location/README.md`
 - `app/api/my-deliveries/README.md`
 
 Main source files:
 
-- `app/api/my-delivery/courier/route.ts`
+- `app/api/my-delivery/route.ts`
+- `app/api/my-delivery/orders/route.ts`
+- `app/api/my-delivery/availability/route.ts`
 - `app/api/my-deliveries/route.ts`
-- `app/api/courier-assignment/route.ts`
-- `app/api/courier-location/route.ts`
+- `app/api/couriers/route.ts`
+- `app/api/my-delivery/location/route.ts`
+- `app/api/orders/courier-location/route.ts`
+- `components/shared/OrderMap.tsx`
+- `hooks/useCourierTracking.ts`
+- `libs/courierTracking.ts`
 - `libs/courierSchedule.ts`
 - `libs/courierWorkSessions.ts`
 - `libs/courierReadiness.ts`
@@ -246,6 +253,10 @@ Key rules:
   order state, stale session cleanup, and timezone-aware reporting.
 - Assignment timeout jobs should be idempotent.
 - Courier location updates must remain role-checked and should not be accepted for unrelated users.
+- Order tracking is private to its customer, matching restaurant admin, or super admin, and ends
+  at handoff/cancellation. Require a current accepted assignment and matching courier `takenOrder`.
+- Never label old coordinates live; preserve last-known points only for transient failures,
+  clear them for access denial/terminal responses, and isolate query cache by viewer and order.
 - Delivery is double-confirmed: courier PIN handoff first, then customer/admin completion.
 
 Focused tests:
@@ -253,6 +264,9 @@ Focused tests:
 ```bash
 npm run test:file -- __tests__/api/my-delivery-courier.route.test.ts __tests__/api/my-deliveries.route.test.ts __tests__/api/courier-assignment.route.test.ts __tests__/api/courier-location.route.test.ts __tests__/libs/courierSchedule.test.ts __tests__/libs/courierWorkSessions.test.ts __tests__/libs/courierReadiness.test.ts __tests__/libs/courier-assignment-timeout.test.ts __tests__/libs/courier-assignment-history.test.ts
 ```
+
+For location-read/privacy/map-only changes, use the smaller `npm run test:courier-tracking`
+instead of the entire courier set above. Add assignment/work-session tests only when they are affected.
 
 ## Auth, Profile, Saved Addresses, And User Management
 

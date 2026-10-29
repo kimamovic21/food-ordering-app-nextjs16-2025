@@ -1,7 +1,11 @@
 'use client';
 
-import { useCallback, useEffect, useState, forwardRef, useImperativeHandle, useRef } from 'react';
+import { useEffect, useState, forwardRef, useImperativeHandle, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useCourierTracking } from '@/hooks/useCourierTracking';
+import { formatAppDateTime } from '@/libs/dateFormat';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
@@ -15,7 +19,7 @@ type OrderMapProps = {
   customerEmail?: string;
   className?: string;
   heightClassName?: string;
-  orderId?: string; // Optional order ID for admin view
+  orderId?: string; // Customer/admin tracking; omitted for the courier's own location
   shouldFetchCourier?: boolean; // Set to false to only show restaurant/location without fetching courier
   enableCourierPolling?: boolean;
 };
@@ -98,64 +102,23 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
     ref
   ) => {
     const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
-    const [courierLocation, setCourierLocation] = useState<[number, number] | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [courierLoading, setCourierLoading] = useState(false);
-    const isMountedRef = useRef(true);
-
-    // Fetch courier location every 60 seconds
-    const fetchCourierLocation = useCallback(async () => {
-      if (!isMountedRef.current) return;
-
-      try {
-        setCourierLoading(true);
-
-        // Use different endpoint based on whether orderId is provided (admin view) or not (courier view)
-        const endpoint = orderId
-          ? `/api/orders/courier-location?orderId=${orderId}`
-          : '/api/my-delivery/location';
-
-        const res = await fetch(endpoint);
-        if (res.ok) {
-          const data = await res.json();
-          const { latitude, longitude } = data.location || {};
-
-          // Validate that we have valid numeric coordinates
-          if (
-            typeof latitude === 'number' &&
-            typeof longitude === 'number' &&
-            !isNaN(latitude) &&
-            !isNaN(longitude)
-          ) {
-            if (isMountedRef.current) {
-              setCourierLocation([latitude, longitude]);
-            }
-          } else {
-            console.warn('Invalid courier location data:', data.location);
-            if (isMountedRef.current) {
-              setCourierLocation(null);
-            }
-          }
-        } else {
-          console.error('Failed to fetch courier location:', res.status);
-        }
-      } catch (err) {
-        console.error('Failed to fetch courier location:', err);
-      } finally {
-        if (isMountedRef.current) {
-          setCourierLoading(false);
-        }
-      }
-    }, [orderId]);
+    const tracking = useCourierTracking(orderId, shouldFetchCourier, enableCourierPolling);
+    const latitude = tracking.location?.latitude;
+    const longitude = tracking.location?.longitude;
+    const courierLocation = useMemo<[number, number] | null>(
+      () => (latitude !== undefined && longitude !== undefined ? [latitude, longitude] : null),
+      [latitude, longitude]
+    );
 
     // Expose refetch method to parent component
     useImperativeHandle(ref, () => ({
-      refetchCourierLocation: fetchCourierLocation,
+      refetchCourierLocation: tracking.refresh,
     }));
 
     useEffect(() => {
-      isMountedRef.current = true;
+      let active = true;
 
       const geocodeAddress = async () => {
         try {
@@ -163,7 +126,7 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
           // Only geocode if we have all required address components
           if (!address || !city || !postalCode || !country) {
-            if (isMountedRef.current) {
+            if (active) {
               setCoordinates(null);
               setError(null);
             }
@@ -187,7 +150,7 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
           if (data && data.length > 0) {
             const { lat, lon } = data[0];
-            if (isMountedRef.current) {
+            if (active) {
               setCoordinates([parseFloat(lat), parseFloat(lon)]);
               setError(null);
             }
@@ -202,23 +165,23 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
             if (cityData && cityData.length > 0) {
               const { lat, lon } = cityData[0];
-              if (isMountedRef.current) {
+              if (active) {
                 setCoordinates([parseFloat(lat), parseFloat(lon)]);
                 setError('Showing approximate location (city center)');
               }
             } else {
-              if (isMountedRef.current) {
+              if (active) {
                 setError('Unable to locate address on map');
               }
             }
           }
         } catch (err) {
           console.error('Geocoding error:', err);
-          if (isMountedRef.current) {
+          if (active) {
             setError('Failed to load map location');
           }
         } finally {
-          if (isMountedRef.current) {
+          if (active) {
             setLoading(false);
           }
         }
@@ -226,39 +189,50 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
       geocodeAddress();
 
-      // Only fetch courier location if enabled
-      if (shouldFetchCourier) {
-        // Fetch immediately on mount
-        fetchCourierLocation();
-
-        if (!enableCourierPolling) {
-          return () => {
-            isMountedRef.current = false;
-          };
-        }
-
-        // Set interval for polling every 60 seconds
-        const interval = setInterval(fetchCourierLocation, 60000);
-
-        return () => {
-          isMountedRef.current = false;
-          clearInterval(interval);
-        };
-      }
-
       return () => {
-        isMountedRef.current = false;
+        active = false;
       };
-    }, [
-      address,
-      city,
-      postalCode,
-      country,
-      orderId,
-      fetchCourierLocation,
-      shouldFetchCourier,
-      enableCourierPolling,
-    ]);
+    }, [address, city, postalCode, country]);
+
+    const trackingStatus = shouldFetchCourier && (
+      <div className='flex shrink-0 items-center gap-3 bg-background px-3 py-2'>
+        <div className='min-w-0 flex-1 text-xs' role='status' aria-live='polite'>
+          <p
+            className={
+              tracking.isError || tracking.freshness === 'stale'
+                ? 'text-amber-700 dark:text-amber-400'
+                : courierLocation && tracking.freshness === 'fresh'
+                  ? 'text-emerald-700 dark:text-emerald-400'
+                  : 'text-muted-foreground'
+            }
+          >
+            {tracking.message}
+          </p>
+          {tracking.location?.lastLocationUpdate && (
+            <p className='mt-1 text-muted-foreground'>
+              Last updated {formatAppDateTime(tracking.location.lastLocationUpdate)}
+            </p>
+          )}
+        </div>
+        {tracking.canRefresh && (
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon'
+            className='size-8 shrink-0'
+            aria-label='Refresh courier location'
+            title='Refresh courier location'
+            disabled={tracking.isFetching}
+            onClick={() => void tracking.refresh()}
+          >
+            <RefreshCw
+              aria-hidden='true'
+              className={`size-4 ${tracking.isFetching ? 'animate-spin motion-reduce:animate-none' : ''}`}
+            />
+          </Button>
+        )}
+      </div>
+    );
 
     if (loading && address && city && postalCode && country) {
       return (
@@ -270,7 +244,7 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
       );
     }
 
-    if (error && !coordinates) {
+    if (error && !coordinates && !courierLocation) {
       return (
         <div
           className={`flex items-center justify-center rounded-lg border bg-slate-50 p-4 dark:bg-slate-900 ${heightClassName} ${className}`}
@@ -287,13 +261,17 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
       );
     }
 
-    // If no coordinates and no courier location, show loading
+    // Waiting, terminal and denied states must not pretend to be a live map.
     if (!coordinates && !courierLocation) {
       return (
         <div
-          className={`flex items-center justify-center rounded-lg border bg-slate-50 p-4 dark:bg-slate-900 ${heightClassName} ${className}`}
+          className={`flex items-center justify-center rounded-lg border bg-background p-4 ${heightClassName} ${className}`}
         >
-          <p className='text-muted-foreground'>Waiting for location...</p>
+          {shouldFetchCourier ? (
+            trackingStatus
+          ) : (
+            <p className='text-muted-foreground'>Waiting for location...</p>
+          )}
         </div>
       );
     }
@@ -323,12 +301,18 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
     return (
       <div
-        className={`relative z-0 overflow-hidden rounded-lg border bg-background ${heightClassName} ${className}`}
+        className={`relative z-0 flex flex-col overflow-hidden rounded-lg border bg-background ${heightClassName} ${className}`}
       >
+        {trackingStatus}
+        {error && (
+          <p className='shrink-0 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-200'>
+            {error}
+          </p>
+        )}
         <MapContainer
           center={mapCenter}
           zoom={mapZoom}
-          className='relative z-0 h-full w-full'
+          className='relative z-0 min-h-0 w-full flex-1'
           scrollWheelZoom={false}
         >
           <TileLayer
@@ -356,13 +340,15 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
 
           {/* Courier Location Marker (Red) */}
           {courierLocation && courierLocation.length === 2 && (
-            <Marker position={courierLocation} icon={courierIcon}>
+            <Marker
+              position={courierLocation}
+              icon={courierIcon}
+              opacity={tracking.freshness === 'fresh' && !tracking.isError ? 1 : 0.6}
+            >
               <Popup>
                 <div className='text-sm'>
                   <p className='font-semibold mb-1 text-red-600'>Courier Location</p>
-                  <p className='text-xs text-gray-600'>
-                    {courierLoading ? 'Updating...' : 'Live Position'}
-                  </p>
+                  <p className='text-xs text-gray-600'>{tracking.message}</p>
                   <p className='text-xs'>
                     Lat: {courierLocation[0]?.toFixed(4) ?? 'N/A'}, Lon:{' '}
                     {courierLocation[1]?.toFixed(4) ?? 'N/A'}
@@ -396,11 +382,6 @@ const OrderMap = forwardRef<OrderMapHandle, OrderMapProps>(
             </Marker>
           )}
         </MapContainer>
-        {error && (
-          <div className='absolute inset-x-0 bottom-0 z-[500] border-t border-amber-200 bg-amber-50/95 px-3 py-2 backdrop-blur-sm'>
-            <p className='text-xs text-amber-800'>{error}</p>
-          </div>
-        )}
       </div>
     );
   }

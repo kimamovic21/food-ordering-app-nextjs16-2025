@@ -82,6 +82,7 @@ This folder contains unit tests grouped by feature area.
 - Run a single test file: `npm run test:file -- __tests__/api/register.route.test.ts`
 - Run profile unit tests: `npm run test:profile`
 - Run menu item edit/form/image-save/availability/inventory tests: `npm run test:menu-items`
+- Run courier tracking privacy/freshness/query/map tests: `npm run test:courier-tracking`
 - Run payment/webhook-focused unit tests: `npm run test:payment`
 - Run realtime/SSE tests: `npm run test:realtime`
 - Run stale order recovery tests: `npm run test:file -- __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts`
@@ -97,6 +98,12 @@ selects eleven files rather than the whole app. It includes mocked image-service
 database tests; it does not manipulate real Cloudinary assets. Add checkout/webhook/cart tests when
 those contracts change. Agents must obtain the user's explicit request or approval before running
 the full unit or e2e suite, including pre-merge verification; use focused tests and concise output by default.
+
+Courier tracking has four focused files: `api/courier-location.route.test.ts`,
+`libs/courierTracking.test.ts`, `hooks/useCourierTracking.test.tsx`, and
+`components/OrderMap.test.tsx`. They cover authorization before location reads, terminal/reassigned
+orders, old readings, cache identity, canceled requests, connectivity failures and accessible map
+states. The hook tests use fake clocks; map tests mock Leaflet, so a browser smoke check remains useful.
 
 ## Editor TypeScript Support
 

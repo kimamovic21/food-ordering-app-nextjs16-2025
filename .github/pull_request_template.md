@@ -4,11 +4,14 @@
 
 ## Validation
 
-- [ ] `npm run lint`
-- [ ] `npm run test`
-- [ ] `npm run test:e2e`
-- [ ] `npm run build`
+- [ ] Focused lint and relevant TypeScript checks (list commands/results below)
+- [ ] Relevant feature/unit tests (list command and passed/failed counts below)
+- [ ] Relevant e2e tests, or reason they are not needed for this change
+- [ ] Build check, or reason it was not run
 - [ ] Not applicable / explained below
+
+Full unit/e2e runs are not automatic requirements for agents. Obtain explicit user approval
+before running them; report the actual validation scope without implying the full app was tested.
 
 ## Documentation
 

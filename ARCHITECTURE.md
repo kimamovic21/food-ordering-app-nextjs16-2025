@@ -360,6 +360,20 @@ If the customer is unavailable after at least 30 minutes in transport, the couri
 
 Courier delivery views show estimated travel time without tracking total route mileage. Completed delivery history can summarize completed deliveries, accepted assignments, declined assignments, missed assignments, response rate, average response time, average delivery minutes, late deliveries, ratings, and earnings.
 
+### Tracking Privacy And Freshness
+
+`/api/orders/courier-location` authorizes the order customer (ID, with legacy email fallback),
+matching restaurant admin, or configured super admin before reading courier data. An accepted
+ready/transportation assignment must still match the courier's `takenOrder`; legacy transportation
+orders without assignment status remain supported. Handoff, completion and cancellation end tracking,
+even though the order retains its courier reference for historical reports. Responses are private/no-store.
+
+`OrderMap` uses `useCourierTracking` with viewer/order-scoped, cancellable TanStack Query requests,
+60-second foreground polling and zero inactive cache retention. Location freshness expires after two
+minutes. Network failures preserve a labeled last-known point; denied/ended responses clear it.
+Geocoding and tracking refresh are independent, so fetching does not remount the map. The own-courier
+location endpoint, assignment writes, development simulator and static restaurant map behavior remain separate.
+
 ## Support Ticket Flow
 
 Customers and couriers can report a problem from the order or delivery UI. Admins manage tickets in `/admin-dashboard/support-tickets`.

@@ -183,6 +183,7 @@ See `example.env`. Variables currently used in the project include:
 - Keep Stripe webhook handling idempotent.
 - Do not expose server secrets in client bundles.
 - Preserve courier location validation and role checks.
+- Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
 
 ## Quality Checklist
 
