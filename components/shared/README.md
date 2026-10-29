@@ -12,6 +12,25 @@ Cross-feature components used throughout public, customer, admin, courier, and m
 - Prefer preserving existing prop names and accessibility behavior unless a task explicitly changes the contract.
 - If a component is used in checkout, auth, messaging, order, or admin flows, run focused tests for the affected workflow.
 
+## Order Map Tracking
+
+`OrderMap.tsx` is shared by customer/admin order details and courier delivery screens. It uses
+`hooks/useCourierTracking.ts` with TanStack Query, not a second manual polling loop. Supply
+`orderId` for customer/admin tracking; omit it only for the courier's own location endpoint.
+`shouldFetchCourier={false}` preserves static restaurant maps without tracking requests or controls.
+
+- The status band shows recent/stale/unknown readings, last update time, waiting/ended/access states,
+  and an accessible icon-only refresh button. The freshness threshold is two minutes.
+- Transient network/server failures preserve the existing map with a labeled last-known pin;
+  denied/ended/null-location responses remove the courier pin. An old point is never labeled live.
+- Query keys include the viewer and order, requests consume an AbortSignal, and inactive location
+  queries have zero retention. Order/account changes must not reuse previous coordinates.
+- Geocoding has its own effect. Background refresh must not geocode again, replace the map with a
+  skeleton, or recenter it when coordinates are unchanged. Status text is outside map overlays.
+- `refetchCourierLocation()` remains available to the existing development simulator.
+- See `app/api/orders/courier-location/README.md` for the server-authoritative privacy rules.
+  Run `npm run test:courier-tracking` for this workflow, not the entire test suite.
+
 ## Components And Responsibilities
 
 - `components/shared/ActiveOrderQuickAccess.tsx`: exports `fetchActiveOrder`, `ActiveOrderQuickAccess`; client-side behavior; calls `/api/my-orders/active`; key imports `@/libs/orderDelay`, `@/libs/queryKeys`, `@/libs/utils`, `@/types/order`
@@ -33,7 +52,7 @@ Cross-feature components used throughout public, customer, admin, courier, and m
 - `components/shared/OrderDelayNotice.tsx`: exports `OrderDelayNotice`; client-side behavior; key imports `@/components/ui/card`, `@/libs/orderDelay`, `@/types/order`
 - `components/shared/OrderElapsedTime.tsx`: client-side behavior; key imports `@/libs/useOrderElapsedTime`
 - `components/shared/OrderItemsDataTable.tsx`: exports `alignNumericColumns`, `OrderItemsDataTable`; client-side behavior; shows read-only order item rows and optional item notes under product names; key imports `@/components/shared/TanStackDataTable`, `@/types/cart`
-- `components/shared/OrderMap.tsx`: exports `MapUpdater`, `createCustomIcon`, `geocodeAddress`; client-side behavior
+- `components/shared/OrderMap.tsx`: default `OrderMap` component and `OrderMapHandle` ref type; private courier tracking, freshness/status UI, and static delivery/restaurant location maps.
 - `components/shared/OrderPhaseTimeline.tsx`: exports `formatDuration`, `formatEstimate`, `getCurrentCheckpointIndex`, `OrderPhaseTimeline`; client-side behavior; key imports `@/components/ui/badge`, `@/components/ui/card`, `@/libs/devOrderTimeSimulator`, `@/libs/useOrderElapsedTime`, `@/libs/utils`, `@/types/order-timeline`
 - `components/shared/OrderProgressStepper.tsx`: exports `getCurrentStepIndex`, `OrderProgressStepper`; key imports `@/libs/utils`
 - `components/shared/PaymentExpiryCountdown.tsx`: exports `PaymentExpiryCountdown`; client-side behavior; key imports `@/components/ui/badge`, `@/libs/dateFormat`, `@/libs/paymentExpiry`, `@/libs/utils`, `@/types/order`

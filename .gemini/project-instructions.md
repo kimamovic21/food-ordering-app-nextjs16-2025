@@ -60,6 +60,7 @@
 - Treat best coupon suggestions as UI help only; checkout must revalidate coupons server-side.
 - Reorder must rebuild current menu data, skip unrecoverable lines, reject mixed restaurants, and share stock/per-item limits across sizes. Use `useReorderCart` and await `CartProvider.replaceCart` confirmation before replacing a nonempty cart; rebuild usual-order previews on click. See `app/my-orders/README.md`.
 - Keep delivery completion double-confirmed with courier PIN handoff followed by customer/admin finalization.
+- Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
 - Keep support tickets scoped between restaurant support and app support.
 - Keep ETA-style notifications and late active-order alerts aligned with order timeline state; failed-delivery review notifications should route restaurant admins to `/admin-dashboard/orders/[id]`.
 - Keep QStash delayed job handlers server-only, signature-verified, idempotent, and fail-open around user-facing checkout/order status flows.
@@ -73,7 +74,7 @@
 ## Validation Workflow
 
 - Execute `npm run lint` for meaningful code edits.
-- Execute `npm run test` for auth and API behavior changes.
+- Execute the relevant auth/API test files or focused feature command for behavior changes; full-suite runs require explicit user approval.
 - Execute `npm run test:qstash` when changing delayed order-maintenance scheduling, courier assignment timeout logic, or the QStash receiver route.
 - Update `example.env` if any env contract changes.
 - Update top-level docs when adding major features or integrations.

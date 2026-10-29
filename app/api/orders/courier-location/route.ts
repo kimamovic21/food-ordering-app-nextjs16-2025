@@ -1,71 +1,119 @@
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/libs/authOptions';
+import { normalizeCourierLocation } from '@/libs/courierTracking';
 import { Order } from '@/models/order';
 import { User } from '@/models/user';
 import mongoose from 'mongoose';
+import type { CourierTrackingResponse } from '@/types/courierTracking';
+
+const json = (body: CourierTrackingResponse | { error: string }, status = 200) =>
+  Response.json(body, {
+    status,
+    headers: { 'Cache-Control': 'private, no-store, max-age=0', Vary: 'Cookie' },
+  });
 
 export async function GET(request: Request) {
-  await mongoose.connect(process.env.MONGODB_URL as string);
-
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Get user information
-  const userEmail = session.user.email;
-  const user = await User.findOne({ email: userEmail });
-
-  if (!user) {
-    return Response.json({ error: 'User not found' }, { status: 404 });
-  }
-
-  const url = new URL(request.url);
-  const orderId = url.searchParams.get('orderId');
-
-  if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
-    return Response.json({ error: 'Invalid order ID' }, { status: 400 });
-  }
-
   try {
-    // Find the order and populate courier information
-    const order = await Order.findById(orderId).populate('courierId').lean();
+    const session = await getServerSession(authOptions);
+    const email = session?.user?.email;
+    if (!email) return json({ error: 'Unauthorized' }, 401);
 
-    if (!order) {
-      return Response.json({ error: 'Order not found' }, { status: 404 });
+    const orderId = new URL(request.url).searchParams.get('orderId');
+    if (!orderId || !mongoose.Types.ObjectId.isValid(orderId)) {
+      return json({ error: 'Invalid order ID' }, 400);
     }
 
-    // Check authorization: only admin or the customer who placed the order can access
-    if (user.role !== 'admin' && order.email !== userEmail) {
-      return Response.json({ error: 'Not authorized to view this order' }, { status: 403 });
+    await mongoose.connect(process.env.MONGODB_URL as string);
+    const user = await User.findOne({ email }).select('_id email role restaurantId').lean();
+    if (!user) return json({ error: 'User not found' }, 404);
+
+    const order = await Order.findById(orderId)
+      .select(
+        'userId email restaurantId orderStatus courierId courierAssignmentStatus courierDeliveredAt courierAcceptedAt courierAssignedAt'
+      )
+      .lean();
+    if (!order) return json({ error: 'Order not found' }, 404);
+
+    const superAdminEmail =
+      process.env.SUPER_ADMIN_EMAIL || process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL;
+    const isSuperAdmin =
+      user.role === 'admin' && Boolean(superAdminEmail) && user.email === superAdminEmail;
+    const isRestaurantAdmin =
+      user.role === 'admin' &&
+      Boolean(user.restaurantId) &&
+      String(user.restaurantId) === String(order.restaurantId);
+    // Legacy orders can have only an email. Never override an existing owner ID with email.
+    const isCustomer = order.userId
+      ? String(order.userId) === String(user._id)
+      : order.email === user.email;
+    if (!isSuperAdmin && !isRestaurantAdmin && !isCustomer) {
+      return json({ error: 'Not authorized to view this order' }, 403);
     }
 
-    // Check if order has a courier assigned
-    let courier: any = order.courierId;
+    const checkedAt = new Date().toISOString();
+    if (
+      ['delivered', 'completed', 'canceled'].includes(order.orderStatus) ||
+      order.courierDeliveredAt
+    ) {
+      return json({
+        location: null,
+        trackingStatus: 'ended',
+        checkedAt,
+        message: 'Courier tracking has ended for this order.',
+      });
+    }
 
-    // Fallback: if no courierId on the order, try to find a courier currently holding this order
+    const accepted = order.courierAssignmentStatus === 'accepted';
+    const legacyTransport =
+      !order.courierAssignmentStatus && order.orderStatus === 'transportation';
+    if (
+      !['ready', 'transportation'].includes(order.orderStatus) ||
+      (!accepted && !legacyTransport)
+    ) {
+      return json({
+        location: null,
+        trackingStatus: 'waiting',
+        checkedAt,
+        message: 'Waiting for an accepted courier assignment.',
+      });
+    }
+
+    // Both sides of the assignment must still agree. Historical courierId alone is not permission.
+    const courier = await User.findOne({
+      ...(order.courierId ? { _id: order.courierId } : {}),
+      takenOrder: order._id,
+      role: 'courier',
+    })
+      .select('name email latitude longitude lastLocationUpdate')
+      .lean();
     if (!courier) {
-      courier = await User.findOne({ takenOrder: order._id });
+      return json({
+        location: null,
+        trackingStatus: 'waiting',
+        checkedAt,
+        message: 'No active courier assigned to this order.',
+      });
     }
 
-    if (!courier) {
-      return Response.json({ location: null, message: 'No courier assigned to this order' });
+    let location = normalizeCourierLocation(courier);
+    const assignmentStartedAt = order.courierAcceptedAt || order.courierAssignedAt;
+    if (
+      assignmentStartedAt &&
+      (!location?.lastLocationUpdate ||
+        Date.parse(location.lastLocationUpdate) < new Date(assignmentStartedAt).getTime())
+    ) {
+      location = null;
     }
 
-    return Response.json({
-      location: {
-        latitude: courier.latitude ?? null,
-        longitude: courier.longitude ?? null,
-        lastLocationUpdate: courier.lastLocationUpdate ?? null,
-      },
-      courier: {
-        name: courier.name,
-        email: courier.email,
-      },
+    return json({
+      location,
+      trackingStatus: location ? 'active' : 'waiting',
+      checkedAt,
+      ...(!location ? { message: 'Waiting for a location update for this delivery.' } : {}),
+      courier: { name: courier.name, email: courier.email },
     });
   } catch (error) {
     console.error('Error fetching courier location:', error);
-    return Response.json({ error: 'Failed to fetch courier location' }, { status: 500 });
+    return json({ error: 'Failed to fetch courier location' }, 500);
   }
 }

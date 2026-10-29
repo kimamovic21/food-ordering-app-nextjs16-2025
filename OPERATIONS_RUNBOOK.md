@@ -201,7 +201,9 @@ cleanup, assigned order state, and local Sarajevo-time reporting.
 
 Check these files first:
 
-- `app/api/my-delivery/courier/route.ts`
+- `app/api/my-delivery/availability/route.ts`
+- `app/api/my-delivery/orders/route.ts`
+- `app/api/orders/courier-location/route.ts`
 - `libs/courierSchedule.ts`
 - `libs/courierWorkSessions.ts`
 - `libs/courierReadiness.ts`
@@ -213,6 +215,13 @@ Useful focused command:
 ```bash
 npm run test:file -- __tests__/api/my-delivery-courier.route.test.ts __tests__/libs/courierSchedule.test.ts __tests__/libs/courierWorkSessions.test.ts __tests__/libs/courierReadiness.test.ts __tests__/libs/courier-assignment-timeout.test.ts
 ```
+
+For tracking-map issues, run only `npm run test:courier-tracking`. Check the current order's
+status, accepted assignment, courier `takenOrder`, and `lastLocationUpdate`. A pending assignment,
+handoff, completed/canceled order, or unrelated restaurant admin must not receive current coordinates.
+An old reading remains explicitly stale; HTTP/network failures do not imply that the courier moved.
+The waiting state after acceptance can be resolved by the courier's next normal location update.
+Do not bypass the API guard or modify historical orders to make a map pin appear.
 
 ## Support, Audit Logs, And Admin Review
 

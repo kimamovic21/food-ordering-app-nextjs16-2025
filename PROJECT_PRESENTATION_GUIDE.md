@@ -811,6 +811,14 @@ Map usage:
 - Restaurant location and customer delivery location are stored as latitude/longitude.
 - Leaflet and React Leaflet are used for visual maps.
 - Courier location is updated for active delivery tracking.
+- Order tracking is private to the customer, the matching restaurant admin, and super admin. It
+  requires an accepted active assignment and ends at delivery handoff or cancellation; a historical
+  order cannot be used to follow the courier on later deliveries.
+- The map shows last update time and distinguishes recent, stale (two minutes), unknown, waiting,
+  ended, and connection-interrupted states. A network failure keeps a clearly labeled last-known
+  point, while lost access clears the courier marker. Refresh does not replace the map with a skeleton.
+- Requests are canceled on order changes, cache entries are scoped to the viewer/order, and
+  foreground polling runs every minute. This is periodic location tracking, not continuous GPS streaming.
 - The app intentionally removed total distance-covered tracking because basic Leaflet/free map usage is not precise enough for reliable courier mileage accounting.
 
 Delivery radius:

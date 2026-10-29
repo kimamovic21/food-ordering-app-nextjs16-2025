@@ -1,4 +1,6 @@
 export const queryKeys = {
+  courierTracking: (viewer: string, orderId?: string) =>
+    ['courier-tracking', viewer, orderId || 'self'] as const,
   messages: {
     all: ['messages'] as const,
     center: (params: { context: string; orderId: string; participantId: string; search: string }) =>
