@@ -50,6 +50,11 @@ export type ConversationThreadMessage = {
   deletedFor: EntityId[];
   createdAt: ISODateString;
   updatedAt: ISODateString;
+  clientMessageId?: string;
+};
+
+export type OutgoingMessage = ConversationThreadMessage & {
+  sendState?: 'sending' | 'failed';
 };
 
 export type MessageProfile = {
@@ -71,6 +76,8 @@ export type SelectedMessageThread = {
   orderId?: EntityId | null;
   contextType: MessageContextType;
   messages: ConversationThreadMessage[];
+  hasOlderMessages?: boolean;
+  olderCursor?: string | null;
 };
 
 export type MessagesCenterApiResponse = {
@@ -96,6 +103,7 @@ export type MessagesCenterQueryParams = {
   page?: number;
   participantId?: EntityId | null;
   searchTerm?: string;
+  before?: string | null;
 };
 
 export type MessageRealtimeEvent = {

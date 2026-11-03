@@ -31,6 +31,19 @@ Cross-feature components used throughout public, customer, admin, courier, and m
 - See `app/api/orders/courier-location/README.md` for the server-authoritative privacy rules.
   Run `npm run test:courier-tracking` for this workflow, not the entire test suite.
 
+## Message Center
+
+`MessagesCenter.tsx` owns the shared inbox/thread UI. Its inner component is keyed by viewer,
+participant, order, and context so drafts/dialogs cannot cross recipients. History uses TanStack
+infinite queries with 50-message cursor windows; contact-search refreshes within the same identity
+retain the composer and focus. `useMessageThreadScroll` owns reading anchors, new-message jumps,
+and visible unread IDs. `mergeThreadMessages` merges pages and outgoing UUIDs without duplicates.
+
+Failed bubbles retain their original retry UUID/text and do not overwrite the next draft.
+Never clear the whole outgoing queue merely because polling returned; remove only confirmed
+messages. Keep pagination fetches separate from contact pagination and honor AbortSignals.
+See `app/messages/README.md` and `app/api/messages/README.md`; verify with `npm run test:messages`.
+
 ## Components And Responsibilities
 
 - `components/shared/ActiveOrderQuickAccess.tsx`: exports `fetchActiveOrder`, `ActiveOrderQuickAccess`; client-side behavior; calls `/api/my-orders/active`; key imports `@/libs/orderDelay`, `@/libs/queryKeys`, `@/libs/utils`, `@/types/order`

@@ -62,6 +62,7 @@
 - Reorder must rebuild current menu data, skip unrecoverable lines, reject mixed restaurants, and share stock/per-item limits across sizes. Use `useReorderCart` and await `CartProvider.replaceCart` confirmation before replacing a nonempty cart; rebuild usual-order previews on click. See `app/my-orders/README.md`.
 - Keep delivery completion double-confirmed with courier PIN handoff followed by customer/admin finalization.
 - Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
+- For message history/sending changes, read `app/messages/README.md` and `app/api/messages/README.md`. Preserve authorized cursor windows, sender-scoped retry UUIDs, conversation/account-scoped state, and viewport-aware read receipts. Verify with `npm run test:messages`, not the full suite.
 - Keep support tickets scoped between restaurant support and app support.
 - Keep ETA-style notifications and late active-order alerts aligned with order timeline state; failed-delivery review notifications should route restaurant admins to `/admin-dashboard/orders/[id]`.
 - Keep QStash delayed job handlers server-only, signature-verified, idempotent, and fail-open around user-facing checkout/order status flows.

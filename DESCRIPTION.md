@@ -399,6 +399,11 @@ Rules:
 - Couriers can message admins.
 - Admins have broader staff/customer messaging access.
 - Messages support delivery/seen state, editing, and per-user hiding/deletion behavior.
+- Long threads load in 50-message windows with a load-older control, stable reading position, and
+  an explicit jump for new arrivals. Failed sends keep a retryable bubble without overwriting the
+  next draft; sender-scoped retry IDs prevent duplicate saves after a lost response.
+- Thread state is isolated by account/recipient/order/context. Read receipts from the current UI
+  apply only to visible incoming messages while the tab is visible, not unloaded history.
 - Server-sent events and polling keep unread state fresh.
 
 ## Notifications Logic

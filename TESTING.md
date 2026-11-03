@@ -116,6 +116,11 @@ app-support reports tied to the reporter's own restaurant, and historical reads 
 - `npm run test:models`: run model tests
 - `npm run test:menu-items`: run focused menu item API, form, availability, image-save, model, and inventory tests
 - `npm run test:courier-tracking`: run only the courier-location API, freshness helper, query hook, and map tests
+- `npm run test:messages`: run the six message API/persistence/helper/scroll/component test files.
+  The persistence file starts its own disposable MongoDB instance and checks unique-index races,
+  legacy messages, and equal-timestamp pagination. It does not touch app data or external services.
+  Add the existing focused messages e2e flow only when verifying role/order/edit/hide integration;
+  always use a dedicated or disposable database for e2e.
 - `npm run test:editor-types`: validate the editor-only test TypeScript project used for Vitest globals and `@/` path aliases in `__tests__`
 - `npm run test:profile`: run only profile-focused unit tests
 - `npm run test:payment`: run only payment & webhook unit tests, including Stripe Checkout session expiration

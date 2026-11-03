@@ -3,14 +3,20 @@ export const queryKeys = {
     ['courier-tracking', viewer, orderId || 'self'] as const,
   messages: {
     all: ['messages'] as const,
-    center: (params: { context: string; orderId: string; participantId: string; search: string }) =>
-      [...queryKeys.messages.all, 'center', params] as const,
+    center: (params: {
+      context: string;
+      orderId: string;
+      participantId: string;
+      search: string;
+      viewerId?: string;
+    }) => [...queryKeys.messages.all, 'center', params] as const,
     centerPage: (params: {
       context: string;
       orderId: string;
       page: number;
       participantId: string;
       search: string;
+      viewerId?: string;
     }) => [...queryKeys.messages.all, 'center-page', params] as const,
     summary: () => [...queryKeys.messages.all, 'summary'] as const,
   },

@@ -1,58 +1,102 @@
 # App Folder: app/messages
 
-> Enhanced folder documentation. Keep this file aligned with the folder workflow when behavior changes.
+## Purpose And Audience
 
-## Purpose
+This is the signed-in customer's, restaurant admin's, and courier's messenger. It connects approved
+people involved in the ordering/delivery workflow, not arbitrary public users.
+The layout keeps contacts/conversations beside the selected thread and preserves existing
+edit, per-user delete/hide, settings, and back-navigation actions.
 
-This folder owns role-approved messaging UI, conversation selection, thread rendering, message settings, and realtime/polling refresh behavior.
+## Entry Points And Dependencies
 
-## Route And Audience
+- `page.tsx`: authenticated inbox/inline conversation shell at `/messages`.
+- `[participantId]/page.tsx`: authenticated participant-route entry point.
+- `components/shared/MessagesCenter.tsx`: contact search, paginated threads, composer, mutations.
+- `hooks/useMessageThreadScroll.ts`: reading-position anchoring, latest-message jump, viewport receipts.
+- `libs/messageThread.ts`: shared limits and merge/deduplication of server pages and outgoing bubbles.
+- `libs/queryKeys.ts`: viewer/context/order/participant-scoped cache keys.
+- `contexts/MessagesContext.tsx`: global unread summary, SSE invalidation, polling, optional sound.
+- `settings/page.tsx` and `MessageSoundSettingsForm.tsx`: separate per-user message sound setting.
 
-- App route/group: `/messages`
-- Folder path: `app/messages`
-- Main audience/roles: `signed-in customer`, `admin`, `courier`
-- Main interaction style: session/auth state, toast feedback
+Read the matching [API workflow](../api/messages/README.md) before changing a request or response.
+`libs/messages.ts` remains authoritative for allowed roles/order relationships.
 
-## What Happens Here
+## Opening And Refreshing A Thread
 
-- Start from `page.tsx` for the route shell and data loading shape.
-- Check colocated components for user interactions, forms, and mutations.
-- Check loading/error/empty states before changing UI because these are part of the user experience.
-- No direct `fetch()` calls were detected here; data may come from hooks, server components, contexts, or child components.
+The route or query string supplies `participantId`, optional `orderId`, and `context`.
+`useProfile` supplies the viewer. TanStack Query `useInfiniteQuery` initially fetches the newest
+50 messages from `/api/messages`, with an AbortSignal for obsolete reads.
+Contact search pagination remains separate from history pagination.
 
-## Important Files
+Conversation identity includes viewer, participant, order, and context. Changing that identity
+remounts local thread state: drafts, edit state, failed/pending bubbles, and dialogs do not become
+active for the next recipient. Query keys also include the viewer. Placeholder data is allowed
+only for a contact-search refresh within the same identity, so typing does not lose focus.
+Late send responses cannot clear the next thread's draft.
 
-- `app/messages/[participantId]/page.tsx`: functions/components: `ConversationPage`; session-aware
-- `app/messages/page.tsx`: functions/components: `MessagesPage`; session-aware
-- `app/messages/settings/MessageSoundSettingsForm.tsx`: functions/components: `MessageSoundSettingsForm`, `handleToggle`; client component
-- `app/messages/settings/page.tsx`: functions/components: `MessageSettingsPage`; session-aware
+SSE invalidates shared message keys; foreground polling every five seconds remains a fallback.
+Already loaded infinite-query pages are revalidated sequentially. Opening a thread does not
+download its entire history, but loading many pages increases subsequent refetch work.
+The first page owns inbox/contact metadata; older pages contribute message history only.
 
-## API/Data Connections
+## Reading Older And Incoming Messages
 
-- No direct `fetch()` calls detected in this folder.
+`Load older messages` requests the next cursor window and is disabled during another fetch.
+The hook restores the previous visual position after older rows are prepended. Loading failures
+leave existing rows in place and offer another attempt.
 
-## Packages And Services Used
+New arrivals scroll to the bottom only while the reader is already near the bottom.
+When reading higher in the thread, the viewport stays anchored and a `New messages` button
+offers an explicit jump. Background edits/read receipts do not force a jump.
+Overlapping pages are merged by message ID; fresher copies win.
 
-- `next` / Next.js App Router: owns the route, layout, loading, and route-handler conventions for this area.
-- `react` and `react-dom`: provide client component state, effects, event handlers, and rendering for interactive UI.
-- `next-auth`: checks whether the visitor is signed in and carries the user role/email used by protected screens and API routes.
-- `sonner`: shows success/error/loading toast feedback for user-facing mutations.
-- `lucide-react`: provides the icon set used in buttons, status indicators, and dashboard actions.
-- `radix-ui` and local `components/ui`: provide accessible primitives and shadcn-style form/table/dialog controls.
+Incoming unread rows intersecting the scroll viewport are acknowledged in batches of at most 50
+while the browser document is visible. Messages in unloaded history, below/above the viewport,
+or in a hidden tab are not automatically marked seen. A failed receipt is retried on a later
+refresh without interrupting writing. Delivered and seen remain distinct states.
 
-## Edge Cases And UX Rules
+## Writing, Failure, And Retry
 
-- Preserve route loading states so refreshes and slow network states look intentional.
-- Preserve empty/error states so users are not left with blank screens.
-- If forms exist, keep validation messages close to the field that failed.
-- If this folder uses server data, keep cache invalidation/refetch behavior aligned with the owning API route.
+A send gets one browser-generated UUID and an immediate outgoing bubble labeled `Sending...`.
+A synchronous guard prevents rapid Enter/click events from launching duplicate sends.
+Enter during IME composition or key repeat does not send; Shift+Enter still adds a newline.
+The composer and API enforce the same 4,000-character limit.
 
-## How To Explain This In A Presentation
+On success, the saved server message replaces the optimistic bubble and shared queries refresh.
+On failure, the bubble stays with `Not sent` and an accessible retry icon. Text typed for the
+next message remains untouched. Retry reuses the original UUID, text, and recipient.
+If the server saved a message but the response was lost, a retry returns that same message,
+and polling can also reconcile it by UUID without displaying two copies.
 
-If someone asks what this folder does, say: this is the `signed-in customer`, `admin`, `courier` UI for `/messages`; it coordinates the files above, protects the edge cases listed here, and delegates server-authoritative checks to the API routes/helpers instead of trusting only the browser.
+Drafts and the local outgoing queue are intentionally memory-only. A refresh/navigation can
+discard an unsent draft/failed local bubble; this is not a persistent offline delivery system.
+Authorization is checked again on the server, including retries. The composer cannot bypass
+the customer-to-customer or assigned-order restrictions.
 
-## Maintenance Notes For Future Work
+Editing preserves sender-only access and disables the edit field while saving.
+Deleting a message or hiding a conversation is per viewer, not a destructive delete for everyone.
+A new message can bring a hidden conversation back into the inbox.
 
-- Read this README, then read the exact component/page before editing.
-- If behavior changes, update this README and any API README that backs this screen.
-- Preserve accessibility, loading, error, and disabled states when changing UI.
+## Packages And Services
+
+React manages local interaction state; Next.js provides route navigation; NextAuth protects the
+entry points. TanStack Query owns server data/pagination/refetches, Sonner provides errors, and
+Lucide plus the existing shadcn/Radix components provide controls/dialogs.
+MongoDB stores conversations/messages behind the API. SSE is a refresh mechanism with polling
+fallback, not an external chat provider. This change does not use Cloudinary, Resend, or Stripe.
+
+## How To Present This Feature
+
+Open an approved conversation, write a message, and show its sending/sent/delivered/seen states.
+For a conversation with more than 50 visible messages, load older history without losing the reading
+position. Scroll upward and receive a message in a second session: the UI offers a jump rather than
+pulling the reader down. Simulate a failed response, type a new draft, and retry the original bubble:
+the draft survives and the backend avoids a duplicate saved message. Switch contacts to demonstrate
+that the previous recipient's draft and dialog do not carry across.
+
+## Maintenance And Focused Tests
+
+Run `npm run test:messages` for the API, isolated MongoDB persistence, merge/cursor helpers, scroll
+hook, and component tests. Do not run the entire app test suite for a thread-only change.
+Keep this README and the API README synchronized; preserve role checks, per-user visibility,
+account-scoped caches, original retry UUIDs, and scroll/read-receipt behavior.

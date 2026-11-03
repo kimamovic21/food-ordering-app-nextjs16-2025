@@ -11,6 +11,7 @@ const MessageSchema = new Schema(
     senderUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     recipientUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     body: { type: String, required: true, trim: true, maxlength: 4000 },
+    clientMessageId: { type: String },
     deliveredAt: { type: Date, default: null, index: true },
     seenAt: { type: Date, default: null, index: true },
     editedAt: { type: Date, default: null },
@@ -25,6 +26,12 @@ const MessageSchema = new Schema(
 );
 
 MessageSchema.index({ conversationId: 1, createdAt: 1 });
+MessageSchema.index({ conversationId: 1, createdAt: -1, _id: -1 });
+// Existing messages without a client ID are intentionally outside the retry constraint.
+MessageSchema.index(
+  { senderUserId: 1, clientMessageId: 1 },
+  { unique: true, partialFilterExpression: { clientMessageId: { $type: 'string' } } }
+);
 MessageSchema.index({ recipientUserId: 1, seenAt: 1, createdAt: -1 });
 
 try {
