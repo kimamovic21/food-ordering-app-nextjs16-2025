@@ -425,6 +425,14 @@ Important messaging rules:
 - Couriers can message admins.
 - Admins can message approved contacts.
 - Conversations and messages are persisted in MongoDB.
+- Thread history uses authorized 50-message cursor windows ordered by `createdAt, _id`; older
+  windows skip inbox/contact queries. TanStack infinite queries revalidate only loaded pages,
+  with viewer/participant/order/context-scoped keys and cancellable reads.
+- A sender-scoped optional client UUID plus a partial unique MongoDB index deduplicates retries,
+  including concurrent first sends. Preview/SSE follow-ups happen after message persistence.
+- Viewport-aware read batches do not mark unloaded history as seen. Thread-local drafts/outgoing
+  bubbles and scroll anchors belong to one conversation identity, not the entire app.
+  See `app/api/messages/README.md` for index deployment and legacy-client behavior.
 
 ## Realtime Updates
 

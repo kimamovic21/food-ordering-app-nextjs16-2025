@@ -1,12 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import {
   ArrowLeft,
+  ArrowDown,
+  History,
+  RotateCcw,
+  Loader2,
   Edit3,
   MessageSquarePlus,
   MoreVertical,
@@ -35,6 +39,8 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import useProfile from '@/hooks/useProfile';
+import { useMessageThreadScroll } from '@/hooks/useMessageThreadScroll';
+import { mergeThreadMessages, MESSAGE_MAX_LENGTH, MESSAGE_PAGE_SIZE } from '@/libs/messageThread';
 import { formatAppDateTime, formatAppTime } from '@/libs/dateFormat';
 import { queryKeys } from '@/libs/queryKeys';
 import type {
@@ -42,6 +48,7 @@ import type {
   MessageContact as ConversationContact,
   MessagesCenterApiResponse,
   MessagesCenterQueryParams,
+  OutgoingMessage,
 } from '@/types/messages';
 
 const buildMessagesCenterUrl = ({
@@ -51,12 +58,14 @@ const buildMessagesCenterUrl = ({
   page = 1,
   participantId,
   searchTerm = '',
+  before,
 }: MessagesCenterQueryParams) => {
   const query = new URLSearchParams();
 
   if (participantId) query.set('participantId', participantId);
   if (orderId) query.set('orderId', orderId);
   if (context) query.set('context', context);
+  if (before) query.set('before', before);
   if (isAdminSearchEnabled && searchTerm.trim()) {
     query.set('search', searchTerm.trim());
     query.set('page', String(page));
@@ -67,9 +76,10 @@ const buildMessagesCenterUrl = ({
 };
 
 const fetchMessagesCenter = async (
-  params: MessagesCenterQueryParams
+  params: MessagesCenterQueryParams,
+  signal?: AbortSignal
 ): Promise<MessagesCenterApiResponse> => {
-  const response = await fetch(buildMessagesCenterUrl(params), { cache: 'no-store' });
+  const response = await fetch(buildMessagesCenterUrl(params), { cache: 'no-store', signal });
   const json = await response.json().catch(() => null);
 
   if (!response.ok) {
@@ -182,7 +192,7 @@ type MessagesCenterProps = {
   backLabel?: string;
 };
 
-const MessagesCenter = ({
+const MessagesCenterContent = ({
   title,
   description,
   backHref = '/my-orders',
@@ -196,7 +206,7 @@ const MessagesCenter = ({
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
-  const [optimisticMessages, setOptimisticMessages] = useState<ThreadMessage[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<OutgoingMessage[]>([]);
   const [messageMenuId, setMessageMenuId] = useState<string | null>(null);
   const [contactSearch, setContactSearch] = useState('');
   const [activeContactSearch, setActiveContactSearch] = useState('');
@@ -204,8 +214,16 @@ const MessagesCenter = ({
   const [contactPage, setContactPage] = useState(1);
   const [contactHasMore, setContactHasMore] = useState(false);
   const [contactLoadingMore, setContactLoadingMore] = useState(false);
+  const contactSearchVersion = useRef(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sendingRef = useRef(false);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const routeParticipantId = params?.participantId;
   const queryParticipantId = searchParams.get('participantId');
@@ -225,31 +243,55 @@ const MessagesCenter = ({
       orderId: orderId || '',
       participantId: participantId || '',
       search: isAdminSearchEnabled ? activeContactSearch.trim() : '',
+      viewerId: currentUserId,
     }),
-    [activeContactSearch, context, isAdminSearchEnabled, orderId, participantId]
+    [activeContactSearch, context, isAdminSearchEnabled, orderId, participantId, currentUserId]
   );
 
   const {
-    data,
+    data: threadPages,
+    dataUpdatedAt,
     error: messagesError,
     isFetching,
     isLoading,
-  } = useQuery({
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
     enabled: !profileLoading && Boolean(profileData?._id),
-    placeholderData: (previousData) => previousData,
-    queryFn: () =>
-      fetchMessagesCenter({
-        context,
-        isAdminSearchEnabled,
-        orderId,
-        page: 1,
-        participantId,
-        searchTerm: activeContactSearch,
-      }),
+    initialPageParam: null as string | null,
+    queryFn: ({ pageParam, signal }) =>
+      fetchMessagesCenter(
+        {
+          before: pageParam,
+          context,
+          isAdminSearchEnabled,
+          orderId,
+          page: 1,
+          participantId,
+          searchTerm: activeContactSearch,
+        },
+        signal
+      ),
     queryKey: queryKeys.messages.center(centerQueryParams),
+    getNextPageParam: (lastPage) =>
+      lastPage.selectedConversation?.hasOlderMessages
+        ? lastPage.selectedConversation.olderCursor
+        : undefined,
+    placeholderData: (previous, previousQuery) => {
+      const previousParams = previousQuery?.queryKey[2] as typeof centerQueryParams | undefined;
+      return previousParams &&
+        previousParams.viewerId === currentUserId &&
+        previousParams.participantId === centerQueryParams.participantId &&
+        previousParams.orderId === centerQueryParams.orderId &&
+        previousParams.context === centerQueryParams.context
+        ? previous
+        : undefined;
+    },
     refetchInterval: 5000,
   });
 
+  const data = threadPages?.pages[0];
   const selectedThread = data?.selectedConversation;
   const loading = profileLoading || (!data && isLoading);
   const refreshing = Boolean(data && isFetching);
@@ -279,8 +321,10 @@ const MessagesCenter = ({
   }, [contactSearch, isAdminSearchEnabled]);
 
   useEffect(() => {
+    contactSearchVersion.current += 1;
     setExtraContacts([]);
     setContactPage(1);
+    setContactLoadingMore(false);
   }, [activeContactSearch, context, isAdminSearchEnabled, orderId, participantId]);
 
   useEffect(() => {
@@ -290,51 +334,71 @@ const MessagesCenter = ({
 
     setContactHasMore(Boolean(data.contactHasMore));
     setContactPage((currentPage) => Math.max(currentPage, Number(data.contactPage) || 1));
+  }, [data]);
 
-    if (!sending && data.selectedConversation?.messages) {
-      setOptimisticMessages([]);
-    }
-  }, [
-    data,
-    data?.contactHasMore,
-    data?.contactPage,
-    data?.selectedConversation?.conversation?._id,
-    data?.selectedConversation?.messages,
-    sending,
-  ]);
-
+  const serverPages = useMemo(
+    () => threadPages?.pages.map((page) => page.selectedConversation?.messages || []) || [],
+    [threadPages]
+  );
+  useEffect(() => {
+    const serverMessages = serverPages.flat();
+    setOptimisticMessages((previous) =>
+      previous.filter(
+        (outgoing) =>
+          !serverMessages.some(
+            (message) =>
+              message._id === outgoing._id ||
+              (outgoing.clientMessageId && message.clientMessageId === outgoing.clientMessageId)
+          )
+      )
+    );
+  }, [serverPages]);
+  const visibleMessages = useMemo(
+    () => mergeThreadMessages(serverPages, optimisticMessages),
+    [serverPages, optimisticMessages]
+  );
+  const {
+    containerRef: scrollContainerRef,
+    onScroll,
+    hasNewMessages,
+    scrollToLatest,
+    rememberOlderPosition,
+    cancelOlderPosition,
+    visibleUnreadIds,
+    documentVisible,
+  } = useMessageThreadScroll(visibleMessages, threadPages?.pages.length || 0);
+  const acknowledgedIds = useRef(new Set<string>());
+  const pendingRead = useRef(false);
   useEffect(() => {
     const conversationId = selectedThread?.conversation?._id;
-    if (!conversationId || !currentUserId || !selectedThread?.messages?.length) {
-      return;
-    }
-
-    void fetch('/api/messages', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'mark-seen', conversationId }),
-    }).then(() => queryClient.invalidateQueries({ queryKey: queryKeys.messages.all }));
+    const messageIds = visibleUnreadIds
+      .filter((id) => !acknowledgedIds.current.has(id))
+      .slice(0, MESSAGE_PAGE_SIZE);
+    if (!conversationId || !documentVisible || !messageIds.length || pendingRead.current) return;
+    pendingRead.current = true;
+    void (async () => {
+      try {
+        const response = await fetch('/api/messages', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'mark-seen', conversationId, messageIds }),
+        });
+        if (!response.ok) return;
+        messageIds.forEach((id) => acknowledgedIds.current.add(id));
+        await queryClient.invalidateQueries({ queryKey: queryKeys.messages.all });
+      } catch {
+        /* Polling retries receipts without interrupting the conversation. */
+      } finally {
+        pendingRead.current = false;
+      }
+    })();
   }, [
     selectedThread?.conversation?._id,
-    selectedThread?.messages?.length,
-    currentUserId,
+    visibleUnreadIds,
+    documentVisible,
+    dataUpdatedAt,
     queryClient,
   ]);
-
-  const visibleMessages = useMemo(() => {
-    const serverMessages = selectedThread?.messages || [];
-    const merged = [...serverMessages];
-
-    for (const optimisticMessage of optimisticMessages) {
-      if (!merged.find((message) => message._id === optimisticMessage._id)) {
-        merged.push(optimisticMessage);
-      }
-    }
-
-    return merged.sort(
-      (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime()
-    );
-  }, [selectedThread?.messages, optimisticMessages]);
 
   const visibleContacts = useMemo(() => {
     const contacts = [...(data?.contactSuggestions || []), ...extraContacts];
@@ -361,43 +425,61 @@ const MessagesCenter = ({
       return;
     }
 
+    const searchVersion = contactSearchVersion.current;
     try {
       setContactLoadingMore(true);
       const nextPage = contactPage + 1;
       const nextData = await queryClient.fetchQuery({
-        queryFn: () =>
-          fetchMessagesCenter({
-            context,
-            isAdminSearchEnabled,
-            orderId,
-            page: nextPage,
-            participantId,
-            searchTerm: activeContactSearch,
-          }),
+        queryFn: ({ signal }) =>
+          fetchMessagesCenter(
+            {
+              context,
+              isAdminSearchEnabled,
+              orderId,
+              page: nextPage,
+              participantId,
+              searchTerm: activeContactSearch,
+            },
+            signal
+          ),
         queryKey: queryKeys.messages.centerPage({
           ...centerQueryParams,
           page: nextPage,
         }),
       });
 
+      if (!mountedRef.current || searchVersion !== contactSearchVersion.current) return;
       setExtraContacts((currentContacts) => [
         ...currentContacts,
         ...(nextData.contactSuggestions || []),
       ]);
       setContactHasMore(Boolean(nextData.contactHasMore));
       setContactPage(Number(nextData.contactPage) || nextPage);
+    } catch (error) {
+      if (mountedRef.current && searchVersion === contactSearchVersion.current)
+        sonnerToast.error(error instanceof Error ? error.message : 'Failed to load contacts');
     } finally {
-      setContactLoadingMore(false);
+      if (mountedRef.current && searchVersion === contactSearchVersion.current)
+        setContactLoadingMore(false);
     }
   };
 
-  useEffect(() => {
-    if (!scrollContainerRef.current) return;
-    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
-  }, [visibleMessages.length]);
+  const handleLoadOlder = async () => {
+    if (!hasNextPage || isFetching) return;
+    rememberOlderPosition();
+    try {
+      const previousPageCount = threadPages?.pages.length || 0;
+      const result = await fetchNextPage({ cancelRefetch: false });
+      if (result.isError) throw new Error('Could not load older messages. Please try again.');
+      if ((result.data?.pages.length || 0) <= previousPageCount) cancelOlderPosition();
+    } catch {
+      cancelOlderPosition();
+      if (mountedRef.current) sonnerToast.error('Could not load older messages. Please try again.');
+    }
+  };
 
-  const handleSendMessage = async () => {
-    if (!selectedThread?.contact || !currentUserId) {
+  const handleSendMessage = async (retryMessage?: OutgoingMessage) => {
+    if (!selectedThread?.contact || !currentUserId || sendingRef.current) {
       return;
     }
 
@@ -407,13 +489,14 @@ const MessagesCenter = ({
       return;
     }
 
-    const body = draft.trim();
-    if (!body) {
+    const body = retryMessage?.body || draft.trim();
+    if (!body || body.length > MESSAGE_MAX_LENGTH) {
       return;
     }
 
-    const tempId = `temp-${Date.now()}`;
-    const optimisticMessage: ThreadMessage = {
+    const clientMessageId = retryMessage?.clientMessageId || crypto.randomUUID();
+    const tempId = retryMessage?._id || `temp-${clientMessageId}`;
+    const optimisticMessage: OutgoingMessage = {
       _id: tempId,
       senderUserId: currentUserId,
       recipientUserId,
@@ -422,13 +505,20 @@ const MessagesCenter = ({
       seenAt: null,
       editedAt: null,
       deletedFor: [],
-      createdAt: new Date().toISOString(),
+      createdAt: retryMessage?.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      clientMessageId,
+      sendState: 'sending',
     };
 
-    setDraft('');
+    if (!retryMessage) setDraft('');
+    sendingRef.current = true;
     setSending(true);
-    setOptimisticMessages((prev) => [...prev, optimisticMessage]);
+    setOptimisticMessages((prev) => [
+      ...prev.filter((message) => message._id !== tempId),
+      optimisticMessage,
+    ]);
+    scrollToLatest();
 
     try {
       const response = await fetch('/api/messages', {
@@ -437,29 +527,42 @@ const MessagesCenter = ({
         body: JSON.stringify({
           recipientUserId,
           text: body,
+          clientMessageId,
           orderId: selectedThread.orderId || orderId || null,
           context: selectedThread.contextType,
         }),
       });
 
-      const json = await response.json();
+      const json = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(json.error || 'Failed to send message');
+        throw new Error(json?.error || 'Failed to send message');
       }
+      if (!json?.message?._id) throw new Error('Unable to confirm delivery. Retry this message.');
 
-      await refreshMessages();
-      setOptimisticMessages((prev) => prev.filter((message) => message._id !== tempId));
+      if (mountedRef.current)
+        setOptimisticMessages((prev) =>
+          prev.map((message) => (message._id === tempId ? json.message : message))
+        );
+      void refreshMessages();
     } catch (sendError) {
-      console.error(sendError);
-      setOptimisticMessages((prev) => prev.filter((message) => message._id !== tempId));
-      setDraft(body);
-      sonnerToast.error(sendError instanceof Error ? sendError.message : 'Failed to send message');
+      if (mountedRef.current) {
+        setOptimisticMessages((prev) =>
+          prev.map((message) =>
+            message._id === tempId ? { ...message, sendState: 'failed' } : message
+          )
+        );
+        sonnerToast.error(
+          sendError instanceof Error ? sendError.message : 'Failed to send message'
+        );
+      }
     } finally {
-      setSending(false);
+      sendingRef.current = false;
+      if (mountedRef.current) setSending(false);
     }
   };
 
   const handleEditMessage = async (message: ThreadMessage) => {
+    if (sendingRef.current) return;
     setEditingMessageId(message._id);
     setDraft(message.body);
   };
@@ -492,15 +595,17 @@ const MessagesCenter = ({
   };
 
   const handleSaveEdit = async () => {
-    if (!selectedThread?.conversation?._id || !editingMessageId) {
+    if (!selectedThread?.conversation?._id || !editingMessageId || sendingRef.current) {
       return;
     }
 
     const body = draft.trim();
-    if (!body) {
+    if (!body || body.length > MESSAGE_MAX_LENGTH) {
       return;
     }
 
+    sendingRef.current = true;
+    setSending(true);
     try {
       const response = await fetch('/api/messages', {
         method: 'PATCH',
@@ -517,12 +622,17 @@ const MessagesCenter = ({
         throw new Error('Failed to update message');
       }
 
-      setDraft('');
-      setEditingMessageId(null);
+      if (mountedRef.current) {
+        setDraft('');
+        setEditingMessageId(null);
+      }
       await refreshMessages();
     } catch (editError) {
       console.error(editError);
-      sonnerToast.error('Failed to edit message');
+      if (mountedRef.current) sonnerToast.error('Failed to edit message');
+    } finally {
+      sendingRef.current = false;
+      if (mountedRef.current) setSending(false);
     }
   };
 
@@ -548,7 +658,7 @@ const MessagesCenter = ({
       setDraft('');
       setEditingMessageId(null);
       await refreshMessages();
-      router.push('/messages');
+      if (mountedRef.current) router.push('/messages');
     } catch (hideError) {
       console.error(hideError);
       sonnerToast.error('Failed to hide conversation');
@@ -829,8 +939,28 @@ const MessagesCenter = ({
 
                 <div
                   ref={scrollContainerRef}
-                  className='min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)] p-4 sm:p-6'
+                  role='region'
+                  aria-label='Conversation messages'
+                  onScroll={onScroll}
+                  className='min-h-0 flex-1 space-y-3 overflow-x-hidden overflow-y-auto [overflow-anchor:none] bg-[linear-gradient(to_bottom,rgba(255,255,255,0.04),transparent)] p-4 sm:p-6'
                 >
+                  {hasNextPage && (
+                    <div className='flex justify-center'>
+                      <Button
+                        variant='ghost'
+                        size='sm'
+                        disabled={isFetching}
+                        onClick={() => void handleLoadOlder()}
+                      >
+                        {isFetchingNextPage ? (
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                        ) : (
+                          <History className='h-4 w-4' />
+                        )}
+                        {isFetchingNextPage ? 'Loading older messages...' : 'Load older messages'}
+                      </Button>
+                    </div>
+                  )}
                   {visibleMessages.length === 0 ? (
                     <div className='flex h-full min-h-112 flex-col items-center justify-center rounded-3xl border border-dashed border-border/60 bg-muted/20 px-6 text-center'>
                       <div className='mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary'>
@@ -847,16 +977,24 @@ const MessagesCenter = ({
                     visibleMessages.map((message) => {
                       const isOwnMessage = message.senderUserId === currentUserId;
                       const statusLabel = isOwnMessage
-                        ? message.seenAt
-                          ? 'Seen'
-                          : message.deliveredAt
-                            ? 'Delivered'
-                            : 'Sent'
+                        ? message.sendState === 'sending'
+                          ? 'Sending...'
+                          : message.sendState === 'failed'
+                            ? 'Not sent'
+                            : message.seenAt
+                              ? 'Seen'
+                              : message.deliveredAt
+                                ? 'Delivered'
+                                : 'Sent'
                         : null;
 
                       return (
                         <div
                           key={message._id}
+                          data-message-id={message._id}
+                          data-unseen-id={
+                            !isOwnMessage && !message.seenAt ? message._id : undefined
+                          }
                           className={`group flex w-full min-w-0 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
@@ -864,13 +1002,13 @@ const MessagesCenter = ({
                               isOwnMessage
                                 ? 'border-primary/20 bg-primary text-primary-foreground'
                                 : 'border-border/70 bg-background'
-                            } ${message._id.startsWith('temp-') ? 'opacity-70' : ''}`}
+                            } ${message.sendState === 'sending' ? 'opacity-70' : ''}`}
                           >
                             <div className='flex min-w-0 items-start justify-between gap-4'>
                               <p className='min-w-0 flex-1 whitespace-pre-wrap wrap-anywhere text-sm leading-relaxed'>
                                 {message.body}
                               </p>
-                              {isOwnMessage && !message._id.startsWith('temp-') && (
+                              {isOwnMessage && !message.sendState && (
                                 <div className='relative flex items-center gap-1'>
                                   <button
                                     type='button'
@@ -931,6 +1069,19 @@ const MessagesCenter = ({
                                   {statusLabel}
                                 </span>
                               )}
+                              {message.sendState === 'failed' && (
+                                <button
+                                  type='button'
+                                  data-slot='button'
+                                  disabled={sending}
+                                  title='Retry message'
+                                  aria-label='Retry message'
+                                  onClick={() => void handleSendMessage(message)}
+                                  className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded border-0 bg-transparent p-0 text-inherit focus-visible:outline-2 disabled:opacity-50'
+                                >
+                                  <RotateCcw className='h-4 w-4' />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -939,6 +1090,13 @@ const MessagesCenter = ({
                   )}
                 </div>
 
+                {hasNewMessages && (
+                  <div className='flex justify-center py-2'>
+                    <Button size='sm' variant='secondary' onClick={scrollToLatest}>
+                      <ArrowDown className='h-4 w-4' /> New messages
+                    </Button>
+                  </div>
+                )}
                 <div className='border-t border-border/60 bg-linear-to-t from-foreground/5 to-transparent p-4 sm:p-5'>
                   {editingMessageId && (
                     <div className='mb-3 flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 px-4 py-2 text-sm'>
@@ -951,6 +1109,8 @@ const MessagesCenter = ({
                       <Button
                         variant='ghost'
                         size='icon'
+                        disabled={sending}
+                        aria-label='Cancel editing'
                         onClick={() => {
                           setEditingMessageId(null);
                           setDraft('');
@@ -964,6 +1124,9 @@ const MessagesCenter = ({
                   <div className='relative max-w-full min-w-0 overflow-hidden rounded-3xl border border-border/70 bg-background transition-colors focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20'>
                     <Textarea
                       value={draft}
+                      aria-label='Message'
+                      maxLength={MESSAGE_MAX_LENGTH}
+                      disabled={Boolean(editingMessageId && sending)}
                       onChange={(event) => setDraft(event.target.value)}
                       placeholder={
                         activeConversation
@@ -973,8 +1136,13 @@ const MessagesCenter = ({
                       wrap='soft'
                       className='block field-sizing-fixed max-h-40 min-h-16 w-full max-w-full min-w-0 resize-none overflow-x-hidden overflow-y-auto wrap-anywhere border-0 bg-transparent py-4 pl-4 pr-20 shadow-none [overflow-wrap:anywhere] [word-break:break-word] focus-visible:ring-0'
                       onKeyDown={(event) => {
-                        if (event.key === 'Enter' && !event.shiftKey) {
+                        if (
+                          event.key === 'Enter' &&
+                          !event.shiftKey &&
+                          !event.nativeEvent.isComposing
+                        ) {
                           event.preventDefault();
+                          if (event.repeat) return;
                           if (editingMessageId) {
                             void handleSaveEdit();
                           } else {
@@ -1048,4 +1216,16 @@ const MessagesCenter = ({
   );
 };
 
-export default MessagesCenter;
+export default function MessagesCenter(props: MessagesCenterProps) {
+  const params = useParams<{ participantId?: string }>();
+  const search = useSearchParams();
+  const { data: profile } = useProfile();
+  const identity = JSON.stringify([
+    profile?._id,
+    params?.participantId || search.get('participantId'),
+    search.get('orderId'),
+    search.get('context'),
+  ]);
+  // Local drafts, pending sends, and dialogs never belong to the next recipient/account.
+  return <MessagesCenterContent key={identity} {...props} />;
+}

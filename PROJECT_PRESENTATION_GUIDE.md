@@ -703,6 +703,16 @@ Main APIs:
 Messaging behavior:
 
 - The main messaging page behaves like a messenger layout.
+- It initially loads only the newest 50 messages. Older history is available on demand without
+  jumping the reader to the bottom. New arrivals offer a jump button when reading older messages.
+- Outgoing bubbles distinguish sending, failed, sent, delivered, and seen states. Retrying a
+  failed response reuses a sender-scoped UUID, so a previously saved message is not saved twice.
+- A failed send leaves the next typed draft alone. Changing recipient/order/account resets local
+  draft/dialog state; searching contacts in the same thread keeps focus and the current draft.
+- Only incoming messages intersecting the visible thread viewport are acknowledged by the new
+  UI. Hidden tabs and unloaded history are not automatically treated as read.
+- Demonstrate these cases with a long conversation and two approved sessions. Drafts/retry
+  bubbles are memory-only, not a persistent offline outbox; existing messages need no migration.
 - Conversation list stays on the left.
 - Selected conversation opens on the right without navigating to a completely separate visual page.
 - URL params can represent selected participant and context.

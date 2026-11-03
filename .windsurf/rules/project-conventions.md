@@ -39,6 +39,7 @@ description: Project rules for this Next.js food ordering app. Use when editing 
 - Preserve customer manual cancel protection: unpaid `placed` order cancellation should use the same Stripe Checkout expiration helper and audit metadata.
 - Preserve delivery double confirmation with courier PIN handoff followed by customer/admin completion.
 - Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
+- For message history/sending changes, read `app/messages/README.md` and `app/api/messages/README.md`. Preserve authorized cursor windows, sender-scoped retry UUIDs, conversation/account-scoped state, and viewport-aware read receipts. Verify with `npm run test:messages`, not the full suite.
 - Preserve courier assignment timeout and history logic for accepted, declined, and expired attempts.
 - Preserve QStash delayed order-maintenance scheduling and signature verification.
 - Preserve Upstash Redis rate limits on sensitive auth, checkout, support, and AI routes.

@@ -69,6 +69,7 @@ This file provides guidance for AI assistance in this repository.
 - Restaurant operations overview lives at `/admin-dashboard/operations` and uses `/api/restaurant/operations` for active stage counts, kitchen capacity, restaurant status, courier availability, today revenue, unpaid/canceled counts, quick actions, and urgent order attention items.
 - Preserve delivery double confirmation: courier PIN handoff first, then customer or restaurant admin completion.
 - Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
+- For message history/sending changes, read `app/messages/README.md` and `app/api/messages/README.md`. Preserve authorized cursor windows, sender-scoped retry UUIDs, conversation/account-scoped state, and viewport-aware read receipts. Verify with `npm run test:messages`, not the full suite.
 - Keep support tickets role-scoped between restaurant support and app support.
 - Keep ETA-style notifications and late active-order alerts aligned with order timeline state; failed-delivery review notifications should route restaurant admins to `/admin-dashboard/orders/[id]`.
 - Keep QStash delayed job handlers server-only, signature-verified, idempotent, and fail-open around user-facing checkout/order status flows.

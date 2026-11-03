@@ -184,6 +184,7 @@ See `example.env`. Variables currently used in the project include:
 - Do not expose server secrets in client bundles.
 - Preserve courier location validation and role checks.
 - Order-based courier tracking must stay private to the order customer, matching restaurant admin, or super admin, and stop at handoff/cancellation. Preserve active-assignment checks, viewer/order-scoped queries, and stale-location labels; see `app/api/orders/courier-location/README.md`. Verify with `npm run test:courier-tracking`.
+- For message history/sending changes, read `app/messages/README.md` and `app/api/messages/README.md`. Preserve authorized cursor windows, sender-scoped retry UUIDs, conversation/account-scoped state, and viewport-aware read receipts. Verify with `npm run test:messages`, not the full suite.
 
 ## Quality Checklist
 

@@ -349,6 +349,11 @@ Key rules:
 - `/my-reports` must request `scope=mine`: filter by the authenticated reporter ID for every role, always omit private handling fields, and keep status/ticket filters within that ownership constraint. The default management scope and PATCH permissions remain separate.
 - Audit logs should record meaningful writes and blocked attempts, not every read.
 - Messages stay approved and role-restricted; customer-to-customer chat remains blocked.
+- Message history/retry/scroll changes: start with `app/messages/README.md` and
+  `app/api/messages/README.md`, then `components/shared/MessagesCenter.tsx`,
+  `hooks/useMessageThreadScroll.ts`, `libs/messagePagination.ts`, and `libs/messageThread.ts`.
+  Preserve 50-message cursors, sender-scoped retry UUIDs, visible read batches, and viewer-scoped
+  thread state. Use `npm run test:messages` instead of the broader cross-feature command below.
 - SSE events should signal clients to refetch source-of-truth JSON endpoints.
 
 Focused tests:

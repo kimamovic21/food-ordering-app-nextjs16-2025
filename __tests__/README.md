@@ -83,6 +83,9 @@ This folder contains unit tests grouped by feature area.
 - Run profile unit tests: `npm run test:profile`
 - Run menu item edit/form/image-save/availability/inventory tests: `npm run test:menu-items`
 - Run courier tracking privacy/freshness/query/map tests: `npm run test:courier-tracking`
+- Run message history, retries, receipts, draft isolation, and scroll tests: `npm run test:messages`.
+  `api/messages.persistence.test.ts` uses an isolated MongoDB server to exercise simultaneous sends
+  and cursor tie-breaking; the remaining files mock network/database boundaries as appropriate.
 - Run payment/webhook-focused unit tests: `npm run test:payment`
 - Run realtime/SSE tests: `npm run test:realtime`
 - Run stale order recovery tests: `npm run test:file -- __tests__/libs/orderMaintenanceRecovery.test.ts __tests__/api/admin-order-maintenance-recovery.route.test.ts`
