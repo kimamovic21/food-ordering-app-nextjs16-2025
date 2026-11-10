@@ -23,6 +23,11 @@ export const queryKeys = {
   notifications: {
     all: ['notifications'] as const,
     list: () => [...queryKeys.notifications.all, 'list'] as const,
+    viewer: (viewer: string) => [...queryKeys.notifications.all, viewer] as const,
+    summary: (viewer: string) => [...queryKeys.notifications.viewer(viewer), 'summary'] as const,
+    inboxes: (viewer: string) => [...queryKeys.notifications.viewer(viewer), 'inbox'] as const,
+    inbox: (viewer: string, filters: { status: string; category: string }) =>
+      [...queryKeys.notifications.inboxes(viewer), filters] as const,
   },
   profile: {
     all: ['profile'] as const,

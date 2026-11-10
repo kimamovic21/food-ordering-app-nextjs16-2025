@@ -20,6 +20,7 @@
     "test:components": "vitest run --environment jsdom __tests__/components",
     "test:libs": "vitest run __tests__/libs",
     "test:models": "vitest run __tests__/models",
+    "test:notifications": "vitest run __tests__/api/notifications.route.test.ts __tests__/api/notifications.persistence.test.ts __tests__/components/NotificationsCenter.test.tsx __tests__/libs/notificationInbox.test.ts __tests__/libs/notificationClient.test.ts __tests__/libs/queryKeys.test.ts",
     "test:messages": "vitest run __tests__/api/messages.route.test.ts __tests__/api/messages.persistence.test.ts __tests__/libs/messages.test.ts __tests__/libs/messageThread.test.ts __tests__/hooks/useMessageThreadScroll.test.tsx __tests__/components/MessagesCenter.test.tsx",
     "test:courier-tracking": "vitest run __tests__/api/courier-location.route.test.ts __tests__/libs/courierTracking.test.ts __tests__/hooks/useCourierTracking.test.tsx __tests__/components/OrderMap.test.tsx",
     "test:menu-items": "vitest run __tests__/api/menu-items.route.test.ts __tests__/api/menu-item-images.route.test.ts __tests__/api/upload-menu-items.route.test.ts __tests__/components/EditMenuItemPage.test.tsx __tests__/components/NewMenuItemPage.test.tsx __tests__/components/MenuItemsAvailability.test.tsx __tests__/components/AdminMenuItemsTable.test.tsx __tests__/libs/menuItemEdit.test.ts __tests__/libs/menuItemInventory.test.ts __tests__/libs/menuItemInventoryServer.test.ts __tests__/models/menuItem.model.test.ts",

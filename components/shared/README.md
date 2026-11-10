@@ -44,6 +44,20 @@ Never clear the whole outgoing queue merely because polling returned; remove onl
 messages. Keep pagination fetches separate from contact pagination and honor AbortSignals.
 See `app/messages/README.md` and `app/api/messages/README.md`; verify with `npm run test:messages`.
 
+## Notification Inbox And Bell
+
+`NotificationsCenter.tsx` renders global inbox counters, URL-backed status/category filters,
+cursor pagination, read/unread actions, and retry states. `NotificationBell.tsx` uses the same
+`NotificationsContext` for global unread counts and mutations. Do not derive totals from either
+surface's limited loaded rows or maintain a second independent read-state store.
+
+The provider owns a pending-operation overlay with rollback/reconciliation on failure, viewer-scoped
+query invalidation, SSE, and arrival sounds. `useNotificationInbox` retains loaded cursor pages;
+new account/filter queries do not reuse previous-account/filter placeholder rows. Bulk read must
+send the server's `readBefore` boundary so new arrivals are protected. Details navigation must not
+wait for a slow read request. See `app/notifications/README.md` and `app/api/notifications/README.md`;
+verify with `npm run test:notifications`.
+
 ## Components And Responsibilities
 
 - `components/shared/ActiveOrderQuickAccess.tsx`: exports `fetchActiveOrder`, `ActiveOrderQuickAccess`; client-side behavior; calls `/api/my-orders/active`; key imports `@/libs/orderDelay`, `@/libs/queryKeys`, `@/libs/utils`, `@/types/order`
@@ -60,7 +74,7 @@ See `app/messages/README.md` and `app/api/messages/README.md`; verify with `npm 
 - `components/shared/MessageBell.tsx`: exports `MessageBell`; client-side behavior; key imports `@/contexts/MessagesContext`
 - `components/shared/MessagesCenter.tsx`: exports `buildMessagesCenterUrl`, `fetchMessagesCenter`, `formatDate`, `formatShortDate`, `getInitials`, `getContactId`, `MessagesLoadingSkeleton`, `MessagesCenter`, `handleLoadMoreContacts`, `handleSendMessage`, `handleEditMessage`, `handleDeleteMessage`, `handleSaveEdit`, `handleHideConversation`; client-side behavior; calls `/api/messages`; key imports `@/components/shared/SonnerToastComponent`, `@/components/ui/alert-dialog`, `@/components/ui/avatar`, `@/components/ui/badge`, `@/components/ui/button`, `@/components/ui/card`
 - `components/shared/NotificationBell.tsx`: exports `timeAgo`, `NotificationBell`, `handleNotificationClick`, `handleMarkAllAsRead`; client-side behavior; key imports `@/components/ui/dropdown-menu`, `@/contexts/NotificationsContext`, `@/hooks/useProfile`, `@/libs/notificationClient`
-- `components/shared/NotificationsCenter.tsx`: exports `timeAgo`, `NotificationsCenter`, `handleNotificationClick`, `handleMarkAsRead`, `handleMarkAllAsRead`; client-side behavior; key imports `@/components/ui/badge`, `@/components/ui/button`, `@/components/ui/card`, `@/components/ui/skeleton`, `@/contexts/NotificationsContext`, `@/libs/notificationClient`
+- `components/shared/NotificationsCenter.tsx`: default `NotificationsCenter`; account-specific filtered inbox, global counters, optimistic row state, cursor pagination, and role-aware details navigation through the shared provider/hook.
 - `components/shared/OrderActivityLog.tsx`: exports `hasReachedStatus`, `hasCourierAssigned`, `getCompletionDescription`, `getCancellationDescription`, `buildOrderActivityEvents`, `OrderActivityLog`; key imports `@/components/ui/badge`, `@/components/ui/card`, `@/libs/dateFormat`, `@/libs/utils`, `@/types/common`, `@/types/order`
 - `components/shared/OrderDelayNotice.tsx`: exports `OrderDelayNotice`; client-side behavior; key imports `@/components/ui/card`, `@/libs/orderDelay`, `@/types/order`
 - `components/shared/OrderElapsedTime.tsx`: client-side behavior; key imports `@/libs/useOrderElapsedTime`
