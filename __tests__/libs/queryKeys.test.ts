@@ -7,6 +7,28 @@ describe('queryKeys', () => {
     expect(queryKeys.notifications.list()).toEqual(['notifications', 'list']);
   });
 
+  it('scopes notification summaries and filtered inboxes to the signed-in viewer', () => {
+    const filters = { status: 'unread', category: 'support' } as const;
+    expect(queryKeys.notifications.viewer('first@example.com')).toEqual([
+      'notifications',
+      'first@example.com',
+    ]);
+    expect(queryKeys.notifications.summary('first@example.com')).toEqual([
+      'notifications',
+      'first@example.com',
+      'summary',
+    ]);
+    expect(queryKeys.notifications.inbox('first@example.com', filters)).toEqual([
+      'notifications',
+      'first@example.com',
+      'inbox',
+      filters,
+    ]);
+    expect(queryKeys.notifications.inbox('first@example.com', filters)).not.toEqual(
+      queryKeys.notifications.inbox('second@example.com', filters)
+    );
+  });
+
   it('keeps message keys grouped for broad invalidation', () => {
     expect(queryKeys.messages.all).toEqual(['messages']);
     expect(queryKeys.messages.summary()).toEqual(['messages', 'summary']);

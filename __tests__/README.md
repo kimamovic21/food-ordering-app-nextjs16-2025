@@ -48,6 +48,10 @@ This folder contains unit tests grouped by feature area.
 - `libs/menuItemInventory.test.ts`: validates optional menu item stock tracking defaults, normalization, checkout-reserved stock math, low-stock status, and sold-out status.
 - `libs/menuItemInventoryServer.test.ts`: validates server-side checkout stock reservation, atomic rollback, reservation release, paid reservation capture, and legacy paid adjustment protection when existing reservations consume stock.
 - `libs/notificationClient.test.ts`: validates role-aware notification routing, including inventory alerts to the admin menu-items table.
+- `api/notifications.route.test.ts`: validates recipient ownership, global counts, filters/cursors, bounded bulk reads, compatibility, and error responses.
+- `api/notifications.persistence.test.ts`: uses disposable MongoDB to verify equal-timestamp cursor pages, arrivals between pages, private/global counts, and the bulk-read cutoff.
+- `components/NotificationsCenter.test.tsx`: exercises the inbox with the real provider/hook and a second shared-state consumer; covers optimistic success/rollback, SSE, filters, counts, pagination, account changes, and arrival sounds.
+- `libs/notificationInbox.test.ts`: validates category membership, deduplication, read overlays, and cursor validation.
 - `libs/notifications.test.ts`: validates notification creation helpers, including inventory alerts for restaurant admins.
 - `libs/orderQuantityLimits.test.ts`: validates shared per-item, per-order, and tracked-stock quantity helpers used by cart UI and checkout APIs.
 - `libs/freeDelivery.test.ts`: validates customer free-delivery threshold calculations, disabled thresholds, remaining-to-free-delivery copy, and courier payout preservation.
@@ -83,6 +87,7 @@ This folder contains unit tests grouped by feature area.
 - Run profile unit tests: `npm run test:profile`
 - Run menu item edit/form/image-save/availability/inventory tests: `npm run test:menu-items`
 - Run courier tracking privacy/freshness/query/map tests: `npm run test:courier-tracking`
+- Run only the notification inbox/API/cursor/read-state tests: `npm run test:notifications`.
 - Run message history, retries, receipts, draft isolation, and scroll tests: `npm run test:messages`.
   `api/messages.persistence.test.ts` uses an isolated MongoDB server to exercise simultaneous sends
   and cursor tie-breaking; the remaining files mock network/database boundaries as appropriate.

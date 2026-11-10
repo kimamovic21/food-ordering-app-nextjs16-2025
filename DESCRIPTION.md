@@ -410,6 +410,14 @@ Rules:
 
 Notifications are stored per recipient and surfaced in the header/notification center.
 
+The inbox shows global Total/Unread/Read counters and shareable status/category filters. Older
+notifications load through cursor pagination without duplicates from equal timestamps or new
+arrivals. The header bell and full page share read updates and background refreshes. Failed writes
+restore optimistic row state and show a retryable error. Mark all as read includes older pages and
+other categories but protects notifications created at or after the loaded server-time boundary.
+Changing accounts clears the previous notification cache; initial loads and read toggles are silent,
+while new arrivals respect the user's sound preference.
+
 Notification examples:
 
 - order placed

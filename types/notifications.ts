@@ -34,6 +34,27 @@ export type AppNotification = {
 export type NotificationsApiResponse = {
   notifications: AppNotification[];
   unreadCount: number;
+  counts: NotificationCounts;
+  readBefore: ISODateString;
+  hasMore: boolean;
+  nextCursor: string | null;
+};
+
+export type NotificationCounts = { total: number; unread: number; read: number };
+export type NotificationStatusFilter = 'all' | 'unread' | 'read';
+export type NotificationCategory =
+  'all' | 'orders' | 'delivery' | 'support' | 'restaurants' | 'inventory';
+export type NotificationFilters = {
+  status: NotificationStatusFilter;
+  category: NotificationCategory;
+};
+export type NotificationReadOperation =
+  | { action: 'mark-read' | 'mark-unread'; notificationId: EntityId }
+  | { action: 'mark-all-read'; readBefore: ISODateString };
+export type NotificationMutationResponse = {
+  success: true;
+  unreadCount: number;
+  counts: NotificationCounts;
 };
 
 export type AppNotificationRealtimePayload = {

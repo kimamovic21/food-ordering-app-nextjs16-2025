@@ -749,7 +749,14 @@ Main APIs:
 Notification behavior:
 
 - Notifications are role-aware.
-- Users can mark notifications as read.
+- Users can mark notifications read/unread, filter by read status or category, and load older
+  cursor pages. Total/Unread/Read counters describe the entire inbox, not just visible cards.
+- The bell and full page share account-scoped updates. Failed writes roll back the optimistic
+  row state and display an error; background refresh reconciles the server truth.
+- Mark all as read includes all pages/categories but sends the server's loaded `readBefore`
+  boundary. Notifications created at or after that boundary stay unread even during a slow request.
+- Refresh preserves loaded pages. Account changes discard the previous inbox, and a delayed
+  previous-account response cannot overwrite the new viewer's state.
 - Notifications route to the correct destination based on type and metadata.
 - Admin order notifications should open the relevant admin order route.
 - Customer order notifications should open the relevant customer order route.
@@ -759,6 +766,8 @@ Notification behavior:
 Sound:
 
 - Notification sound can be enabled/disabled.
+- Initial inbox loading and read/unread toggles are silent. A new latest notification after
+  loading can trigger the enabled arrival sound, including a first arrival into an empty inbox.
 - Message sound can be enabled/disabled separately.
 - The sound file lives in `public/` and is played by client-side logic only after browser interaction/permission rules allow audio.
 

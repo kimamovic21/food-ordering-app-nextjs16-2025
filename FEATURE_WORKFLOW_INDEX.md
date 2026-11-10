@@ -355,6 +355,11 @@ Key rules:
   Preserve 50-message cursors, sender-scoped retry UUIDs, visible read batches, and viewer-scoped
   thread state. Use `npm run test:messages` instead of the broader cross-feature command below.
 - SSE events should signal clients to refetch source-of-truth JSON endpoints.
+- For notification inbox changes, read `app/notifications/README.md` and
+  `app/api/notifications/README.md`, then `contexts/NotificationsContext.tsx`,
+  `hooks/useNotificationInbox.ts`, `libs/notificationInbox.ts`, and `libs/notificationPagination.ts`.
+  Preserve global counts, viewer-scoped summary/inbox keys, date/ID cursors, and the server-time
+  bulk-read cutoff. Use `npm run test:notifications` instead of the cross-feature command below.
 
 Focused tests:
 

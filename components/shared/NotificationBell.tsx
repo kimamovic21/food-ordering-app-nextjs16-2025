@@ -33,7 +33,16 @@ const NotificationBell = ({ iconSize = 22 }: NotificationBellProps) => {
   const router = useRouter();
   const session = useSession();
   const { data: profile } = useProfile();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    error,
+    isUpdatingReadState,
+    markAsRead,
+    markAllAsRead,
+    refreshNotifications,
+  } = useNotifications();
   const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
   if (session.status !== 'authenticated') {
@@ -50,14 +59,14 @@ const NotificationBell = ({ iconSize = 22 }: NotificationBellProps) => {
   const notificationsRoute = getNotificationsRoute(role);
   const visibleNotifications = notifications.slice(0, 5);
 
-  const handleNotificationClick = async (notification: {
+  const handleNotificationClick = (notification: {
     _id: string;
     isRead: boolean;
     type: string;
     orderId?: string | null;
   }) => {
     if (!notification.isRead) {
-      await markAsRead(notification._id);
+      void markAsRead(notification._id);
     }
 
     const path = resolveNotificationTargetPath(notification, role);
@@ -105,7 +114,23 @@ const NotificationBell = ({ iconSize = 22 }: NotificationBellProps) => {
         </div>
 
         <div className='max-h-[360px] overflow-y-auto overflow-x-hidden'>
-          {visibleNotifications.length === 0 ? (
+          {error && (
+            <div role='alert' className='px-3 py-2 text-sm text-destructive'>
+              {error}
+              <button
+                data-slot='button'
+                className='ml-2 border-0 bg-transparent p-0 underline'
+                onClick={() => void refreshNotifications()}
+              >
+                Try again
+              </button>
+            </div>
+          )}
+          {loading ? (
+            <div role='status' className='px-3 py-8 text-sm text-muted-foreground text-center'>
+              Loading notifications...
+            </div>
+          ) : visibleNotifications.length === 0 && !error ? (
             <div className='px-3 py-8 text-sm text-muted-foreground text-center'>
               No notifications yet.
             </div>
@@ -142,7 +167,7 @@ const NotificationBell = ({ iconSize = 22 }: NotificationBellProps) => {
                       event.stopPropagation();
                       if (!notification.isRead) await markAsRead(notification._id);
                     }}
-                    disabled={notification.isRead}
+                    disabled={notification.isRead || isUpdatingReadState}
                     className='text-xs text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-default'
                   >
                     Mark as read
@@ -160,7 +185,7 @@ const NotificationBell = ({ iconSize = 22 }: NotificationBellProps) => {
             <button
               data-slot='button'
               onClick={handleMarkAllAsRead}
-              disabled={unreadCount === 0 || isMarkingAllRead}
+              disabled={unreadCount === 0 || isMarkingAllRead || isUpdatingReadState}
               className='mb-2 w-full rounded-lg border border-border px-3 py-2 text-sm font-medium text-center text-foreground hover:bg-muted transition-colors disabled:cursor-not-allowed disabled:opacity-60'
             >
               {isMarkingAllRead ? 'Marking all as read...' : 'Mark all as read'}

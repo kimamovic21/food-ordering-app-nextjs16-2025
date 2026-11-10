@@ -410,6 +410,18 @@ Rules:
 
 Notifications are stored in MongoDB and loaded through `NotificationsContext`. Notification routing is role-aware through `libs/notificationClient.ts`.
 
+The provider's 12-row summary and `useNotificationInbox`'s 15-row cursor pages share a viewer-scoped
+query-key prefix. Filters are applied server-side before pagination; a separate recipient-scoped
+aggregation supplies global Total/Unread/Read counts. Cursor sorting uses `createdAt` and `_id` to
+handle ties. SSE, foreground polling, and read mutations revalidate active queries under the same
+viewer without resetting loaded pages. Account changes cancel/remove the old queries.
+
+Optimistic read state is a pending operation over current rows, not a snapshot that can overwrite
+new arrivals on rollback. Counters remain authoritative server values. Bulk read uses the GET
+request-start `readBefore` cutoff and updates only older recipient-owned rows; it includes unloaded
+pages and other filters but leaves arrivals at/after the cutoff unread. JSON row/count reads are
+not a database transaction snapshot. See `app/api/notifications/README.md` for the exact contract.
+
 Important notification examples include order placement, payment, order status changes, ETA-style phase updates, courier assignment, support ticket creation, late active-order warnings, and delivery completion prompts.
 
 Failed-delivery review notifications are admin-facing operational items and resolve to `/admin-dashboard/orders/[id]`; customer order notifications continue to resolve to customer order pages.

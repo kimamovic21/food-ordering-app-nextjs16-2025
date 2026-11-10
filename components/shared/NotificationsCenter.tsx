@@ -1,16 +1,49 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Bell, Clock3, Check, Settings } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { parseAsStringLiteral, useQueryStates } from 'nuqs';
+import {
+  ArrowLeft,
+  Bell,
+  Clock3,
+  Check,
+  CheckCheck,
+  Settings,
+  RefreshCw,
+  Loader2,
+  FilterX,
+  Mail,
+  MailOpen,
+  ArrowUpRight,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import { useNotificationInbox } from '@/hooks/useNotificationInbox';
+import {
+  applyNotificationRead,
+  matchesNotificationFilters,
+  mergeNotificationPages,
+  NOTIFICATION_CATEGORIES,
+} from '@/libs/notificationInbox';
 import { resolveNotificationTargetPath, type NotificationRole } from '@/libs/notificationClient';
-import type { AppNotification } from '@/types/notifications';
+import { formatAppDateTime } from '@/libs/dateFormat';
+import type {
+  AppNotification,
+  NotificationCategory,
+  NotificationStatusFilter,
+} from '@/types/notifications';
 
 type NotificationsCenterProps = {
   title: string;
@@ -20,15 +53,9 @@ type NotificationsCenterProps = {
   role: NotificationRole;
 };
 
-const timeAgo = (dateInput: string) => {
-  const date = new Date(dateInput);
-  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-
-  if (seconds < 60) return 'just now';
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-  return `${Math.floor(seconds / 86400)}d ago`;
-};
+const statuses = ['all', 'unread', 'read'] as const;
+const categories = ['all', 'orders', 'delivery', 'support', 'restaurants', 'inventory'] as const;
+const statusLabels = { all: 'All', unread: 'Unread', read: 'Read' };
 
 const NotificationsCenter = ({
   title,
@@ -38,315 +65,315 @@ const NotificationsCenter = ({
   role,
 }: NotificationsCenterProps) => {
   const router = useRouter();
-  const { markAsRead, markAllAsRead } = useNotifications();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [markingAllRead, setMarkingAllRead] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const ITEMS_PER_PAGE = 5;
-
-  const fetchNotifications = useCallback(
-    async (showLoading = true, appendMode = false, skip = 0) => {
-      try {
-        if (showLoading) {
-          setLoading(true);
-        } else if (appendMode) {
-          setLoadingMore(true);
-        } else {
-          setRefreshing(true);
-        }
-
-        const skipValue = appendMode ? skip : 0;
-        const response = await fetch(
-          `/api/notifications?limit=${ITEMS_PER_PAGE}&skip=${skipValue}`,
-          {
-            cache: 'no-store',
-          }
-        );
-        if (!response.ok) {
-          throw new Error('Failed to load notifications');
-        }
-
-        const json = await response.json();
-        const newNotifications = Array.isArray(json.notifications) ? json.notifications : [];
-
-        if (appendMode) {
-          // Append new notifications to existing ones
-          setNotifications((prev) => [...prev, ...newNotifications]);
-          setOffset((prev) => prev + newNotifications.length);
-        } else {
-          // Replace all notifications (initial load or refresh)
-          setNotifications(newNotifications);
-          setOffset(newNotifications.length);
-        }
-
-        // Determine if there are more notifications to load
-        setHasMore(newNotifications.length === ITEMS_PER_PAGE);
-        setError(null);
-      } catch (fetchError) {
-        console.error(fetchError);
-        setError('Failed to load notifications');
-      } finally {
-        setLoading(false);
-        setRefreshing(false);
-        setLoadingMore(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    fetchNotifications(true, false);
-  }, [fetchNotifications]);
-
-  const handleNotificationClick = async (notification: AppNotification) => {
-    if (!notification.isRead) {
-      await markAsRead(notification._id);
-      setNotifications((prev) =>
-        prev.map((item) =>
-          item._id === notification._id
-            ? { ...item, isRead: true, readAt: new Date().toISOString() }
-            : item
-        )
-      );
-    }
-
-    const targetPath = resolveNotificationTargetPath(notification, role);
-    if (targetPath) {
-      router.push(targetPath);
-    }
-  };
-
-  const handleMarkAsRead = async (notificationId: string) => {
-    await markAsRead(notificationId);
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification._id === notificationId
-          ? { ...notification, isRead: true, readAt: new Date().toISOString() }
-          : notification
-      )
+  const {
+    viewer,
+    counts,
+    readBefore,
+    error: summaryError,
+    pendingRead,
+    isUpdatingReadState,
+    markAsRead,
+    markAsUnread,
+    markAllAsRead,
+    refreshNotifications,
+  } = useNotifications();
+  const [filters, setFilters] = useQueryStates({
+    status: parseAsStringLiteral(statuses).withDefault('all'),
+    category: parseAsStringLiteral(categories).withDefault('all'),
+  });
+  const inbox = useNotificationInbox(viewer, filters);
+  const notifications = useMemo(() => {
+    const items = mergeNotificationPages(inbox.data?.pages.map((page) => page.notifications) || []);
+    return applyNotificationRead(items, pendingRead).filter((item) =>
+      matchesNotificationFilters(item, filters)
     );
+  }, [inbox.data, pendingRead, filters]);
+  const loading = !viewer || inbox.isPending;
+  const filtered = filters.status !== 'all' || filters.category !== 'all';
+  const error = inbox.error instanceof Error ? inbox.error.message : summaryError;
+  const boundary = inbox.data?.pages[0]?.readBefore || readBefore;
+  const markAllPending = pendingRead?.action === 'mark-all-read';
+
+  const openNotification = (notification: AppNotification) => {
+    if (!notification.isRead) void markAsRead(notification._id);
+    const target = resolveNotificationTargetPath(notification, role);
+    if (target) router.push(target);
   };
 
-  const unreadCount = notifications.filter((notification) => !notification.isRead).length;
-
-  const handleMarkAllAsRead = async () => {
-    if (unreadCount === 0 || markingAllRead) {
-      return;
-    }
-
-    try {
-      setMarkingAllRead(true);
-      const readAt = new Date().toISOString();
-      setNotifications((prev) =>
-        prev.map((notification) => ({
-          ...notification,
-          isRead: true,
-          readAt: notification.readAt || readAt,
-        }))
-      );
-      await markAllAsRead();
-    } finally {
-      setMarkingAllRead(false);
-    }
+  const loadMore = async () => {
+    if (inbox.hasNextPage && !inbox.isFetching) await inbox.fetchNextPage({ cancelRefetch: false });
   };
-
-  if (loading) {
-    return (
-      <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex items-center gap-3 mb-6'>
-          <Skeleton className='h-10 w-10 rounded-full' />
-          <div className='space-y-2'>
-            <Skeleton className='h-7 w-48' />
-            <Skeleton className='h-4 w-72' />
-          </div>
-        </div>
-
-        <div className='grid gap-4 sm:grid-cols-3 mb-8'>
-          {Array.from({ length: 3 }).map((_, index) => (
-            <Skeleton key={index} className='h-24 rounded-2xl' />
-          ))}
-        </div>
-
-        <div className='space-y-4'>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <Skeleton key={index} className='h-28 rounded-2xl' />
-          ))}
-        </div>
-      </section>
-    );
-  }
 
   return (
-    <section className='mt-8 flex flex-col min-h-[calc(100vh-8rem)] max-w-5xl mx-auto px-4 sm:px-6 lg:px-8'>
-      <div className='flex flex-col gap-4 mb-6 sm:flex-row sm:items-start sm:justify-between'>
-        <div className='flex items-start gap-4'>
-          <Link
-            href={backHref}
-            className='inline-flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background text-foreground hover:bg-muted transition-colors'
-            aria-label={backLabel}
-          >
-            <ArrowLeft className='h-4 w-4' />
-          </Link>
-          <div>
-            <div className='flex items-center gap-2'>
-              <Bell className='h-5 w-5 text-primary' />
-              <h1 className='text-2xl font-bold tracking-tight'>{title}</h1>
-            </div>
-            <p className='text-sm text-muted-foreground mt-1'>{description}</p>
-          </div>
-        </div>
-
-        <div className='flex items-center gap-3'>
-          <Button variant='outline' asChild className='rounded-full'>
-            <Link href='/notifications/settings' className='gap-2'>
-              <Settings className='h-4 w-4' />
-              Settings
+    <section className='mx-auto mt-8 min-h-[calc(100vh-8rem)] w-full min-w-0 max-w-5xl px-4 sm:px-6 lg:px-8'>
+      <div className='mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+        <div className='flex min-w-0 items-start gap-3'>
+          <Button asChild variant='ghost' size='icon' className='shrink-0' title={backLabel}>
+            <Link href={backHref} aria-label={backLabel}>
+              <ArrowLeft className='h-4 w-4' />
             </Link>
           </Button>
-
+          <div className='min-w-0'>
+            <h1 className='text-2xl font-bold'>{title}</h1>
+            <p className='mt-1 text-sm text-muted-foreground'>{description}</p>
+          </div>
+        </div>
+        <div className='flex shrink-0 flex-wrap items-center gap-2'>
           <Button
             variant='outline'
-            onClick={handleMarkAllAsRead}
-            disabled={unreadCount === 0 || markingAllRead}
-            className='rounded-full'
+            size='sm'
+            title='Mark all notifications as read, including other pages and filters'
+            onClick={() => void markAllAsRead(boundary || undefined)}
+            disabled={!counts?.unread || !boundary || isUpdatingReadState}
           >
-            {markingAllRead ? 'Marking all as read...' : 'Mark all as read'}
+            {markAllPending ? (
+              <Loader2 className='h-4 w-4 animate-spin' />
+            ) : (
+              <CheckCheck className='h-4 w-4' />
+            )}
+            {markAllPending ? 'Updating...' : 'Mark all as read'}
           </Button>
-
           <Button
             variant='outline'
-            onClick={() => fetchNotifications(false)}
-            disabled={refreshing}
-            className='rounded-full'
+            size='icon'
+            title='Refresh notifications'
+            aria-label='Refresh notifications'
+            disabled={inbox.isFetching || isUpdatingReadState}
+            onClick={() => void refreshNotifications()}
           >
-            {refreshing ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw className={inbox.isFetching ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+          </Button>
+          <Button variant='outline' size='icon' asChild title='Notification settings'>
+            <Link href='/notifications/settings' aria-label='Notification settings'>
+              <Settings className='h-4 w-4' />
+            </Link>
           </Button>
         </div>
       </div>
 
-      <div className='grid gap-4 sm:grid-cols-3 mb-8'>
-        <Card>
-          <CardContent className='p-5 flex items-center gap-4'>
-            <div className='h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center'>
-              <Bell className='h-5 w-5' />
-            </div>
-            <div>
-              <p className='text-sm text-muted-foreground'>Total</p>
-              <p className='text-2xl font-bold'>{notifications.length}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className='mb-6 grid grid-cols-3 gap-2 sm:gap-4' aria-label='Notification totals'>
+        {[
+          { label: 'Total', value: counts?.total, Icon: Bell, color: 'text-primary' },
+          {
+            label: 'Unread',
+            value: counts?.unread,
+            Icon: Clock3,
+            color: 'text-amber-600 dark:text-amber-400',
+          },
+          {
+            label: 'Read',
+            value: counts?.read,
+            Icon: Check,
+            color: 'text-emerald-600 dark:text-emerald-400',
+          },
+        ].map(({ label, value, Icon, color }) => (
+          <Card key={label} className='min-w-0 rounded-lg py-0'>
+            <CardContent className='flex min-w-0 flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-5'>
+              <Icon className={'h-5 w-5 shrink-0 ' + color} />
+              <div className='min-w-0'>
+                <p className='text-sm text-muted-foreground'>{label}</p>
+                <p
+                  className='break-all text-xl font-semibold tabular-nums'
+                  aria-label={label + ' notifications'}
+                >
+                  {value ?? '-'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-        <Card>
-          <CardContent className='p-5 flex items-center gap-4'>
-            <div className='h-12 w-12 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center'>
-              <Clock3 className='h-5 w-5' />
-            </div>
-            <div>
-              <p className='text-sm text-muted-foreground'>Unread</p>
-              <p className='text-2xl font-bold'>{unreadCount}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className='p-5 flex items-center gap-4'>
-            <div className='h-12 w-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center'>
-              <Check className='h-5 w-5' />
-            </div>
-            <div>
-              <p className='text-sm text-muted-foreground'>Read</p>
-              <p className='text-2xl font-bold'>{notifications.length - unreadCount}</p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className='mb-4 flex min-w-0 flex-col gap-3 border-y border-border py-3 sm:flex-row sm:items-center sm:justify-between'>
+        <div
+          role='group'
+          aria-label='Notification status'
+          className='grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:w-64'
+        >
+          {statuses.map((status) => (
+            <Button
+              key={status}
+              type='button'
+              size='sm'
+              variant={filters.status === status ? 'secondary' : 'ghost'}
+              className='min-w-0'
+              aria-pressed={filters.status === status}
+              onClick={() => void setFilters({ status: status as NotificationStatusFilter })}
+            >
+              {statusLabels[status]}
+            </Button>
+          ))}
+        </div>
+        <div className='flex min-w-0 items-center gap-2 sm:w-64'>
+          <Select
+            value={filters.category}
+            onValueChange={(category) =>
+              void setFilters({ category: category as NotificationCategory })
+            }
+          >
+            <SelectTrigger
+              data-slot='button'
+              aria-label='Notification category'
+              className='w-full min-w-0'
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {NOTIFICATION_CATEGORIES[category].label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {filtered && (
+            <Button
+              variant='ghost'
+              size='icon'
+              className='shrink-0'
+              title='Clear filters'
+              aria-label='Clear filters'
+              onClick={() => void setFilters({ status: 'all', category: 'all' })}
+            >
+              <FilterX className='h-4 w-4' />
+            </Button>
+          )}
+        </div>
       </div>
 
       {error && (
-        <div className='mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300'>
+        <div
+          role='alert'
+          className='mb-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive'
+        >
           {error}
+          <Button
+            size='sm'
+            variant='ghost'
+            className='ml-2'
+            onClick={() => void refreshNotifications()}
+            disabled={inbox.isFetching}
+          >
+            Try again
+          </Button>
         </div>
       )}
 
-      <div className='space-y-4'>
-        {notifications.length === 0 ? (
-          <Card className='border-dashed'>
-            <CardContent className='flex flex-col items-center justify-center py-16 text-center'>
-              <div className='mb-4 h-16 w-16 rounded-full bg-muted flex items-center justify-center'>
-                <Bell className='h-7 w-7 text-muted-foreground' />
-              </div>
-              <h2 className='text-lg font-semibold'>No notifications yet</h2>
-              <p className='mt-2 text-sm text-muted-foreground max-w-sm'>
-                New updates about orders, delivery status, and assignments will appear here.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {notifications.map((notification) => (
-              <Card
-                key={notification._id}
-                className={`transition-colors hover:border-primary/40 ${notification.isRead ? 'opacity-80' : ''}`}
+      <div className='space-y-3' aria-busy={loading || inbox.isFetchingNextPage}>
+        {loading
+          ? Array.from({ length: 5 }, (_, index) => (
+              <div
+                key={index}
+                className='space-y-3 rounded-lg border p-5'
+                aria-label='Loading notification'
               >
-                <CardHeader className='pb-3'>
-                  <div className='flex items-start justify-between gap-4'>
-                    <div className='min-w-0'>
-                      <CardTitle className='text-base'>{notification.title}</CardTitle>
-                      <CardDescription className='mt-1'>
-                        {timeAgo(notification.createdAt)}
-                      </CardDescription>
-                    </div>
-                    <Badge variant={notification.isRead ? 'secondary' : 'default'}>
-                      {notification.isRead ? 'Read' : 'Unread'}
-                    </Badge>
-                  </div>
-                </CardHeader>
-
-                <CardContent className='space-y-4'>
-                  <p className='text-sm text-muted-foreground leading-relaxed'>
-                    {notification.message}
-                  </p>
-
-                  <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                    <Button
-                      variant='outline'
-                      className='rounded-full justify-start sm:justify-center'
-                      onClick={() => handleNotificationClick(notification)}
-                    >
-                      View details
-                    </Button>
-
-                    <button
-                      data-slot='button'
-                      onClick={() => handleMarkAsRead(notification._id)}
-                      disabled={notification.isRead}
-                      className='text-sm font-medium text-primary hover:underline disabled:text-muted-foreground disabled:no-underline disabled:cursor-default text-left sm:text-right'
-                    >
-                      Mark as read
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-            {hasMore && (
-              <div className='flex justify-center mt-8'>
-                <Button
-                  onClick={() => fetchNotifications(false, true, offset)}
-                  disabled={loadingMore}
-                  variant='outline'
-                  className='rounded-full px-8'
-                >
-                  {loadingMore ? 'Loading more...' : 'Load more'}
-                </Button>
+                <Skeleton className='h-5 w-2/3' />
+                <Skeleton className='h-4 w-full' />
+                <Skeleton className='h-4 w-1/3' />
               </div>
-            )}
-          </>
+            ))
+          : notifications.length === 0
+            ? !error && (
+                <div className='py-12 text-center'>
+                  <Bell className='mx-auto mb-3 h-8 w-8 text-muted-foreground' />
+                  <h2 className='text-lg font-semibold'>
+                    {filtered ? 'No notifications match these filters' : 'No notifications yet'}
+                  </h2>
+                  {filtered && (
+                    <Button
+                      className='mt-3'
+                      variant='ghost'
+                      onClick={() => void setFilters({ status: 'all', category: 'all' })}
+                    >
+                      Clear filters
+                    </Button>
+                  )}
+                </div>
+              )
+            : notifications.map((notification) => {
+                const target = resolveNotificationTargetPath(notification, role);
+                const isPending =
+                  pendingRead?.action === 'mark-all-read'
+                    ? Date.parse(notification.createdAt) < Date.parse(pendingRead.readBefore)
+                    : pendingRead?.notificationId === notification._id;
+                return (
+                  <Card
+                    key={notification._id}
+                    className={
+                      'min-w-0 rounded-lg py-0 ' +
+                      (notification.isRead ? 'bg-background' : 'border-primary/30 bg-primary/5')
+                    }
+                  >
+                    <CardContent className='space-y-3 p-4 sm:p-5'>
+                      <div className='flex items-start justify-between gap-3'>
+                        <div className='min-w-0'>
+                          <h2 className='break-words text-base font-semibold'>
+                            {notification.title}
+                          </h2>
+                          <time
+                            dateTime={notification.createdAt}
+                            className='text-xs text-muted-foreground'
+                          >
+                            {formatAppDateTime(notification.createdAt)}
+                          </time>
+                        </div>
+                        <Badge
+                          variant={notification.isRead ? 'secondary' : 'default'}
+                          className='shrink-0'
+                        >
+                          {notification.isRead ? 'Read' : 'Unread'}
+                        </Badge>
+                      </div>
+                      <p className='break-words text-sm leading-relaxed text-muted-foreground'>
+                        {notification.message}
+                      </p>
+                      <div className='flex flex-wrap items-center justify-between gap-2'>
+                        {target && (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            onClick={() => openNotification(notification)}
+                          >
+                            <ArrowUpRight className='h-4 w-4' />
+                            View details
+                          </Button>
+                        )}
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          className='ml-auto'
+                          disabled={isUpdatingReadState}
+                          onClick={() =>
+                            void (notification.isRead
+                              ? markAsUnread(notification._id)
+                              : markAsRead(notification._id))
+                          }
+                        >
+                          {isPending ? (
+                            <Loader2 className='h-4 w-4 animate-spin' />
+                          ) : notification.isRead ? (
+                            <Mail className='h-4 w-4' />
+                          ) : (
+                            <MailOpen className='h-4 w-4' />
+                          )}
+                          {notification.isRead ? 'Mark as unread' : 'Mark as read'}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+        {!loading && inbox.hasNextPage && (
+          <div className='flex justify-center py-5'>
+            <Button
+              onClick={() => void loadMore()}
+              disabled={inbox.isFetching || isUpdatingReadState}
+              variant='outline'
+            >
+              {inbox.isFetchingNextPage && <Loader2 className='h-4 w-4 animate-spin' />}
+              {inbox.isFetchingNextPage ? 'Loading...' : 'Load more'}
+            </Button>
+          </div>
         )}
       </div>
     </section>
