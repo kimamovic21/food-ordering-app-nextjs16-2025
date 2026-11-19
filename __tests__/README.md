@@ -81,6 +81,11 @@ This folder contains unit tests grouped by feature area.
 
 ## Running Tests
 
+- `npm run test:account-privacy`: seven focused files for viewer-scoped profile/addresses/favorites,
+  stale-response guards, favorite optimistic rollback, same-account refresh and profile/cart draft
+  isolation. Uses mocked fetch/NextAuth in jsdom; does not access MongoDB, Stripe or Cloudinary.
+  See `TESTING.md` -> Account Switch Privacy for manual browser checks and scope limitations.
+
 - Run all tests: `npm run test`
 - Watch mode: `npm run test:watch`
 - Run a single test file: `npm run test:file -- __tests__/api/register.route.test.ts`

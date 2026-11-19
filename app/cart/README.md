@@ -34,6 +34,22 @@ This folder owns cart review, per-item cart notes, cart validation, tracked-stoc
 - If `/api/checkout` accepts the cart, tracked inventory can be temporarily reserved for the unpaid payment window. If the customer pays, the webhook captures the reservation; if the order expires or is canceled unpaid, the reservation is released.
 - The UI is allowed to provide a better experience, but the checkout API remains the final authority.
 
+## Account Switch Behavior
+
+The outer `CartPage` keys the inner `AccountCartPage` by the session viewer. A different account
+starts with new delivery fields, phone, coordinates, saved-address selection, coupon/loyalty preview,
+and order-level special instructions. Its own profile/default saved address can then populate the
+form. The surrounding `CartProvider` is not remounted: products, quantities and per-item notes stay
+in the existing device-local cart. Same-account session refreshes do not reset the form.
+
+`useDeliveryAddresses` scopes GET/mutation caches by viewer. Create, default, label and delete
+mutations capture their starting account and reject stale continuations before touching the next
+account's cache or UI. After a session change, old checkout validation cannot start a new checkout;
+an old checkout response cannot clear the new cart or redirect the new user. A request already
+accepted by the server can still finish; server order/payment validation remains unchanged.
+
+See `ARCHITECTURE.md` -> Account Switch Privacy. Verify with `npm run test:account-privacy`.
+
 ## Important Files
 
 - `app/cart/CartItems.tsx`: functions/components: `getCartItemKey`, `showToast`, `handleUpdateQuantity`, `handleRemoveFromCart`, `handleClearCart`; renders quantity controls plus a short per-item note textarea; client component

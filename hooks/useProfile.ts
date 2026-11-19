@@ -1,14 +1,14 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import useAccountScope from '@/hooks/useAccountScope';
 import { queryKeys } from '@/libs/queryKeys';
 import type { ProfileData } from '@/types/user';
 
 export type { ProfileData } from '@/types/user';
 
-export const fetchProfile = async (): Promise<ProfileData | null> => {
-  const response = await fetch('/api/profile', { cache: 'no-store' });
+export const fetchProfile = async (signal?: AbortSignal): Promise<ProfileData | null> => {
+  const response = await fetch('/api/profile', { cache: 'no-store', signal });
   const json = await response.json().catch(() => null);
 
   if (response.status === 401) {
@@ -23,13 +23,13 @@ export const fetchProfile = async (): Promise<ProfileData | null> => {
 };
 
 const useProfile = () => {
-  const { status } = useSession();
-  const isAuthenticated = status === 'authenticated';
+  const { status, viewer } = useAccountScope();
+  const isAuthenticated = status === 'authenticated' && Boolean(viewer);
   const isSessionLoading = status === 'loading';
 
   const query = useQuery({
-    queryFn: fetchProfile,
-    queryKey: queryKeys.profile.detail(),
+    queryFn: ({ signal }) => fetchProfile(signal),
+    queryKey: queryKeys.profile.detail(viewer),
     enabled: isAuthenticated,
     staleTime: 60 * 1000,
     gcTime: 10 * 60 * 1000,

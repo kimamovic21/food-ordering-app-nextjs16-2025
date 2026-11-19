@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns the `/favorite-meals` UI area. It may include pages, loading states, nested route components, and client-side workflow helpers.
+This folder displays the signed-in customer's saved meals, with loading, retry, empty and signed-out states, and links back to menu items.
 
 ## Route And Audience
 
@@ -19,6 +19,15 @@ This folder owns the `/favorite-meals` UI area. It may include pages, loading st
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/favorites/menu-items`. Keep API response shapes aligned.
+
+## Viewer-Scoped Favorites
+
+The list uses `queryKeys.favorites.menuItems(viewer)` and an abortable GET. Favorite IDs use
+`queryKeys.favorites.ids(viewer)`. The account boundary removes old profile/favorites queries on
+logout or account switch, so a fresh cache from the previous login cannot populate this screen.
+`FavoriteToggleButton` updates the heart immediately, keeps the card until removal is confirmed,
+rolls back only the failed ID, and ignores completion UI from an obsolete account.
+See `ARCHITECTURE.md` -> Account Switch Privacy; run `npm run test:account-privacy`.
 
 ## Important Files
 

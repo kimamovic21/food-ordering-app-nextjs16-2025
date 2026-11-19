@@ -72,7 +72,13 @@ describe('queryKeys', () => {
 
   it('keeps profile keys grouped for broad invalidation', () => {
     expect(queryKeys.profile.all).toEqual(['profile']);
-    expect(queryKeys.profile.detail()).toEqual(['profile', 'detail']);
+    expect(queryKeys.profile.detail('user-a')).toEqual(['profile', 'user-a', 'detail']);
+    expect(queryKeys.profile.deliveryAddresses('user-a')).toEqual([
+      'profile',
+      'user-a',
+      'delivery-addresses',
+    ]);
+    expect(queryKeys.profile.detail('user-a')).not.toEqual(queryKeys.profile.detail('user-b'));
   });
 
   it('keeps admin user keys grouped for broad invalidation', () => {
@@ -82,9 +88,14 @@ describe('queryKeys', () => {
 
   it('keeps favorite keys grouped for broad invalidation', () => {
     expect(queryKeys.favorites.all).toEqual(['favorites']);
-    expect(queryKeys.favorites.ids()).toEqual(['favorites', 'ids']);
-    expect(queryKeys.favorites.menuItems()).toEqual(['favorites', 'menu-items']);
-    expect(queryKeys.favorites.restaurants()).toEqual(['favorites', 'restaurants']);
+    expect(queryKeys.favorites.ids('user-a')).toEqual(['favorites', 'user-a', 'ids']);
+    expect(queryKeys.favorites.menuItems('user-a')).toEqual(['favorites', 'user-a', 'menu-items']);
+    expect(queryKeys.favorites.restaurants('user-a')).toEqual([
+      'favorites',
+      'user-a',
+      'restaurants',
+    ]);
+    expect(queryKeys.favorites.viewer('user-a')).not.toEqual(queryKeys.favorites.viewer('user-b'));
   });
 
   it('keeps restaurant operations keys grouped for broad invalidation', () => {

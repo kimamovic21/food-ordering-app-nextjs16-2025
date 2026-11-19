@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState } from 'react';
+import AccountCacheBoundary from './AccountCacheBoundary';
 
 type TanStackQueryProviderProps = {
   children: React.ReactNode;
@@ -25,7 +26,12 @@ const TanStackQueryProvider = ({ children }: TanStackQueryProviderProps) => {
       })
   );
 
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AccountCacheBoundary />
+      {children}
+    </QueryClientProvider>
+  );
 };
 
 export default TanStackQueryProvider;

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import useAccountScope from '@/hooks/useAccountScope';
 import { Heart } from 'lucide-react';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,6 @@ interface FavoriteToggleButtonProps {
 }
 
 type FavoriteMutationContext = {
-  previousFavorites?: FavoritesState;
   previousLocalValue: boolean;
 };
 
@@ -70,11 +69,12 @@ const updateFavoritesCache = (
 const removeFavoriteListItem = (
   queryClient: ReturnType<typeof useQueryClient>,
   type: FavoriteType,
-  targetId: string
+  targetId: string,
+  viewer: string
 ) => {
   if (type === 'menu-item') {
     queryClient.setQueryData<FavoriteMenuItemsCache>(
-      queryKeys.favorites.menuItems(),
+      queryKeys.favorites.menuItems(viewer),
       (current) => ({
         items: (current?.items || []).filter((item) => item._id !== targetId),
       })
@@ -83,14 +83,14 @@ const removeFavoriteListItem = (
   }
 
   queryClient.setQueryData<FavoriteRestaurantsCache>(
-    queryKeys.favorites.restaurants(),
+    queryKeys.favorites.restaurants(viewer),
     (current) => ({
       restaurants: (current?.restaurants || []).filter((restaurant) => restaurant._id !== targetId),
     })
   );
 };
 
-const FavoriteToggleButton = ({
+const AccountFavoriteToggleButton = ({
   type,
   targetId,
   isFavorite,
@@ -99,7 +99,7 @@ const FavoriteToggleButton = ({
   showLabel = false,
   onChanged,
 }: FavoriteToggleButtonProps) => {
-  const { status } = useSession();
+  const { status, viewer, isCurrent, assertCurrent } = useAccountScope();
   const queryClient = useQueryClient();
   const [localValue, setLocalValue] = useState(isFavorite);
 
@@ -114,6 +114,7 @@ const FavoriteToggleButton = ({
     FavoriteMutationContext
   >({
     mutationFn: async () => {
+      assertCurrent();
       const response = await fetch(endpointByType[type], {
         method: 'POST',
         headers: {
@@ -123,6 +124,7 @@ const FavoriteToggleButton = ({
       });
 
       const data = await response.json().catch(() => null);
+      assertCurrent();
 
       if (!response.ok) {
         throw new Error(data?.error || 'Failed to update favorites');
@@ -135,8 +137,11 @@ const FavoriteToggleButton = ({
       };
     },
     onError: (error, _variables, context) => {
-      if (context?.previousFavorites) {
-        queryClient.setQueryData(queryKeys.favorites.ids(), context.previousFavorites);
+      if (!isCurrent()) return;
+      if (context) {
+        queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(viewer), (current) =>
+          updateFavoritesCache(current, type, targetId, context.previousLocalValue)
+        );
       }
 
       const previousValue = context?.previousLocalValue ?? isFavorite;
@@ -145,34 +150,32 @@ const FavoriteToggleButton = ({
       sonnerToast.error(error.message || 'Failed to update favorites');
     },
     onMutate: async () => {
+      assertCurrent();
       const nextIsFavorite = !localValue;
 
-      await queryClient.cancelQueries({ queryKey: queryKeys.favorites.all });
-      const previousFavorites = queryClient.getQueryData<FavoritesState>(queryKeys.favorites.ids());
+      await queryClient.cancelQueries({ queryKey: queryKeys.favorites.viewer(viewer) });
+      assertCurrent();
 
-      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(), (current) =>
+      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(viewer), (current) =>
         updateFavoritesCache(current, type, targetId, nextIsFavorite)
       );
-
-      if (!nextIsFavorite) {
-        removeFavoriteListItem(queryClient, type, targetId);
-      }
 
       setLocalValue(nextIsFavorite);
       onChanged?.(nextIsFavorite);
 
       return {
-        previousFavorites,
         previousLocalValue: localValue,
       };
     },
     onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all });
+      // Invalidation does not recreate removed queries; it also reconciles navigation away mid-save.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.favorites.viewer(viewer) });
     },
     onSuccess: (data) => {
+      if (!isCurrent()) return;
       setLocalValue(data.isFavorite);
       onChanged?.(data.isFavorite);
-      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(), (current) =>
+      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(viewer), (current) =>
         updateFavoritesCache(current, type, targetId, data.isFavorite)
       );
 
@@ -181,11 +184,12 @@ const FavoriteToggleButton = ({
           ? `Added to favorite ${labelByType[type]}s`
           : `Removed from favorite ${labelByType[type]}s`
       );
+      if (!data.isFavorite) removeFavoriteListItem(queryClient, type, targetId, viewer);
     },
   });
 
   const handleToggle = () => {
-    if (status !== 'authenticated') {
+    if (status !== 'authenticated' || !isCurrent()) {
       sonnerToast.error('Please login to save favorites');
       return;
     }
@@ -217,6 +221,16 @@ const FavoriteToggleButton = ({
       />
       {showLabel && <span>{localValue ? 'Favorited' : 'Favorite'}</span>}
     </Button>
+  );
+};
+
+const FavoriteToggleButton = (props: FavoriteToggleButtonProps) => {
+  const { viewer } = useAccountScope();
+  return (
+    <AccountFavoriteToggleButton
+      key={viewer + ':' + props.type + ':' + props.targetId}
+      {...props}
+    />
   );
 };
 

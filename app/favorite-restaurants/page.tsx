@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { MapPin } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import useAccountScope from '@/hooks/useAccountScope';
 import Image from 'next/image';
 import Link from 'next/link';
 import FavoriteToggleButton from '@/components/shared/FavoriteToggleButton';
@@ -18,8 +18,10 @@ import { queryKeys } from '@/libs/queryKeys';
 import FavoriteRestaurantsLoading from './loading';
 import type { FavoriteRestaurantsResponse } from '@/types/favorites';
 
-const fetchFavoriteRestaurants = async (): Promise<FavoriteRestaurantsResponse> => {
-  const response = await fetch('/api/favorites/restaurants', { cache: 'no-store' });
+const fetchFavoriteRestaurants = async (
+  signal?: AbortSignal
+): Promise<FavoriteRestaurantsResponse> => {
+  const response = await fetch('/api/favorites/restaurants', { cache: 'no-store', signal });
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
@@ -32,15 +34,15 @@ const fetchFavoriteRestaurants = async (): Promise<FavoriteRestaurantsResponse> 
 };
 
 const FavoriteRestaurantsPage = () => {
-  const { status } = useSession();
+  const { status, viewer } = useAccountScope();
   const { data: favorites, setRestaurantFavorite } = useFavorites();
-  const isAuthenticated = status === 'authenticated';
+  const isAuthenticated = status === 'authenticated' && Boolean(viewer);
 
   const favoriteRestaurantsQuery = useQuery({
     enabled: isAuthenticated,
     gcTime: 10 * 60 * 1000,
-    queryFn: fetchFavoriteRestaurants,
-    queryKey: queryKeys.favorites.restaurants(),
+    queryFn: ({ signal }) => fetchFavoriteRestaurants(signal),
+    queryKey: queryKeys.favorites.restaurants(viewer),
     staleTime: 60 * 1000,
   });
 

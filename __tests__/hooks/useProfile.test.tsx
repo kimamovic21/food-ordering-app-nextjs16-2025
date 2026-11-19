@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import useProfile from '@/hooks/useProfile';
 
 const sessionMock = vi.hoisted(() => ({
+  data: { user: { email: 'kerim@example.com' } },
   status: 'authenticated' as 'authenticated' | 'unauthenticated' | 'loading',
 }));
 

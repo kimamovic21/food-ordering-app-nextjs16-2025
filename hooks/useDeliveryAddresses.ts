@@ -1,6 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import useAccountScope from '@/hooks/useAccountScope';
 import { queryKeys } from '@/libs/queryKeys';
 import type { DeliveryAddress, DeliveryAddressInput } from '@/types/user';
 
@@ -11,118 +12,86 @@ type DeliveryAddressResponse = {
   labelUpdated?: boolean;
 };
 
-const readErrorMessage = async (response: Response, fallback: string) => {
+const endpoint = '/api/profile/delivery-addresses';
+
+async function fetchDeliveryAddresses(signal?: AbortSignal): Promise<DeliveryAddress[]> {
+  const response = await fetch(endpoint, { cache: 'no-store', signal });
+  if (response.status === 401) return [];
   const json = await response.json().catch(() => null);
-  return json?.error || fallback;
-};
+  if (!response.ok) throw new Error(json?.error || 'Failed to load delivery addresses.');
+  return Array.isArray(json?.addresses) ? json.addresses : [];
+}
 
-const fetchDeliveryAddresses = async (): Promise<DeliveryAddress[]> => {
-  const response = await fetch('/api/profile/delivery-addresses', { cache: 'no-store' });
-
-  if (response.status === 401) {
-    return [];
-  }
-
-  if (!response.ok) {
-    throw new Error(await readErrorMessage(response, 'Failed to load delivery addresses.'));
-  }
-
-  const json = (await response.json()) as DeliveryAddressResponse;
-  return Array.isArray(json.addresses) ? json.addresses : [];
-};
+// Capture the initiating account in variables, not callbacks that can change on rerender.
+function useAddressMutation<T>(
+  action: string,
+  request: (value: T) => { url?: string; method: string; body?: unknown }
+) {
+  const account = useAccountScope();
+  const client = useQueryClient();
+  const mutation = useMutation({
+    mutationKey: [...queryKeys.profile.deliveryAddresses(account.viewer), action],
+    mutationFn: async ({ value, owner }: { value: T; owner: typeof account }) => {
+      owner.assertCurrent();
+      const config = request(value);
+      const response = await fetch(config.url || endpoint, {
+        method: config.method,
+        headers: { 'Content-Type': 'application/json' },
+        ...(config.body ? { body: JSON.stringify(config.body) } : {}),
+      });
+      const data = await response.json().catch(() => null);
+      owner.assertCurrent();
+      if (!response.ok) throw new Error(data?.error || 'Failed to update delivery addresses.');
+      return data as DeliveryAddressResponse;
+    },
+    onSuccess: (data, { owner }) => {
+      if (!owner.isCurrent()) return;
+      client.setQueryData(queryKeys.profile.deliveryAddresses(owner.viewer), data.addresses);
+      void client.invalidateQueries({ queryKey: queryKeys.profile.detail(owner.viewer) });
+    },
+  });
+  return {
+    ...mutation,
+    mutate: (value: T) => mutation.mutate({ value, owner: account }),
+    mutateAsync: async (value: T) => {
+      const data = await mutation.mutateAsync({ value, owner: account });
+      account.assertCurrent();
+      return data;
+    },
+  };
+}
 
 const useDeliveryAddresses = (enabled: boolean) => {
-  const queryClient = useQueryClient();
-
+  const { viewer, status } = useAccountScope();
+  const authenticated = status === 'authenticated' && Boolean(viewer);
   const query = useQuery({
-    queryKey: queryKeys.profile.deliveryAddresses(),
-    queryFn: fetchDeliveryAddresses,
-    enabled,
+    queryKey: queryKeys.profile.deliveryAddresses(viewer),
+    queryFn: ({ signal }) => fetchDeliveryAddresses(signal),
+    enabled: enabled && authenticated,
     staleTime: 60 * 1000,
   });
-
-  const createAddress = useMutation({
-    mutationFn: async (address: DeliveryAddressInput) => {
-      const response = await fetch('/api/profile/delivery-addresses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(address),
-      });
-
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response, 'Failed to save delivery address.'));
-      }
-
-      return (await response.json()) as DeliveryAddressResponse;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.profile.deliveryAddresses(), data.addresses);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profile.detail() });
-    },
-  });
-
-  const setDefaultAddress = useMutation({
-    mutationFn: async (addressId: string) => {
-      const response = await fetch('/api/profile/delivery-addresses', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addressId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response, 'Failed to update delivery address.'));
-      }
-
-      return (await response.json()) as DeliveryAddressResponse;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.profile.deliveryAddresses(), data.addresses);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profile.detail() });
-    },
-  });
-
-  const updateAddressLabel = useMutation({
-    mutationFn: async ({ addressId, label }: { addressId: string; label: string }) => {
-      const response = await fetch('/api/profile/delivery-addresses', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addressId, label }),
-      });
-
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response, 'Failed to update delivery address.'));
-      }
-
-      return (await response.json()) as DeliveryAddressResponse;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.profile.deliveryAddresses(), data.addresses);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profile.detail() });
-    },
-  });
-
-  const deleteAddress = useMutation({
-    mutationFn: async (addressId: string) => {
-      const response = await fetch(
-        `/api/profile/delivery-addresses?addressId=${encodeURIComponent(addressId)}`,
-        { method: 'DELETE' }
-      );
-
-      if (!response.ok) {
-        throw new Error(await readErrorMessage(response, 'Failed to delete delivery address.'));
-      }
-
-      return (await response.json()) as DeliveryAddressResponse;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(queryKeys.profile.deliveryAddresses(), data.addresses);
-      void queryClient.invalidateQueries({ queryKey: queryKeys.profile.detail() });
-    },
-  });
-
+  const createAddress = useAddressMutation<DeliveryAddressInput>('create', (address) => ({
+    method: 'POST',
+    body: address,
+  }));
+  const setDefaultAddress = useAddressMutation<string>('default', (addressId) => ({
+    method: 'PATCH',
+    body: { addressId },
+  }));
+  const updateAddressLabel = useAddressMutation<{ addressId: string; label: string }>(
+    'label',
+    (body) => ({
+      method: 'PATCH',
+      body,
+    })
+  );
+  const deleteAddress = useAddressMutation<string>('delete', (addressId) => ({
+    method: 'DELETE',
+    url: endpoint + '?addressId=' + encodeURIComponent(addressId),
+  }));
   return {
-    addresses: query.data ?? [],
-    isLoading: query.isLoading,
+    addresses: authenticated && enabled ? (query.data ?? []) : [],
+    isLoading: status === 'loading' || (enabled && authenticated && query.isLoading),
     createAddress,
     setDefaultAddress,
     updateAddressLabel,

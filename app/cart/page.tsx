@@ -6,11 +6,12 @@ import {
   useMemo,
   useState,
   useRef,
+  useId,
   type ChangeEvent,
   type ReactNode,
 } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import useAccountScope from '@/hooks/useAccountScope';
 import { AlertTriangle, CheckCircle2, Clock3, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import { useCart } from '@/contexts/CartContext';
@@ -177,12 +178,19 @@ const CartSkeleton = () => (
   </div>
 );
 
-const CartPage = () => {
+const AccountCartPage = () => {
   const router = useRouter();
   const { cartItems, removeFromCart, updateQuantity, updateItemNote, clearCart } = useCart();
 
   const { data: profileData } = useProfile();
-  const { status: sessionStatus } = useSession();
+  const { status: sessionStatus, isCurrent } = useAccountScope();
+  const checkoutToastId = useId();
+  useEffect(
+    () => () => {
+      sonnerToast.dismiss(checkoutToastId);
+    },
+    [checkoutToastId]
+  );
   const isLoggedIn = sessionStatus === 'authenticated';
   const {
     addresses: savedDeliveryAddresses,
@@ -848,6 +856,7 @@ const CartPage = () => {
 
     try {
       const result = await createDeliveryAddress.mutateAsync(address);
+      if (!isCurrent()) return;
       if (result.address?._id) {
         setSelectedDeliveryAddressId(result.address._id);
         setFormData((prev) => ({
@@ -874,6 +883,7 @@ const CartPage = () => {
         }
       );
     } catch (error) {
+      if (!isCurrent()) return;
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to save address.');
     }
   };
@@ -885,10 +895,12 @@ const CartPage = () => {
 
     try {
       await setDefaultAddress.mutateAsync(selectedDeliveryAddressId);
+      if (!isCurrent()) return;
       sonnerToast.success('Default delivery address updated', {
         style: { background: '#22c55e', color: 'white' },
       });
     } catch (error) {
+      if (!isCurrent()) return;
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to update address.');
     }
   };
@@ -909,6 +921,7 @@ const CartPage = () => {
         addressId: selectedDeliveryAddressId,
         label,
       });
+      if (!isCurrent()) return;
       const updatedAddress =
         result.address || result.addresses.find((item) => item._id === selectedDeliveryAddressId);
       setFormData((prev) => ({
@@ -919,6 +932,7 @@ const CartPage = () => {
         style: { background: '#22c55e', color: 'white' },
       });
     } catch (error) {
+      if (!isCurrent()) return;
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to update address.');
     }
   };
@@ -930,11 +944,13 @@ const CartPage = () => {
 
     try {
       await deleteAddress.mutateAsync(selectedDeliveryAddressId);
+      if (!isCurrent()) return;
       setSelectedDeliveryAddressId('');
       sonnerToast.success('Delivery address deleted', {
         style: { background: '#22c55e', color: 'white' },
       });
     } catch (error) {
+      if (!isCurrent()) return;
       sonnerToast.error(error instanceof Error ? error.message : 'Failed to delete address.');
     }
   };
@@ -1108,6 +1124,7 @@ const CartPage = () => {
       }
 
       const latestCartValidation = await fetchCartValidation();
+      if (!isCurrent()) return;
       setCartValidationItems(latestCartValidation.items);
       setCartValidationMessage(latestCartValidation.message || null);
 
@@ -1247,55 +1264,60 @@ const CartPage = () => {
 
       const couponToSend = couponValidationError ? '' : appliedCoupon?.code || '';
 
-      await sonnerToast.promise(
-        (async (): Promise<CheckoutStartResult> => {
-          const response = await fetch('/api/checkout', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              phone: formData.phone,
-              streetAddress: formData.streetAddress,
-              postalCode: formData.postalCode,
-              city: formData.city,
-              country: formData.country,
-              deliveryLatitude: formData.deliveryLatitude,
-              deliveryLongitude: formData.deliveryLongitude,
-              specialInstructions: formData.specialInstructions,
-              cartItems,
-              loyaltyDiscount,
-              loyaltyDiscountPercentage,
-              couponCode: couponToSend,
-            }),
-          });
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            throw new Error(errorData?.error || 'Failed to start checkout.');
-          }
-          const data = await response.json();
-          if (data?.paid) {
-            clearCart();
-            router.push(data.orderId ? `/my-orders/${data.orderId}` : '/my-orders');
-            return { paid: true };
-          }
-
-          if (data?.url) {
-            window.location.href = data.url;
-            return { paid: false };
-          } else {
-            throw new Error('Checkout URL missing.');
-          }
-        })(),
-        {
-          loading: 'Processing checkout...',
-          success: (result) =>
-            (result as CheckoutStartResult | undefined)?.paid
-              ? 'Payment already completed.'
-              : 'Redirecting to payment...',
-          error: (err) => err?.message || 'Unable to proceed to checkout.',
+      sonnerToast.loading('Processing checkout...', { id: checkoutToastId });
+      const result = await (async (): Promise<CheckoutStartResult> => {
+        const response = await fetch('/api/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            phone: formData.phone,
+            streetAddress: formData.streetAddress,
+            postalCode: formData.postalCode,
+            city: formData.city,
+            country: formData.country,
+            deliveryLatitude: formData.deliveryLatitude,
+            deliveryLongitude: formData.deliveryLongitude,
+            specialInstructions: formData.specialInstructions,
+            cartItems,
+            loyaltyDiscount,
+            loyaltyDiscountPercentage,
+            couponCode: couponToSend,
+          }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.error || 'Failed to start checkout.');
         }
-      );
+        const data = await response.json();
+        if (!isCurrent()) return { paid: false };
+        if (data?.paid) {
+          clearCart();
+          router.push(data.orderId ? `/my-orders/${data.orderId}` : '/my-orders');
+          return { paid: true };
+        }
+
+        if (data?.url) {
+          window.location.href = data.url;
+          return { paid: false };
+        } else {
+          throw new Error('Checkout URL missing.');
+        }
+      })();
+      if (isCurrent()) {
+        sonnerToast.success(
+          result.paid ? 'Payment already completed.' : 'Redirecting to payment...',
+          { id: checkoutToastId }
+        );
+      }
+    } catch (error) {
+      if (isCurrent()) {
+        sonnerToast.error(
+          error instanceof Error ? error.message : 'Unable to proceed to checkout.',
+          { id: checkoutToastId }
+        );
+      }
     } finally {
       setIsSubmitting(false);
       isSubmittingRef.current = false;
@@ -1782,6 +1804,11 @@ const CartPage = () => {
       </div>
     </div>
   );
+};
+
+const CartPage = () => {
+  const { viewer } = useAccountScope();
+  return <AccountCartPage key={viewer} />;
 };
 
 export default CartPage;

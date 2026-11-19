@@ -83,6 +83,43 @@ TanStack Query is currently used for client-side server data that benefits from 
 
 TanStack Table is currently used for larger list views that benefit from client-side search, sorting, pagination, and column visibility controls: `/admin-dashboard/orders`, `/admin-dashboard/users`, `/admin-dashboard/menu-items`, `/admin-dashboard/audit-logs`, and `/my-orders`. Order detail item tables on `/admin-dashboard/orders/[id]` and `/my-orders/[id]` use a simple TanStack mode without toolbar or pagination so the read-only receipt-style layout stays quiet.
 
+## Account Switch Privacy
+
+NextAuth session changes do not recreate the shared QueryClient. Profile and favorite queries
+therefore include the signed-in session email in their keys: `['profile', viewer, ...]` and
+`['favorites', viewer, ...]`. This covers profile details, saved delivery addresses, favorite IDs,
+and both favorite list pages. Requests remain session-authorized on the server; the viewer key
+partitions browser state and is not an authorization credential sent to the API.
+
+- `AccountCacheBoundary`, inside `TanStackQueryProvider` and below the NextAuth session provider,
+  cancels and removes previous-viewer profile/favorites queries when identity changes. On logout
+  it removes all queries in those two families. Public restaurant queries and the cart provider
+  remain intact; do not clear or remount the entire QueryClient to solve this problem.
+- Private GET functions consume TanStack Query's AbortSignal. A response that arrives after
+  cancellation must not become visible under the next viewer's key.
+- `useAccountScope` provides a viewer, generation-aware `isCurrent()` check, and `assertCurrent()`.
+  An old callback stays invalid after A -> B -> A or unmount. Session `loading` with the same known
+  email preserves the generation so a normal session update does not cancel its own save.
+- Saved-address mutations carry the initiating scope in their variables, recheck it before the
+  request and after the response, and update/invalidate only that owner's keys. Stale caller
+  continuations cannot select an old address or show a success/error toast in the new account.
+- Profile and cart inner forms are keyed by viewer. Profile drafts and checkout delivery details,
+  coordinates, selected address, coupon state, loyalty preview, and order-level instructions reset
+  on identity changes. Cart products, quantities and per-item notes remain device-local in the
+  existing `CartProvider`/localStorage; this feature does not make the cart account-specific.
+- Profile save/delete and checkout continuations check ownership before updating session/cache,
+  signing out, clearing the cart, redirecting, or showing completion feedback. Same-account profile
+  session refreshes do not overwrite a dirty form; successful saves apply the server's normalized fields.
+- Favorite hearts update optimistically; list cards are removed only after a successful response,
+  so their mutation owner is not unmounted by its own optimistic removal. Failure rolls back only
+  the affected ID. Settled mutations invalidate the original viewer prefix, never the new viewer;
+  invalidation alone does not recreate deleted queries.
+
+Scope: this is client-state isolation after an observed session change, not session revocation,
+request rollback, or a replacement for server-side ownership checks. Already accepted writes may
+finish on the server. Cloudinary endpoints, upload/delete timing, payment rules, and database
+schemas are unchanged. Verify with `npm run test:account-privacy` and the manual checks in `TESTING.md`.
+
 ## Application Areas
 
 ```mermaid

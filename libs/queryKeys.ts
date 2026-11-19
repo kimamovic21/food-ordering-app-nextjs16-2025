@@ -31,8 +31,10 @@ export const queryKeys = {
   },
   profile: {
     all: ['profile'] as const,
-    detail: () => [...queryKeys.profile.all, 'detail'] as const,
-    deliveryAddresses: () => [...queryKeys.profile.all, 'delivery-addresses'] as const,
+    viewer: (viewer: string) => [...queryKeys.profile.all, viewer] as const,
+    detail: (viewer: string) => [...queryKeys.profile.viewer(viewer), 'detail'] as const,
+    deliveryAddresses: (viewer: string) =>
+      [...queryKeys.profile.viewer(viewer), 'delivery-addresses'] as const,
   },
   users: {
     all: ['users'] as const,
@@ -40,9 +42,11 @@ export const queryKeys = {
   },
   favorites: {
     all: ['favorites'] as const,
-    ids: () => [...queryKeys.favorites.all, 'ids'] as const,
-    menuItems: () => [...queryKeys.favorites.all, 'menu-items'] as const,
-    restaurants: () => [...queryKeys.favorites.all, 'restaurants'] as const,
+    viewer: (viewer: string) => [...queryKeys.favorites.all, viewer] as const,
+    ids: (viewer: string) => [...queryKeys.favorites.viewer(viewer), 'ids'] as const,
+    menuItems: (viewer: string) => [...queryKeys.favorites.viewer(viewer), 'menu-items'] as const,
+    restaurants: (viewer: string) =>
+      [...queryKeys.favorites.viewer(viewer), 'restaurants'] as const,
   },
   restaurants: {
     all: ['restaurants'] as const,

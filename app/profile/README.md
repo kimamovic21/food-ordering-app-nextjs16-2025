@@ -28,6 +28,22 @@ This folder owns customer profile editing, phone/address validation, saved deliv
 - Account deletion: `page.tsx` includes the delete account flow and surfaces API errors with toast feedback instead of failing silently.
 - Password changes: `change-password/` is a separate security workflow. It checks the session, blocks Google OAuth users from seeing a password form, validates strong passwords, confirms the current password through `/api/profile/change-password`, and only then updates the stored password hash.
 
+## Account Changes And In-Flight Saves
+
+`ProfilePage` keys `AccountProfilePage` by the session viewer from `useAccountScope`. Switching
+accounts or logging out discards the previous form, including local avatar selection/preview and
+pending UI state. A refresh of the same account's session preserves unsaved text instead of
+reinitializing the form; after a successful save, normalized API fields are applied explicitly.
+
+Each save checks its initiating scope before the profile write, session update and cache update.
+An old deletion response must not sign out the newly logged-in account. Completion toasts are
+suppressed after an account change, and the pending profile toast is dismissed on unmount.
+Profile cache writes use `queryKeys.profile.detail(viewer)`, not a global profile key.
+This does not undo an already accepted server request. Image selection still stays local until
+Save; existing `/api/upload/users` upload/delete calls and Cloudinary handling are unchanged.
+
+See `ARCHITECTURE.md` -> Account Switch Privacy and `npm run test:account-privacy`.
+
 ## Service-Level Details
 
 - Profile data lives in MongoDB through the `User` model; the browser should never be treated as the final authority for saved contact/address values.
@@ -43,7 +59,7 @@ This folder owns customer profile editing, phone/address validation, saved deliv
 - `app/profile/change-password/page.tsx`: functions/components: `ChangePasswordPage`, `pageHeader`; client component; session-aware
 - `app/profile/layout.tsx`: functions/components: `ProfileLayout`
 - `app/profile/loading.tsx`: functions/components: `ProfilePageLoading`; client component
-- `app/profile/page.tsx`: functions/components: `readResponseErrorMessage`, `ProfilePage`, `handleImageSelect`, `handleRemoveImage`, `handleProfileSave`, `savePromise`, `handleDeleteAccount`, `deletePromise`; API calls: `/api/upload/users`, `/api/profile`; client component; session-aware
+- `app/profile/page.tsx`: functions/components: `readResponseErrorMessage`, `ProfilePage`, `AccountProfilePage`, `handleImageSelect`, `handleRemoveImage`, `handleProfileSave`, `savePromise`, `handleDeleteAccount`; API calls: `/api/upload/users`, `/api/profile`; client component; viewer-scoped form and save continuations
 - `app/profile/UserProfileForm.tsx`: functions/components: `UserProfileForm`; client component
 - `app/profile/UserProfileImage.tsx`: functions/components: `UserProfileImage`, `handleFileChange`; client component
 
