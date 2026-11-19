@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import useAccountScope from '@/hooks/useAccountScope';
 import Link from 'next/link';
 import MenuItem from '@/app/menu/MenuItem';
 import Title from '@/components/shared/Title';
@@ -11,8 +11,8 @@ import { queryKeys } from '@/libs/queryKeys';
 import FavoriteMealsLoading from './loading';
 import type { FavoriteMealsResponse } from '@/types/favorites';
 
-const fetchFavoriteMeals = async (): Promise<FavoriteMealsResponse> => {
-  const response = await fetch('/api/favorites/menu-items', { cache: 'no-store' });
+const fetchFavoriteMeals = async (signal?: AbortSignal): Promise<FavoriteMealsResponse> => {
+  const response = await fetch('/api/favorites/menu-items', { cache: 'no-store', signal });
   const data = await response.json().catch(() => null);
 
   if (!response.ok) {
@@ -25,14 +25,14 @@ const fetchFavoriteMeals = async (): Promise<FavoriteMealsResponse> => {
 };
 
 const FavoriteMealsPage = () => {
-  const { status } = useSession();
-  const isAuthenticated = status === 'authenticated';
+  const { status, viewer } = useAccountScope();
+  const isAuthenticated = status === 'authenticated' && Boolean(viewer);
 
   const favoriteMealsQuery = useQuery({
     enabled: isAuthenticated,
     gcTime: 10 * 60 * 1000,
-    queryFn: fetchFavoriteMeals,
-    queryKey: queryKeys.favorites.menuItems(),
+    queryFn: ({ signal }) => fetchFavoriteMeals(signal),
+    queryKey: queryKeys.favorites.menuItems(viewer),
     staleTime: 60 * 1000,
   });
 

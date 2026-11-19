@@ -210,10 +210,22 @@ Customer discovery:
 - Visible menu cards can prefetch restaurant ordering status to make first add-to-cart interaction feel faster.
 - A customer cannot add an unavailable item or an item from a blocked restaurant state.
 
+Account switching on a shared browser:
+
+- Profile details, saved addresses and favorite lists are cached per signed-in viewer, not globally.
+- Switching from A to B removes A's private query cache and reinitializes the profile/delivery forms.
+  Old network responses cannot refill B's form, sign B out after A's deletion, or redirect B after A's checkout.
+- A normal refresh of the same account's session preserves unsaved profile edits.
+- Cart products, quantities and per-item notes are still device-local and remain intentionally;
+  delivery details, coordinates, selected address, coupon/loyalty preview and order-level instructions reset.
+- This is client privacy/UX protection, not a rollback of server writes. API ownership checks still apply.
+  No migration or Cloudinary behavior change is involved. Demo and test steps are in `TESTING.md`.
+
 Favorites:
 
 - Customers can favorite menu items and restaurants.
-- Favorites are cached with TanStack Query.
+- Favorites are cached with viewer-scoped TanStack Query keys. Hearts update optimistically; cards are
+  removed after successful unfavorite responses, and failures roll back only the affected favorite.
 - Favorite pages support quick access to saved items.
 - Favorite restaurant quick reorder uses the customer's latest valid previous order from that restaurant.
 

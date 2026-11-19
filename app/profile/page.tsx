@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { signOut } from 'next-auth/react';
 import SonnerToastComponent, { sonnerToast } from '@/components/shared/SonnerToastComponent';
 import type { ExtendedUser } from '@/types/user';
 import type { ProfileData } from '@/hooks/useProfile';
+import useAccountScope from '@/hooks/useAccountScope';
 import { isValidAppPhoneNumber } from '@/libs/phone';
 import { queryKeys } from '@/libs/queryKeys';
 import Title from '@/components/shared/Title';
@@ -44,8 +45,9 @@ const readResponseErrorMessage = async (response: Response, fallback: string) =>
   return text || fallback;
 };
 
-const ProfilePage = () => {
+const AccountProfilePage = () => {
   const session = useSession();
+  const { viewer, isCurrent, assertCurrent } = useAccountScope();
   const { status } = session;
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -65,6 +67,14 @@ const ProfilePage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isInitialSessionLoading, setIsInitialSessionLoading] = useState(true);
   const [profileToast, setProfileToast] = useState<ProfileToastState | null>(null);
+  const initializedProfile = useRef(false);
+
+  useEffect(
+    () => () => {
+      sonnerToast.dismiss(PROFILE_UPDATE_TOAST_ID);
+    },
+    []
+  );
 
   useEffect(() => {
     if (status !== 'loading') {
@@ -79,10 +89,12 @@ const ProfilePage = () => {
   }, [status, router]);
 
   useEffect(() => {
-    if (status === 'authenticated' && session.data?.user) {
+    if (status === 'authenticated' && session.data?.user && !initializedProfile.current) {
       const user = session.data.user as ExtendedUser;
 
       Promise.resolve().then(() => {
+        if (!isCurrent() || initializedProfile.current) return;
+        initializedProfile.current = true;
         setUserName(user.name || '');
         setPhone(user.phone || '');
         setStreetAddress(user.streetAddress || '');
@@ -93,7 +105,7 @@ const ProfilePage = () => {
         setImageUrl(user.image || FALLBACK_IMAGE);
       });
     }
-  }, [status, session.data?.user]);
+  }, [status, session.data?.user, isCurrent]);
 
   useEffect(
     () => () => {
@@ -121,6 +133,7 @@ const ProfilePage = () => {
 
   const handleProfileSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!isCurrent() || isSaving) return;
 
     if (phone.trim() && !isValidAppPhoneNumber(phone)) {
       setProfileToast({
@@ -168,6 +181,7 @@ const ProfilePage = () => {
         }
       }
 
+      assertCurrent();
       const profileRes = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -188,6 +202,7 @@ const ProfilePage = () => {
       }
 
       const updatedUser = await profileRes.json();
+      assertCurrent();
       const nextCachedUser: ProfileData = {
         ...updatedUser,
         image: nextImageUrl || FALLBACK_IMAGE,
@@ -207,7 +222,14 @@ const ProfilePage = () => {
         },
       });
 
-      queryClient.setQueryData(queryKeys.profile.detail(), nextCachedUser);
+      assertCurrent();
+      queryClient.setQueryData(queryKeys.profile.detail(viewer), nextCachedUser);
+      setUserName(updatedUser.name || '');
+      setPhone(updatedUser.phone || '');
+      setStreetAddress(updatedUser.streetAddress || '');
+      setPostalCode(updatedUser.postalCode || '');
+      setCity(updatedUser.city || '');
+      setCountry(updatedUser.country || '');
       setImageUrl(nextImageUrl || FALLBACK_IMAGE);
       setSelectedImageFile(null);
       setPreviewUrl(null);
@@ -223,24 +245,28 @@ const ProfilePage = () => {
 
     try {
       await savePromise;
+      if (!isCurrent()) return;
       setProfileToast({
         key: Date.now(),
         success: 'Profile updated!',
       });
     } catch (error) {
+      if (!isCurrent()) return;
       setProfileToast({
         key: Date.now(),
         error: error instanceof Error ? error.message : 'Failed to update profile.',
       });
     } finally {
-      setIsSaving(false);
+      if (isCurrent()) setIsSaving(false);
     }
   };
 
   const handleDeleteAccount = async () => {
+    if (!isCurrent() || isDeleting) return;
     setIsDeleting(true);
+    setProfileToast({ key: Date.now(), pending: 'Deleting account...' });
 
-    const deletePromise = (async () => {
+    try {
       const deleteRes = await fetch('/api/profile', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
@@ -251,28 +277,21 @@ const ProfilePage = () => {
         throw new Error(message);
       }
 
-      queryClient.removeQueries({ queryKey: queryKeys.profile.all });
+      assertCurrent();
+      queryClient.removeQueries({ queryKey: queryKeys.profile.viewer(viewer) });
 
       // Sign out the user after successful account deletion
       await signOut({ callbackUrl: '/login' });
 
-      return deleteRes.json();
-    })();
-
-    sonnerToast.promise(deletePromise, {
-      loading: 'Deleting account...',
-      success: 'Account deleted successfully!',
-      error: (err) => (err instanceof Error ? err.message : 'Failed to delete account.'),
-      style: {
-        background: '#22c55e', // Tailwind green-500
-        color: 'white',
-      },
-    });
-
-    try {
-      await deletePromise;
+      if (isCurrent()) {
+        setProfileToast({ key: Date.now(), success: 'Account deleted successfully!' });
+      }
     } catch (error) {
-      console.error('Account deletion error:', error);
+      if (!isCurrent()) return;
+      setProfileToast({
+        key: Date.now(),
+        error: error instanceof Error ? error.message : 'Failed to delete account.',
+      });
       setIsDeleting(false);
     }
   };
@@ -327,6 +346,11 @@ const ProfilePage = () => {
       </div>
     </section>
   );
+};
+
+const ProfilePage = () => {
+  const { viewer } = useAccountScope();
+  return <AccountProfilePage key={viewer} />;
 };
 
 export default ProfilePage;

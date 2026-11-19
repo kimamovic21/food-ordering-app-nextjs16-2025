@@ -74,6 +74,29 @@ Recent high-priority coverage also checks best coupon suggestion rules, restaura
 
 ## Commands
 
+### Account Switch Privacy
+
+Run `npm run test:account-privacy -- --reporter=dot` for seven focused files covering scoped query
+keys, shared profile/favorite requests, provider cleanup, saved-address mutations, favorite toggles,
+and profile/cart form behavior. All network calls are mocked; no database or real image service is used.
+Coverage includes slow responses after A -> B or A -> B -> A, GET cancellation, late success/errors,
+logout cleanup, guest mutations, unchanged-account session refresh, per-ID rollback, and cart preservation.
+
+Manual smoke check with two test accounts in one browser session:
+
+1. As account A, visit `/profile`, `/favorite-meals`, `/favorite-restaurants` and `/cart`.
+2. Log out and log in as B without reloading the app. B must never see A's cached profile, addresses,
+   or favorites. A's unsaved delivery coordinates/selection/coupon must not survive the switch.
+3. Confirm products, quantities and per-item notes remain in the device-local cart. B's own default
+   address may populate its newly initialized form.
+4. With network throttling, start an address/favorite/profile write then change accounts. A's late
+   response must not alter B's UI, session, toast or navigation. Already accepted server writes are
+   not rolled back by this client guard.
+5. Refresh the same account's session while editing a profile draft; the draft should remain intact.
+
+These tests do not certify cross-tab session propagation, live payment behavior or Cloudinary flows.
+Backend ownership checks remain mandatory; include their existing focused suites if those APIs change.
+
 ### Choose The Scope First
 
 The total printed by `npm run test` describes the entire unit/component/integration suite, not

@@ -275,6 +275,8 @@ Read first:
 - `README.md` Auth and Rate Limiting sections.
 - `app/(auth)/README.md`
 - `app/profile/README.md`
+- `app/cart/README.md`, `app/favorite-meals/README.md`, `app/favorite-restaurants/README.md`
+- `ARCHITECTURE.md` -> Account Switch Privacy
 - `app/admin-dashboard/users/README.md`
 - `app/api/register/README.md`
 - `app/api/profile/README.md`
@@ -284,6 +286,9 @@ Read first:
 Main source files:
 
 - `libs/authOptions.ts`
+- `hooks/useAccountScope.ts`, `hooks/useProfile.ts`, `hooks/useDeliveryAddresses.ts`, `hooks/useFavorites.ts`
+- `components/shared/AccountCacheBoundary.tsx`, `components/shared/FavoriteToggleButton.tsx`
+- `libs/queryKeys.ts`
 - `libs/authEmails.tsx`
 - `libs/rateLimit.ts`
 - `libs/phone.ts`
@@ -300,6 +305,8 @@ Key rules:
 - Credentials auth, register, forgot password, and resend verification should remain rate-limited.
 - Profile and checkout phone numbers should be normalized through `libs/phone.ts`.
 - Saved addresses are capped at five and dedupe by normalized address/phone/coordinates.
+- Profile/favorites keys must include the viewer. Capture the initiating account for async mutations;
+  preserve same-account drafts, reset private forms on identity changes, and keep device-local cart items.
 - Superadmin user deletion must keep historical orders but clean dependent owned data and media when
   active-order guards allow it.
 
@@ -308,6 +315,7 @@ Focused tests:
 ```bash
 npm run test:auth
 npm run test:profile
+npm run test:account-privacy
 npm run test:file -- __tests__/api/delivery-addresses.route.test.ts __tests__/api/users-delete.route.test.ts __tests__/api/users-role-guards.route.test.ts __tests__/libs/adminUserDeletion.test.ts __tests__/libs/phone.test.ts __tests__/libs/rateLimit.test.ts
 ```
 

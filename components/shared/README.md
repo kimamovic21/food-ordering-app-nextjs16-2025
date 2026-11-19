@@ -12,6 +12,15 @@ Cross-feature components used throughout public, customer, admin, courier, and m
 - Prefer preserving existing prop names and accessibility behavior unless a task explicitly changes the contract.
 - If a component is used in checkout, auth, messaging, order, or admin flows, run focused tests for the affected workflow.
 
+## Private Account State
+
+`TanStackQueryProvider` mounts `AccountCacheBoundary` below the NextAuth session provider.
+The boundary cancels/removes previous-viewer profile and favorite queries without clearing public
+restaurant caches or remounting `CartProvider`. `FavoriteToggleButton` has a viewer-keyed inner
+component, owner-scoped optimistic IDs and guarded async completion. It waits for server success
+before removing a list card so that its own mutation can finish. Read `ARCHITECTURE.md` ->
+Account Switch Privacy and run `npm run test:account-privacy` when changing these contracts.
+
 ## Order Map Tracking
 
 `OrderMap.tsx` is shared by customer/admin order details and courier delivery screens. It uses

@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useSession } from 'next-auth/react';
+import useAccountScope from '@/hooks/useAccountScope';
 import { queryKeys } from '@/libs/queryKeys';
 import type { FavoritesState } from '@/types/favorites';
 
@@ -16,8 +16,8 @@ export const emptyFavorites: FavoritesState = {
 const normalizeFavoriteIds = (value: unknown) =>
   Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
 
-export const fetchFavoriteIds = async (): Promise<FavoritesState> => {
-  const response = await fetch('/api/favorites', { cache: 'no-store' });
+export const fetchFavoriteIds = async (signal?: AbortSignal): Promise<FavoritesState> => {
+  const response = await fetch('/api/favorites', { cache: 'no-store', signal });
   const json = await response.json().catch(() => null);
 
   if (response.status === 401) {
@@ -43,47 +43,44 @@ const setFavoriteIds = (ids: string[], id: string, isFavorite: boolean) => {
 };
 
 const useFavorites = () => {
-  const { status } = useSession();
+  const { status, viewer, isCurrent } = useAccountScope();
   const queryClient = useQueryClient();
-  const isAuthenticated = status === 'authenticated';
+  const isAuthenticated = status === 'authenticated' && Boolean(viewer);
 
   const favoritesQuery = useQuery({
     enabled: isAuthenticated,
     gcTime: 10 * 60 * 1000,
-    queryFn: fetchFavoriteIds,
-    queryKey: queryKeys.favorites.ids(),
+    queryFn: ({ signal }) => fetchFavoriteIds(signal),
+    queryKey: queryKeys.favorites.ids(viewer),
     staleTime: 60 * 1000,
   });
 
-  useEffect(() => {
-    if (!isAuthenticated) {
-      queryClient.removeQueries({ queryKey: queryKeys.favorites.all });
-    }
-  }, [isAuthenticated, queryClient]);
-
   const setMenuItemFavorite = useCallback(
     (id: string, isFavorite: boolean) => {
-      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(), (current) => ({
+      if (!isCurrent()) return;
+      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(viewer), (current) => ({
         favoriteMenuItemIds: setFavoriteIds(current?.favoriteMenuItemIds || [], id, isFavorite),
         favoriteRestaurantIds: current?.favoriteRestaurantIds || [],
       }));
     },
-    [queryClient]
+    [queryClient, viewer, isCurrent]
   );
 
   const setRestaurantFavorite = useCallback(
     (id: string, isFavorite: boolean) => {
-      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(), (current) => ({
+      if (!isCurrent()) return;
+      queryClient.setQueryData<FavoritesState>(queryKeys.favorites.ids(viewer), (current) => ({
         favoriteMenuItemIds: current?.favoriteMenuItemIds || [],
         favoriteRestaurantIds: setFavoriteIds(current?.favoriteRestaurantIds || [], id, isFavorite),
       }));
     },
-    [queryClient]
+    [queryClient, viewer, isCurrent]
   );
 
   const refresh = useCallback(async () => {
-    await queryClient.invalidateQueries({ queryKey: queryKeys.favorites.all });
-  }, [queryClient]);
+    if (isCurrent())
+      await queryClient.invalidateQueries({ queryKey: queryKeys.favorites.viewer(viewer) });
+  }, [queryClient, viewer, isCurrent]);
 
   return {
     data: isAuthenticated ? (favoritesQuery.data ?? emptyFavorites) : emptyFavorites,

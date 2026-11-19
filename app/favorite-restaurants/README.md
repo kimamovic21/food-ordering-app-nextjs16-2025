@@ -4,7 +4,7 @@
 
 ## Purpose
 
-This folder owns restaurant discovery and public restaurant details, including status, distance, favorites, reviews, menu entry points, and dynamic ETA messaging.
+This folder displays the signed-in customer's saved restaurants, with restaurant details/menu links, ratings, favorite controls and quick reorder.
 
 ## Route And Audience
 
@@ -19,6 +19,15 @@ This folder owns restaurant discovery and public restaurant details, including s
 - Check colocated components for user interactions, forms, and mutations.
 - Check loading/error/empty states before changing UI because these are part of the user experience.
 - This folder talks to `/api/favorites/restaurants`. Keep API response shapes aligned.
+
+## Viewer-Scoped Favorites
+
+The list uses `queryKeys.favorites.restaurants(viewer)` and an abortable GET. Favorite IDs use
+`queryKeys.favorites.ids(viewer)`. The account boundary removes old profile/favorites queries on
+logout or account switch, so the previous customer's saved restaurants do not flash on screen.
+Hearts update optimistically; removing a restaurant card waits for server success. Failed toggles
+roll back only the affected ID, and stale responses cannot write the next account's cache or toast.
+See `ARCHITECTURE.md` -> Account Switch Privacy; run `npm run test:account-privacy`.
 
 ## Important Files
 

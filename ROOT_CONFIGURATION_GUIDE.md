@@ -61,6 +61,10 @@ Use this section when someone asks what the project is built with and which exte
 
 ## Testing
 
+- `npm run test:account-privacy` selects the seven account-switch cache/form tests. Use it when changing
+  `useAccountScope`, profile/favorite query keys, the account cache boundary, or related mutation guards.
+  See `TESTING.md`; no new dependency, environment variable or database migration is needed.
+
 - `vitest.config.ts`: Main Vitest unit/integration test configuration. It sets aliases, setup files, and the test environment.
 - `vitest.e2e.config.ts`: E2E-style Vitest configuration for route/workflow tests that need separate behavior.
 - `TESTING.md`: Human-facing testing guide. Update it when adding new scripts, test groups, or test workflow expectations.
